@@ -1,4 +1,4 @@
-from collections.abc import AsyncIterator
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -11,7 +11,7 @@ from app.services.mediamtx import MediaMTXClient
 
 
 @asynccontextmanager
-async def lifespan(application: FastAPI) -> AsyncIterator[None]:
+async def lifespan(application: FastAPI) -> AsyncGenerator[None]:
     settings = get_settings()
     client = MediaMTXClient(
         base_url=settings.mediamtx_api_url,
@@ -33,7 +33,7 @@ def create_app() -> FastAPI:
     )
     application.add_middleware(
         CORSMiddleware,
-        allow_origins=settings.cors_origins,
+        allow_origins=settings.stream_gateway_cors_origins,
         allow_credentials=False,
         allow_methods=["*"],
         allow_headers=["*"],

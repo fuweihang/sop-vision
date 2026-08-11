@@ -215,8 +215,8 @@ MEDIAMTX_API_URL=http://mediamtx:9997
 # 返回给浏览器，必须是浏览器可访问的地址
 PUBLIC_WEBRTC_BASE_URL=http://localhost:8889
 
-# 前端访问后端
-VITE_API_BASE_URL=http://localhost:8000/api/v1
+# 前端访问 Stream Gateway
+VITE_STREAM_GATEWAY_API_BASE_URL=http://localhost:8000/api/v1
 ```
 
 不要提交真实摄像头地址或凭据；本项目的 `.gitignore` 已忽略 `.env`，仓库只保留脱敏的 `.env.example`。
