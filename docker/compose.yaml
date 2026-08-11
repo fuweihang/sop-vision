@@ -1,5 +1,10 @@
 name: sop-vision
 
+networks:
+  default:
+    name: sop-vision
+    driver: bridge
+
 services:
 
   mediamtx:
