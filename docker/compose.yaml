@@ -1,0 +1,49 @@
+name: sop-vision
+
+services:
+
+  mediamtx:
+    image: bluenviron/mediamtx:${MEDIAMTX_IMAGE_TAG:-1}
+    restart: unless-stopped
+    environment:
+      MTX_API: "${MTX_API:-yes}"
+      MTX_APIADDRESS: "${MTX_APIADDRESS:-:9997}"
+      MTX_WEBRTC: "${MTX_WEBRTC:-yes}"
+      MTX_WEBRTCADDRESS: "${MTX_WEBRTCADDRESS:-:8889}"
+      MTX_WEBRTCLOCALUDPADDRESS: "${MTX_WEBRTCLOCALUDPADDRESS:-:8189}"
+      MTX_WEBRTCADDITIONALHOSTS: "${MTX_WEBRTCADDITIONALHOSTS:-127.0.0.1}"
+    ports:
+      - "${MEDIAMTX_RTSP_PORT:-8554}:8554"
+      - "${MEDIAMTX_WEBRTC_PORT:-8889}:8889"
+      - "${MEDIAMTX_WEBRTC_UDP_PORT:-8189}:8189/udp"
+    expose:
+      - "9997"
+
+  stream-gateway:
+    build:
+      context: ../stream-gateway
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      MEDIAMTX_API_URL: "${MEDIAMTX_API_URL:-http://mediamtx:9997}"
+      MEDIAMTX_API_TIMEOUT: "${MEDIAMTX_API_TIMEOUT:-5}"
+      PUBLIC_WEBRTC_BASE_URL: "${PUBLIC_WEBRTC_BASE_URL:-http://localhost:8889}"
+      STREAM_GATEWAY_CORS_ORIGINS: "${STREAM_GATEWAY_CORS_ORIGINS:-http://localhost:5173}"
+      UVICORN_LOG_LEVEL: "${STREAM_GATEWAY_LOG_LEVEL:-info}"
+    ports:
+      - "${STREAM_GATEWAY_PORT:-8000}:8000"
+    depends_on:
+      mediamtx:
+        condition: service_started
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - >-
+          import urllib.request;
+          urllib.request.urlopen('http://127.0.0.1:8000/api/v1/health/live', timeout=2)
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
