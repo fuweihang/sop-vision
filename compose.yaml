@@ -5,7 +5,30 @@ networks:
     name: sop-vision
     driver: bridge
 
+volumes:
+  postgres-data:
+
 services:
+
+  postgres:
+    image: postgres:${POSTGRES_IMAGE_TAG:-17-alpine}
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: "${POSTGRES_DB:-sop_vision}"
+      POSTGRES_USER: "${POSTGRES_USER:-sop_vision}"
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:-sop_vision_dev_password}"
+    ports:
+      - "127.0.0.1:${POSTGRES_HOST_PORT:-5432}:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - pg_isready -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
   mediamtx:
     image: bluenviron/mediamtx:${MEDIAMTX_IMAGE_TAG:-1}
@@ -24,22 +47,25 @@ services:
     expose:
       - "9997"
 
-  stream-gateway:
+  backend:
     build:
-      context: ./stream-gateway
+      context: ./backend
       dockerfile: Dockerfile
     restart: unless-stopped
     environment:
+      DATABASE_URL: "${DATABASE_URL:-postgresql://sop_vision:sop_vision_dev_password@postgres:5432/sop_vision}"
       MEDIAMTX_API_URL: "${MEDIAMTX_API_URL:-http://mediamtx:9997}"
       MEDIAMTX_API_TIMEOUT: "${MEDIAMTX_API_TIMEOUT:-5}"
       PUBLIC_WEBRTC_BASE_URL: "${PUBLIC_WEBRTC_BASE_URL:-http://localhost:8889}"
-      STREAM_GATEWAY_CORS_ORIGINS: "${STREAM_GATEWAY_CORS_ORIGINS:-http://localhost:5173}"
-      UVICORN_LOG_LEVEL: "${STREAM_GATEWAY_LOG_LEVEL:-info}"
+      BACKEND_CORS_ORIGINS: "${BACKEND_CORS_ORIGINS:-http://localhost:5173}"
+      UVICORN_LOG_LEVEL: "${BACKEND_LOG_LEVEL:-info}"
     ports:
-      - "${STREAM_GATEWAY_PORT:-8000}:8000"
+      - "${BACKEND_PORT:-8000}:8000"
     depends_on:
       mediamtx:
         condition: service_started
+      postgres:
+        condition: service_healthy
     healthcheck:
       test:
         - CMD
