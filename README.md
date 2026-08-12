@@ -45,8 +45,7 @@ flowchart LR
 ```text
 .
 ├── .env.example
-├── docker/
-│   └── compose.yaml
+├── compose.yaml
 ├── stream-gateway/
 │   ├── Dockerfile
 │   ├── pyproject.toml
@@ -98,7 +97,7 @@ MTX_WEBRTCLOCALUDPADDRESS=:8189
 MTX_WEBRTCADDITIONALHOSTS=127.0.0.1,192.168.1.100
 ```
 
-Compose 的 `.env` 文件默认只参与变量插值，不会自动把全部变量注入容器，因此 `docker/compose.yaml` 需要显式传递这些变量：
+Compose 的 `.env` 文件默认只参与变量插值，不会自动把全部变量注入容器，因此 `compose.yaml` 需要显式传递这些变量：
 
 ```yaml
 services:
@@ -227,8 +226,8 @@ VITE_STREAM_GATEWAY_API_BASE_URL=http://localhost:8000/api/v1
 
 ```bash
 cp .env.example .env
-docker compose --env-file .env -f docker/compose.yaml config
-docker compose --env-file .env -f docker/compose.yaml up --build --wait
+docker compose config
+docker compose up --build --wait
 ```
 
 验证服务：
@@ -242,14 +241,14 @@ curl http://localhost:8000/api/v1/cameras
 常用排查命令：
 
 ```bash
-docker compose --env-file .env -f docker/compose.yaml ps
-docker compose --env-file .env -f docker/compose.yaml logs -f stream-gateway mediamtx
+docker compose ps
+docker compose logs -f stream-gateway mediamtx
 ```
 
 停止服务：
 
 ```bash
-docker compose --env-file .env -f docker/compose.yaml down
+docker compose down
 ```
 
 ## 暂不持久化的行为

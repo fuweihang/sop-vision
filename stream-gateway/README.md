@@ -63,7 +63,7 @@ cp ../.env.example ../.env
 
 ```bash
 cp .env.example .env
-docker compose --env-file .env -f docker/compose.yaml up --build --wait
+docker compose up --build --wait
 ```
 
 FastAPI 在 Compose 网络中通过 `http://mediamtx:9997` 访问 MediaMTX。Control API 端口不会映射到宿主机。
@@ -71,7 +71,7 @@ FastAPI 在 Compose 网络中通过 `http://mediamtx:9997` 访问 MediaMTX。Con
 查看日志：
 
 ```bash
-docker compose --env-file .env -f docker/compose.yaml logs -f stream-gateway
+docker compose logs -f stream-gateway
 ```
 
 ## 配置项
