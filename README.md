@@ -1,8 +1,8 @@
 # SOP Vision
 
-SOP Vision 是一个面向 IP 摄像头的轻量视频接入原型。当前 MVP 使用 Docker Compose 运行 MediaMTX、FastAPI 和前端应用：FastAPI 对 MediaMTX Control API 做一层业务封装，用于动态绑定或解绑 RTSP 摄像头；前端通过 WebRTC（WHEP）播放 MediaMTX 输出的视频流。
+SOP Vision 是一个面向 IP 摄像头的轻量视频接入原型。当前 MVP 使用 Docker Compose 运行 MediaMTX、Backend 和前端应用：Backend 基于 FastAPI，其中的 Stream Gateway 模块对 MediaMTX Control API 做一层业务封装，用于动态绑定或解绑 RTSP 摄像头；前端通过 WebRTC（WHEP）播放 MediaMTX 输出的视频流。
 
-> 当前仓库处于初始化阶段。本文描述首期实现目标和约定；数据库、事件存储等能力暂不在本阶段实现。
+> 当前仓库处于初始化阶段。Compose 已提供 PostgreSQL 基础设施，但 Backend 的数据库持久化和事件存储尚未实现。
 
 ## MVP 目标
 
@@ -11,7 +11,7 @@ SOP Vision 是一个面向 IP 摄像头的轻量视频接入原型。当前 MVP 
 - FastAPI 通过 Docker 内部网络访问 MediaMTX Control API。
 - MediaMTX 按需拉取摄像头 RTSP 流，并通过 WebRTC/WHEP 提供浏览器播放能力。
 - 前端展示摄像头列表，并使用 `<video>` 播放选中的 WebRTC 流。
-- 暂不接入数据库；动态配置仅视为运行时状态，服务重启后不保留。
+- PostgreSQL 已加入 Compose；在 Gateway 完成持久化实现前，动态配置仍只视为运行时状态，服务重启后不保留。
 
 ## 系统架构
 
@@ -20,6 +20,7 @@ flowchart LR
     CAM["IP 摄像头"] -->|"RTSP"| MTX["MediaMTX"]
     MTX -->|"WHEP 信令 :8889<br/>WebRTC 媒体 :8189/udp"| WEB
     API -->|"Docker 网络 / Control API :9997"| MTX
+    API -.->|"配置持久化（待实现）"| DB["PostgreSQL"]
     WEB["浏览器前端"] -->|"REST"| API["FastAPI"]
 ```
 
@@ -34,29 +35,32 @@ flowchart LR
 ## 技术栈
 
 - 容器编排：Docker Compose
+- 数据库：PostgreSQL 17
 - 媒体服务：MediaMTX 1.x
-- 后端：Python、FastAPI、Pydantic
+- 后端：Python、FastAPI、Pydantic；业务能力按模块组织
 - 前端：Vite、TypeScript（具体 UI 框架可在实现时确定）
 - 播放协议：WebRTC / WHEP
 - 摄像头输入：RTSP，首期优先支持 H.264
 
-## 计划目录
+## 目录结构
 
 ```text
 .
 ├── .env.example
 ├── compose.yaml
-├── stream-gateway/
+├── backend/
 │   ├── Dockerfile
 │   ├── pyproject.toml
 │   ├── uv.lock
 │   ├── src/
 │   │   └── app/
 │   │       ├── main.py
-│   │       ├── api/
-│   │       ├── schemas/
-│   │       ├── services/
-│   │       └── core/
+│   │       ├── core/
+│   │       └── modules/
+│   │           └── stream_gateway/
+│   │               ├── api/
+│   │               ├── schemas/
+│   │               └── services/
 │   └── tests/
 ├── frontend/
 │   ├── Dockerfile
@@ -75,7 +79,8 @@ flowchart LR
 | 服务 | 容器端口 | 是否映射到宿主机 | 用途 |
 | --- | ---: | --- | --- |
 | `frontend` | `5173` 或 `80` | 是 | Web 页面 |
-| `stream-gateway` | `8000/tcp` | 是 | 摄像头管理 API 和 OpenAPI 文档 |
+| `backend` | `8000/tcp` | 是 | 后端 API 和 OpenAPI 文档（含 Stream Gateway 模块） |
+| `postgres` | `5432/tcp` | 仅宿主机回环地址 | Backend 配置持久化（待实现） |
 | `mediamtx` | `8554/tcp` | 按需 | RTSP 输入/调试 |
 | `mediamtx` | `8889/tcp` | 是 | WebRTC HTTP/WHEP 信令 |
 | `mediamtx` | `8189/udp` | 是 | WebRTC ICE/媒体传输 |
@@ -97,10 +102,21 @@ MTX_WEBRTCLOCALUDPADDRESS=:8189
 MTX_WEBRTCADDITIONALHOSTS=127.0.0.1,192.168.1.100
 ```
 
-Compose 的 `.env` 文件默认只参与变量插值，不会自动把全部变量注入容器，因此 `compose.yaml` 需要显式传递这些变量：
+Compose 的 `.env` 文件默认只参与变量插值，不会自动把全部变量注入容器，因此 `compose.yaml` 需要显式传递这些变量。PostgreSQL 使用命名卷 `postgres-data` 保存数据，Backend 通过 `DATABASE_URL` 连接数据库：
 
 ```yaml
 services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: sop_vision
+      POSTGRES_USER: sop_vision
+      POSTGRES_PASSWORD: change-me
+
+  backend:
+    environment:
+      DATABASE_URL: postgresql://sop_vision:change-me@postgres:5432/sop_vision
+
   mediamtx:
     image: bluenviron/mediamtx:1
     environment:
@@ -214,8 +230,13 @@ MEDIAMTX_API_URL=http://mediamtx:9997
 # 返回给浏览器，必须是浏览器可访问的地址
 PUBLIC_WEBRTC_BASE_URL=http://localhost:8889
 
-# 前端访问 Stream Gateway
-VITE_STREAM_GATEWAY_API_BASE_URL=http://localhost:8000/api/v1
+# Backend 服务配置
+BACKEND_PORT=8000
+BACKEND_LOG_LEVEL=info
+BACKEND_CORS_ORIGINS=http://localhost:5173
+
+# 前端访问 Backend
+VITE_BACKEND_API_BASE_URL=http://localhost:8000/api/v1
 ```
 
 不要提交真实摄像头地址或凭据；本项目的 `.gitignore` 已忽略 `.env`，仓库只保留脱敏的 `.env.example`。
@@ -242,7 +263,7 @@ curl http://localhost:8000/api/v1/cameras
 
 ```bash
 docker compose ps
-docker compose logs -f stream-gateway mediamtx
+docker compose logs -f backend mediamtx
 ```
 
 停止服务：
@@ -253,7 +274,7 @@ docker compose down
 
 ## 暂不持久化的行为
 
-本阶段不使用数据库，也不让 FastAPI 维护另一份摄像头状态。MediaMTX 的当前运行时配置作为唯一状态来源：
+PostgreSQL 服务目前只完成基础设施接入，FastAPI 尚未读写数据库。MediaMTX 的当前运行时配置仍是唯一状态来源：
 
 - FastAPI 重启后，重新从 MediaMTX 查询现有 path。
 - MediaMTX 或整个 Compose 项目重启后，动态添加的摄像头可能丢失，需要重新调用添加接口。
