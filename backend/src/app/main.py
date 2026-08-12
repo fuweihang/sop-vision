@@ -5,9 +5,9 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app import __version__
-from app.api.router import api_router
 from app.core.config import get_settings
-from app.services.mediamtx import MediaMTXClient
+from app.modules.stream_gateway.api.router import router as stream_gateway_router
+from app.modules.stream_gateway.services.mediamtx import MediaMTXClient
 
 
 @asynccontextmanager
@@ -17,7 +17,7 @@ async def lifespan(application: FastAPI) -> AsyncGenerator[None]:
         base_url=settings.mediamtx_api_url,
         timeout=settings.mediamtx_api_timeout,
     )
-    application.state.mediamtx_client = client
+    application.state.stream_gateway_mediamtx_client = client
     try:
         yield
     finally:
@@ -33,12 +33,12 @@ def create_app() -> FastAPI:
     )
     application.add_middleware(
         CORSMiddleware,
-        allow_origins=settings.stream_gateway_cors_origins,
+        allow_origins=settings.backend_cors_origins,
         allow_credentials=False,
         allow_methods=["*"],
         allow_headers=["*"],
     )
-    application.include_router(api_router)
+    application.include_router(stream_gateway_router)
     return application
 
 

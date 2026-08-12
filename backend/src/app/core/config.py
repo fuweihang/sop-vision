@@ -17,11 +17,11 @@ CommaSeparatedList = Annotated[list[str], NoDecode, BeforeValidator(split_comma_
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(case_sensitive=False, extra="ignore")
 
-    app_name: str = "SOP Vision Stream Gateway"
+    app_name: str = "SOP Vision Backend"
     mediamtx_api_url: str = "http://mediamtx:9997"
     mediamtx_api_timeout: float = Field(default=5.0, gt=0)
     public_webrtc_base_url: str = "http://localhost:8889"
-    stream_gateway_cors_origins: CommaSeparatedList = Field(
+    backend_cors_origins: CommaSeparatedList = Field(
         default_factory=lambda: ["http://localhost:5173"]
     )
 

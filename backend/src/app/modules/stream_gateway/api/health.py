@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, status
 
-from app.api.dependencies import MediaMTXClientDependency
-from app.schemas.health import HealthResponse
+from app.modules.stream_gateway.api.dependencies import MediaMTXClientDependency
+from app.modules.stream_gateway.schemas.health import HealthResponse
 
 router = APIRouter(prefix="/health", tags=["health"])
 

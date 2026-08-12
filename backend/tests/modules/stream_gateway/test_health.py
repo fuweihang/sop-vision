@@ -1,8 +1,8 @@
 import httpx
 import pytest
 
-from app.api.dependencies import get_mediamtx_client
 from app.main import app
+from app.modules.stream_gateway.api.dependencies import get_mediamtx_client
 
 pytestmark = pytest.mark.anyio
 
