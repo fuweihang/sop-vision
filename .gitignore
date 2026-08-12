@@ -70,4 +70,4 @@ node_modules/
 .vite/
 out/
 
-docs
+docs.local
