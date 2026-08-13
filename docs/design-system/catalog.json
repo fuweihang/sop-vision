@@ -1,0 +1,53 @@
+{
+  "$schemaVersion": "1.0.0",
+  "name": "SOP Vision Design System",
+  "status": "observed-and-normalized",
+  "baseline": {
+    "viewport": {
+      "width": 1280,
+      "height": 720,
+      "devicePixelRatio": 1
+    },
+    "theme": "light",
+    "capturedAt": "2026-08-13",
+    "source": "authenticated Vercel dashboard"
+  },
+  "entrypoints": {
+    "human": "README.md",
+    "agents": "agent-guidelines.md",
+    "evidence": "evidence/manifest.json"
+  },
+  "tokens": {
+    "primitives": "tokens/primitives.tokens.json",
+    "semantic": "tokens/semantic.tokens.json",
+    "themes": {
+      "light": "tokens/light.tokens.json",
+      "dark": "tokens/dark.tokens.json"
+    }
+  },
+  "specifications": {
+    "foundations": "specs/foundations.md",
+    "layout": "specs/layout.yaml",
+    "components": "specs/components.yaml",
+    "pagePatterns": "specs/page-patterns.md",
+    "interactionAccessibility": "specs/interaction-accessibility.md"
+  },
+  "sourceOfTruthOrder": [
+    "user requirements",
+    "semantic tokens plus selected theme",
+    "component and layout specifications",
+    "page patterns and foundations",
+    "observational evidence"
+  ],
+  "generatedArtifacts": {
+    "committed": false,
+    "examples": [
+      "CSS custom properties",
+      "framework theme mapping",
+      "typed token constants",
+      "component implementations",
+      "visual regression baselines"
+    ]
+  }
+}
+

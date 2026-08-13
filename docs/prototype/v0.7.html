@@ -1,0 +1,1704 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SOP Vision · Prototype v0.7</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --sop-color-background-page: light-dark(#fafafa, #000);
+      --sop-color-background-surface: light-dark(#fff, #0a0a0a);
+      --sop-color-background-subtle: light-dark(#fafafa, #1a1a1a);
+      --sop-color-background-active: light-dark(#ebebeb, #292929);
+      --sop-color-text-primary: light-dark(#171717, #ededed);
+      --sop-color-text-secondary: light-dark(#4d4d4d, #a1a1a1);
+      --sop-color-text-muted: #8f8f8f;
+      --sop-color-text-inverse: #fff;
+      --sop-color-text-link: light-dark(#0068d6, #8abfff);
+      --sop-color-border-default: light-dark(#ebebeb, #292929);
+      --sop-color-border-strong: light-dark(#c9c9c9, #454545);
+      --sop-color-action-primary: light-dark(#171717, #ededed);
+      --sop-color-action-primary-hover: light-dark(#4d4d4d, #fff);
+      --sop-color-action-primary-text: light-dark(#fff, #171717);
+      --sop-color-action-focus: #0072f5;
+      --sop-color-status-success: #46a758;
+      --sop-color-status-warning: light-dark(#a35200, #ffb224);
+      --sop-color-status-danger: #e5484d;
+      --sop-space-inline-compact: 8px;
+      --sop-space-inline: 12px;
+      --sop-space-component: 16px;
+      --sop-space-card: 20px;
+      --sop-space-page: 24px;
+      --sop-space-section: 32px;
+      --sop-radius-control: 6px;
+      --sop-radius-card: 6px;
+      --sop-radius-popover: 12px;
+      --sop-radius-badge: 9999px;
+      --sop-size-control-small: 32px;
+      --sop-size-control-medium: 36px;
+      --sop-size-sidebar: 256px;
+      --sop-size-header: 56px;
+      --sop-shadow-surface: 0 0 0 1px light-dark(#00000014, #ffffff21);
+      --sop-shadow-control-focus: 0 0 0 1px #00000057, 0 0 0 4px #00000029;
+      --sop-shadow-keyboard-focus: 0 0 0 2px var(--sop-color-background-page), 0 0 0 4px #0072f5;
+      --sop-shadow-modal: 0 0 0 1px light-dark(#00000014, #ffffff21), 0 24px 32px -8px #00000026;
+      --sop-motion-control: 150ms cubic-bezier(.4, 0, .2, 1);
+    }
+    :root[data-theme="light"] { color-scheme: light; }
+    :root[data-theme="dark"] { color-scheme: dark; }
+
+    * { box-sizing: border-box; }
+    html, body { min-width: 1120px; min-height: 100%; margin: 0; }
+    body {
+      background: var(--sop-color-background-page);
+      color: var(--sop-color-text-primary);
+      font: 400 14px/20px GeistSans, Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    button, input, select { font: inherit; }
+    button { color: inherit; }
+    [hidden] { display: none !important; }
+
+    .app-shell { min-height: 100vh; padding-left: var(--sop-size-sidebar); }
+    .sidebar {
+      position: fixed;
+      inset: 0 auto 0 0;
+      z-index: 30;
+      width: var(--sop-size-sidebar);
+      padding: var(--sop-space-component) var(--sop-space-inline);
+      overflow-y: auto;
+      background: var(--sop-color-background-page);
+      border-right: 1px solid var(--sop-color-border-default);
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      height: 48px;
+      padding: 0 8px;
+      margin-bottom: var(--sop-space-component);
+      font-weight: 600;
+      letter-spacing: -.2px;
+    }
+    .brand-logo { display: block; flex: 0 0 auto; width: 28px; height: 28px; border-radius: var(--sop-radius-control); object-fit: contain; }
+    .brand-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .brand-button {
+      width: 100%;
+      border: 0;
+      border-radius: var(--sop-radius-control);
+      background: transparent;
+      color: inherit;
+      text-align: left;
+      cursor: pointer;
+    }
+    .brand-button:hover { background: transparent; color: inherit; }
+    .nav-label {
+      padding: 0 10px;
+      margin: 0 0 var(--sop-space-inline-compact);
+      color: var(--sop-color-text-muted);
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: .2px;
+      text-transform: uppercase;
+    }
+    .nav { display: grid; gap: 4px; }
+    .nav-button {
+      display: grid;
+      grid-template-columns: 16px minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 10px;
+      width: 100%;
+      height: var(--sop-size-control-medium);
+      padding: 0 10px;
+      border: 0;
+      border-radius: var(--sop-radius-control);
+      background: transparent;
+      text-align: left;
+      cursor: pointer;
+      transition: background var(--sop-motion-control);
+    }
+    .nav-button:hover { background: var(--sop-color-background-subtle); }
+    .nav-button[aria-current="page"] { background: var(--sop-color-background-active); font-weight: 500; }
+    .nav-button svg, .button svg, .icon-button svg, .search svg, .empty-state svg, .notice svg { width: 16px; height: 16px; stroke-width: 1.8; }
+    .nav-meta { color: var(--sop-color-text-muted); font-size: 12px; font-weight: 400; }
+
+    .main { min-width: 0; }
+    .header {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      display: grid;
+      place-items: center;
+      height: var(--sop-size-header);
+      background: color-mix(in srgb, var(--sop-color-background-page) 92%, transparent);
+      border-bottom: 1px solid var(--sop-color-border-default);
+      backdrop-filter: blur(8px);
+    }
+    .header-back { position: absolute; left: var(--sop-space-page); }
+    .header-theme { position: absolute; right: var(--sop-space-page); }
+    .breadcrumb { display: flex; align-items: center; gap: var(--sop-space-inline-compact); font-weight: 500; }
+    .breadcrumb-button {
+      padding: 0;
+      border: 0;
+      border-radius: 2px;
+      background: transparent;
+      color: inherit;
+      cursor: pointer;
+    }
+    .breadcrumb-button:hover { color: inherit; text-decoration: none; }
+    .breadcrumb-button[aria-current="page"] { cursor: default; }
+    .breadcrumb-button[aria-current="page"]:hover { color: inherit; text-decoration: none; }
+    .breadcrumb-muted { color: var(--sop-color-text-muted); font-weight: 400; }
+    .page { padding: var(--sop-space-page); }
+    .page-section { display: grid; gap: var(--sop-space-page); }
+
+    .toolbar { display: flex; align-items: center; gap: var(--sop-space-inline-compact); }
+    .search {
+      position: relative;
+      flex: 1;
+      min-width: 0;
+    }
+    .search svg {
+      position: absolute;
+      left: 12px;
+      top: 10px;
+      color: var(--sop-color-text-muted);
+      pointer-events: none;
+    }
+    .search input { padding-left: 36px; }
+    .field-control, .search input {
+      width: 100%;
+      height: var(--sop-size-control-medium);
+      padding-right: 12px;
+      border: 0;
+      border-radius: var(--sop-radius-control);
+      outline: 0;
+      background: var(--sop-color-background-surface);
+      color: var(--sop-color-text-primary);
+      box-shadow: var(--sop-shadow-surface);
+      transition: box-shadow var(--sop-motion-control);
+    }
+    .field-control { padding-left: 12px; }
+    textarea.field-control { height: 64px; padding-top: 9px; padding-bottom: 9px; resize: vertical; line-height: 20px; }
+    .field-control:focus, .search input:focus { box-shadow: var(--sop-shadow-control-focus); }
+    .field-control[aria-invalid="true"] { box-shadow: 0 0 0 1px var(--sop-color-status-danger); }
+    input::placeholder, textarea::placeholder { color: var(--sop-color-text-muted); }
+
+    .button, .icon-button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: var(--sop-space-inline-compact);
+      min-height: var(--sop-size-control-medium);
+      padding: 0 10px;
+      border: 0;
+      border-radius: var(--sop-radius-control);
+      background: var(--sop-color-background-surface);
+      color: var(--sop-color-text-primary);
+      box-shadow: var(--sop-shadow-surface);
+      white-space: nowrap;
+      cursor: pointer;
+      transition: background var(--sop-motion-control), color var(--sop-motion-control), box-shadow var(--sop-motion-control);
+    }
+    .button:hover, .icon-button:hover { background: var(--sop-color-background-subtle); }
+    .button.primary { background: var(--sop-color-action-primary); color: var(--sop-color-action-primary-text); box-shadow: none; }
+    .button.primary:hover { background: var(--sop-color-action-primary-hover); }
+    .button.ghost { background: transparent; box-shadow: none; }
+    .button.ghost:hover { background: var(--sop-color-background-active); }
+    .button.plain { background: transparent; box-shadow: none; }
+    .button.plain:hover { background: transparent; color: inherit; }
+    .button.danger { color: var(--sop-color-status-danger); box-shadow: 0 0 0 1px var(--sop-color-status-danger); }
+    .button:disabled { background: var(--sop-color-background-subtle); color: var(--sop-color-text-muted); cursor: not-allowed; }
+    .icon-button { width: var(--sop-size-control-small); min-height: var(--sop-size-control-small); padding: 0; }
+    :is(button, input, select, textarea):focus-visible { outline: 0; box-shadow: var(--sop-shadow-keyboard-focus); }
+
+    .camera-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: var(--sop-space-component);
+    }
+    .camera-card {
+      min-width: 0;
+      padding: 0;
+      overflow: hidden;
+      border: 0;
+      border-radius: var(--sop-radius-card);
+      background: var(--sop-color-background-surface);
+      color: inherit;
+      box-shadow: var(--sop-shadow-surface);
+      text-align: left;
+      cursor: pointer;
+      transition: box-shadow var(--sop-motion-control), background var(--sop-motion-control);
+    }
+    .camera-card:hover { background: var(--sop-color-background-subtle); box-shadow: 0 0 0 1px var(--sop-color-border-strong); }
+    .camera-card:focus-visible { outline: 0; box-shadow: var(--sop-shadow-keyboard-focus); }
+    .camera-preview {
+      position: relative;
+      aspect-ratio: 16 / 8.5;
+      overflow: hidden;
+      background:
+        linear-gradient(180deg, transparent 55%, #00000085),
+        radial-gradient(circle at 70% 30%, #80929a 0 7%, transparent 7.5%),
+        linear-gradient(150deg, #5c6c72 0 30%, #263239 30% 54%, #80929a 54% 68%, #34464d 68%);
+    }
+    .camera-preview.packing { background: linear-gradient(180deg, transparent 55%, #00000085), linear-gradient(140deg, #827b6d 0 25%, #443f37 25% 55%, #a19a89 55% 70%, #514c43 70%); }
+    .camera-preview.gate { background: linear-gradient(180deg, transparent 55%, #00000085), linear-gradient(155deg, #6e8177 0 32%, #273e37 32% 52%, #9aa69f 52% 67%, #3b4e46 67%); }
+    .camera-preview.storage { background: linear-gradient(180deg, transparent 55%, #00000085), linear-gradient(145deg, #786d76 0 28%, #3d343d 28% 58%, #938592 58% 72%, #494048 72%); }
+    .preview-label { position: absolute; left: 12px; bottom: 10px; color: #fff; font-size: 12px; }
+    .preview-live { position: absolute; top: 10px; right: 10px; display: flex; align-items: center; gap: 6px; height: 20px; padding: 0 8px; border-radius: var(--sop-radius-badge); background: #00000099; color: #fff; font-size: 11px; }
+    .camera-preview.is-degraded { filter: saturate(.72); }
+    .camera-preview.is-offline { filter: grayscale(1); }
+    .camera-preview.is-offline::after { content: ""; position: absolute; inset: 0; background: #00000066; }
+    .camera-preview.is-offline > * { z-index: 1; }
+    .status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--sop-color-status-success); }
+    .status-dot.warning { background: var(--sop-color-status-warning); }
+    .status-dot.danger { background: var(--sop-color-status-danger); }
+    .camera-body { padding: var(--sop-space-card); }
+    .camera-heading, .detail-heading, .section-heading, .source-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .camera-name { overflow: hidden; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+    .camera-address { margin-top: 4px; color: var(--sop-color-text-secondary); font-family: "Geist Mono", "SFMono-Regular", monospace; font-size: 12px; }
+    .camera-meta { display: flex; justify-content: space-between; margin-top: var(--sop-space-component); color: var(--sop-color-text-muted); font-size: 12px; }
+    .badge { display: inline-flex; align-items: center; gap: 6px; height: 20px; padding: 0 8px; border-radius: var(--sop-radius-badge); background: var(--sop-color-background-subtle); color: var(--sop-color-text-secondary); font-size: 11px; font-weight: 500; letter-spacing: .2px; white-space: nowrap; }
+    .badge.success { color: light-dark(#297a3a, #65c777); }
+    .badge.warning { color: var(--sop-color-status-warning); }
+    .badge.danger { color: var(--sop-color-status-danger); }
+    .badge.neutral { color: var(--sop-color-text-secondary); }
+    .badge.muted { color: var(--sop-color-text-muted); }
+
+    .detail-view { display: grid; width: 100%; max-width: 1320px; gap: var(--sop-space-page); margin: 0 auto; }
+    .detail-heading { align-items: flex-start; }
+    .detail-identity { display: flex; align-items: center; gap: var(--sop-space-inline); min-width: 0; }
+    .detail-title { margin: 0; font-size: 20px; line-height: 26px; letter-spacing: -.4px; }
+    .detail-subtitle { margin-top: 4px; color: var(--sop-color-text-secondary); }
+    .detail-actions { display: flex; gap: var(--sop-space-inline-compact); }
+    .surface { overflow: hidden; border-radius: var(--sop-radius-card); background: var(--sop-color-background-surface); box-shadow: var(--sop-shadow-surface); }
+    .surface-body { padding: var(--sop-space-card); }
+    .overview-grid { display: grid; grid-template-columns: minmax(0, 1.65fr) minmax(300px, .75fr); align-items: start; gap: var(--sop-space-page); }
+    .live-preview {
+      position: relative;
+      display: grid;
+      place-items: center;
+      width: 100%;
+      min-width: 0;
+      aspect-ratio: 16 / 9;
+      overflow: hidden;
+      border-radius: var(--sop-radius-card);
+      box-shadow: var(--sop-shadow-surface);
+      background: linear-gradient(150deg, #526168 0 30%, #222d32 30% 54%, #75858c 54% 68%, #2d3d43 68%);
+      color: #fff;
+    }
+    .live-preview::after { content: ""; position: absolute; inset: auto 0 0; height: 45%; background: linear-gradient(transparent, #00000085); }
+    .live-preview.is-paused::before { content: "预览已停止"; position: relative; z-index: 2; font-weight: 600; }
+    .live-preview.is-paused { background: #171717; }
+    .live-preview-label { position: absolute; z-index: 2; left: 16px; bottom: 16px; }
+    .live-preview.is-paused .live-preview-label { display: none; }
+    .connection-surface { min-width: 0; }
+    .info-list { display: grid; margin: 0; }
+    .info-row { display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--sop-color-border-default); }
+    .info-row:first-child { padding-top: 0; }
+    .info-row:last-child { padding-bottom: 0; border-bottom: 0; }
+    .info-row dt { color: var(--sop-color-text-muted); }
+    .info-row dd { min-width: 0; margin: 0; overflow-wrap: anywhere; }
+    .mono { font-family: "Geist Mono", "SFMono-Regular", Menlo, monospace; font-size: 12px; }
+    .section-heading { margin-bottom: var(--sop-space-component); }
+    .section-title { margin: 0; font-size: 16px; font-weight: 600; line-height: 24px; }
+    .section-description { margin: 2px 0 0; color: var(--sop-color-text-secondary); }
+    .source-list { display: grid; border-top: 1px solid var(--sop-color-border-default); }
+    .source-row { display: grid; grid-template-columns: 56px minmax(140px, .55fr) minmax(320px, 1.45fr) 72px; align-items: center; min-height: 56px; border-bottom: 1px solid var(--sop-color-border-default); }
+    .source-row:last-child { border-bottom: 0; }
+    .source-row > * { min-width: 0; padding: 10px 12px; }
+    .source-header { min-height: 40px; background: var(--sop-color-background-subtle); color: var(--sop-color-text-muted); font-size: 12px; font-weight: 500; }
+    .source-url { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .radio-cell { text-align: center; }
+    input[type="radio"] { width: 16px; height: 16px; margin: 0; accent-color: var(--sop-color-action-primary); }
+
+    .empty-state { display: grid; justify-items: center; max-width: 420px; margin: 96px auto; text-align: center; }
+    .empty-state-icon { display: grid; place-items: center; width: 40px; height: 40px; margin-bottom: 24px; border-radius: var(--sop-radius-control); background: var(--sop-color-background-active); }
+    .empty-state h2 { margin: 0; font-size: 16px; line-height: 24px; }
+    .empty-state p { margin: 8px 0 20px; color: var(--sop-color-text-secondary); }
+    .notice { display: flex; align-items: flex-start; gap: 12px; max-width: 720px; min-height: 36px; padding: 12px; margin: 64px auto; border: 1px solid var(--sop-color-border-default); border-radius: var(--sop-radius-control); background: var(--sop-color-background-surface); }
+    .notice strong { display: block; margin-bottom: 4px; }
+    .notice p { margin: 0; color: var(--sop-color-text-secondary); }
+
+    .tasks-page { display: block; }
+    .task-list-view, .task-detail-view { display: grid; width: 100%; max-width: 1320px; gap: var(--sop-space-page); margin: 0 auto; }
+    .task-toolbar { justify-content: flex-end; }
+    .task-panel-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 64px; padding: 12px 20px; border-bottom: 1px solid var(--sop-color-border-default); }
+    .task-panel-title { margin: 0; font-size: 16px; font-weight: 600; line-height: 24px; }
+    .task-panel-description { margin: 2px 0 0; color: var(--sop-color-text-secondary); font-size: 12px; }
+    .task-list { display: grid; }
+    .task-list-header, .task-list-item { display: grid; grid-template-columns: minmax(180px, 1fr) minmax(220px, 1.3fr) minmax(180px, 1fr) 100px 24px; align-items: center; gap: 16px; min-height: 56px; padding: 0 20px; }
+    .task-list-header { min-height: 40px; background: var(--sop-color-background-subtle); color: var(--sop-color-text-muted); font-size: 12px; font-weight: 500; }
+    .task-list-item { width: 100%; border: 0; border-top: 1px solid var(--sop-color-border-default); background: transparent; color: inherit; text-align: left; cursor: pointer; }
+    .task-list-item:hover { background: var(--sop-color-background-subtle); }
+    .task-list-item > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .task-list-item { min-height: 64px; }
+    .task-item-copy { display: block; }
+    .task-item-name { display: block; overflow: hidden; font-weight: 500; text-overflow: ellipsis; white-space: nowrap; }
+    .task-item-description { display: block; overflow: hidden; margin-top: 2px; color: var(--sop-color-text-muted); font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+    .task-row-arrow { width: 16px; height: 16px; justify-self: end; color: var(--sop-color-text-muted); }
+    .task-detail-heading { align-items: flex-start; }
+    .task-heading { display: flex; align-items: center; gap: 10px; min-width: 0; }
+    .task-heading-copy { min-width: 0; }
+    .task-heading-copy .detail-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .task-heading-description { max-width: 640px; margin: 3px 0 0; overflow: hidden; color: var(--sop-color-text-secondary); text-overflow: ellipsis; white-space: nowrap; }
+    .task-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: var(--sop-space-inline-compact); }
+    .task-binding { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1px; overflow: hidden; border-radius: var(--sop-radius-card); background: var(--sop-color-border-default); box-shadow: var(--sop-shadow-surface); }
+    .task-binding > div { min-width: 0; padding: 12px 16px; background: var(--sop-color-background-surface); }
+    .task-binding-label { color: var(--sop-color-text-muted); font-size: 12px; }
+    .task-binding-value { margin-top: 4px; overflow: hidden; font-weight: 500; text-overflow: ellipsis; white-space: nowrap; }
+    .task-preview-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .roi-toggle { display: inline-flex; align-items: center; gap: 8px; min-height: 32px; cursor: pointer; }
+    .roi-toggle input { width: 16px; height: 16px; margin: 0; accent-color: var(--sop-color-action-primary); }
+    .roi-legend { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; min-height: 32px; padding: 8px 12px; border-radius: var(--sop-radius-control); background: var(--sop-color-background-subtle); }
+    .roi-legend .roi-toggle { min-height: 20px; font-size: 12px; font-weight: 500; }
+    .roi-legend-divider { width: 1px; height: 16px; background: var(--sop-color-border-default); }
+    .roi-legend-items { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; }
+    .roi-legend-item { display: inline-flex; align-items: center; gap: 6px; color: var(--sop-color-text-secondary); font-size: 12px; }
+    .roi-legend-color { width: 8px; height: 8px; flex: none; border-radius: 50%; }
+    .task-video-wrap { width: min(100%, 960px); margin: 0 auto; }
+    .task-video {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      overflow: hidden;
+      border-radius: var(--sop-radius-card);
+      background: linear-gradient(150deg, #5a676c 0 28%, #1f2a2f 28% 55%, #738086 55% 68%, #2a393e 68%);
+      box-shadow: var(--sop-shadow-surface);
+      color: #fff;
+    }
+    .task-video::after { content: ""; position: absolute; inset: auto 0 0; height: 40%; background: linear-gradient(transparent, #0000008f); }
+    .task-video-label, .task-video-meta { position: absolute; z-index: 3; left: 12px; font-size: 12px; }
+    .task-video-label { top: 10px; }
+    .task-video-meta { bottom: 10px; }
+    .roi-overlay { position: absolute; inset: 0; z-index: 1; width: 100%; height: 100%; pointer-events: none; }
+    .roi-polygon { vector-effect: non-scaling-stroke; stroke-width: 2px; fill-opacity: .12; }
+    .detection-frame { position: absolute; z-index: 2; top: 20%; left: 56%; width: 24%; height: 60%; border: 2px solid #65d896; }
+    .detection-frame span { position: absolute; top: -22px; left: -2px; padding: 1px 5px; background: #297a3a; color: #fff; font-size: 11px; white-space: nowrap; }
+    .task-video-stopped { position: absolute; inset: 0; z-index: 4; display: none; place-items: center; background: #171717e8; text-align: center; }
+    .task-video.is-stopped .task-video-stopped { display: grid; }
+    .task-video.is-stopped .detection-frame, .task-video.is-stopped .roi-overlay, .task-video.is-stopped .task-video-label, .task-video.is-stopped .task-video-meta { display: none; }
+    .task-video-stopped span { display: block; margin-top: 4px; color: #a8a8a8; font-size: 12px; }
+    .dialog.task-config-dialog { width: min(980px, calc(100vw - 48px)); }
+    .roi-editor-section { padding-top: 20px; margin-top: 20px; border-top: 1px solid var(--sop-color-border-default); }
+    .roi-editor-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+    .roi-editor-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+    .roi-requirement { display: flex; align-items: flex-start; gap: 8px; min-height: 36px; padding: 8px 12px; margin-top: 12px; border: 1px solid var(--sop-color-border-default); border-radius: var(--sop-radius-control); background: var(--sop-color-background-subtle); color: var(--sop-color-text-secondary); }
+    .roi-editor-layout { display: grid; grid-template-columns: minmax(0, 1fr) 220px; align-items: start; gap: 16px; margin-top: 16px; }
+    .roi-canvas {
+      position: relative;
+      aspect-ratio: 16 / 9;
+      overflow: hidden;
+      border-radius: var(--sop-radius-card);
+      background: linear-gradient(150deg, #5a676c 0 28%, #1f2a2f 28% 55%, #738086 55% 68%, #2a393e 68%);
+      box-shadow: var(--sop-shadow-surface);
+      cursor: crosshair;
+      user-select: none;
+    }
+    .roi-canvas.is-editing { cursor: default; }
+    .roi-editor-svg { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: none; }
+    .roi-editor-polygon { vector-effect: non-scaling-stroke; stroke-width: 2px; fill-opacity: .16; cursor: pointer; }
+    .roi-editor-polygon.is-selected { stroke-width: 3px; fill-opacity: .24; }
+    .roi-editor-draft { vector-effect: non-scaling-stroke; stroke: #fff; stroke-width: 2px; stroke-dasharray: 5 4; fill: #ffffff12; }
+    .roi-vertex { vector-effect: non-scaling-stroke; stroke: #fff; stroke-width: 1.5px; cursor: grab; }
+    .roi-vertex:active { cursor: grabbing; }
+    .roi-editor-hint { position: absolute; z-index: 2; left: 12px; bottom: 10px; padding: 4px 8px; border-radius: var(--sop-radius-control); background: #000000a8; color: #fff; font-size: 12px; pointer-events: none; }
+    .roi-side { overflow: hidden; border-radius: var(--sop-radius-card); background: var(--sop-color-background-surface); box-shadow: var(--sop-shadow-surface); }
+    .roi-side-title { padding: 12px; border-bottom: 1px solid var(--sop-color-border-default); font-weight: 600; }
+    .roi-list { display: grid; max-height: 270px; overflow-y: auto; padding: 8px; }
+    .roi-list-item { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 8px; min-height: 52px; padding: 6px 8px; border: 0; border-radius: var(--sop-radius-control); background: transparent; color: inherit; text-align: left; }
+    .roi-list-item.is-selected { background: var(--sop-color-background-active); }
+    .roi-list-item input { width: 16px; height: 16px; margin: 0; accent-color: var(--sop-color-action-primary); }
+    .roi-list-select { min-width: 0; padding: 0; border: 0; background: transparent; color: inherit; text-align: left; cursor: pointer; }
+    .roi-list-name { display: block; overflow: hidden; font-weight: 500; text-overflow: ellipsis; white-space: nowrap; }
+    .roi-list-meta { display: block; color: var(--sop-color-text-muted); font-size: 11px; }
+    .roi-color { width: 8px; height: 8px; border-radius: 50%; }
+    .roi-id { display: block; overflow: hidden; margin-top: 2px; color: var(--sop-color-text-muted); font: 10px/16px "Geist Mono", "SFMono-Regular", Menlo, monospace; text-overflow: ellipsis; white-space: nowrap; }
+    .roi-state { min-width: 48px; color: var(--sop-color-text-muted); font-size: 11px; text-align: right; }
+    .roi-state.complete { color: light-dark(#297a3a, #65c777); }
+    .algorithm-parameters { grid-column: 1 / -1; padding-top: 16px; border-top: 1px solid var(--sop-color-border-default); }
+    .algorithm-parameters-head { margin-bottom: 12px; }
+    .dynamic-parameter-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+    .parameter-boolean { display: flex; align-items: center; gap: 10px; min-height: 38px; padding-top: 24px; font-weight: 400; cursor: pointer; }
+    .parameter-boolean input { width: 16px; height: 16px; margin: 0; accent-color: var(--sop-color-action-primary); }
+    .button.is-loading svg { animation: task-spin .8s linear infinite; }
+    @keyframes task-spin { to { transform: rotate(360deg); } }
+
+    .dialog-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 100;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+      background: #00000072;
+    }
+    .dialog {
+      display: flex;
+      flex-direction: column;
+      width: min(760px, calc(100vw - 48px));
+      max-height: calc(100vh - 48px);
+      overflow: hidden;
+      border-radius: var(--sop-radius-popover);
+      background: var(--sop-color-background-surface);
+      box-shadow: var(--sop-shadow-modal);
+    }
+    .dialog-header, .dialog-footer { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 16px 20px; }
+    .dialog-header { border-bottom: 1px solid var(--sop-color-border-default); }
+    .dialog-footer { justify-content: flex-end; border-top: 1px solid var(--sop-color-border-default); background: var(--sop-color-background-subtle); }
+    .dialog-title { margin: 0; font-size: 16px; line-height: 24px; }
+    .dialog-description { margin: 2px 0 0; color: var(--sop-color-text-secondary); }
+    .dialog-body { padding: 20px; overflow-y: auto; }
+    .form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+    .field { display: grid; gap: 8px; font-weight: 500; }
+    .field.full { grid-column: 1 / -1; }
+    .field-hint { color: var(--sop-color-text-muted); font-size: 12px; font-weight: 400; }
+    .form-section { padding-top: 20px; margin-top: 20px; border-top: 1px solid var(--sop-color-border-default); }
+    .source-edit-list { display: grid; gap: 8px; margin-top: 16px; }
+    .source-edit-row { display: grid; grid-template-columns: 40px minmax(150px, .65fr) minmax(260px, 1.35fr) 32px; align-items: center; gap: 8px; }
+    .source-edit-row .field-control { min-width: 0; }
+    .generated-url { margin-top: 12px; padding: 12px; border-radius: var(--sop-radius-control); background: var(--sop-color-background-subtle); color: var(--sop-color-text-secondary); overflow-wrap: anywhere; }
+    .form-error { margin: 12px 0 0; color: var(--sop-color-status-danger); }
+    .toast {
+      position: fixed;
+      right: 24px;
+      bottom: 24px;
+      z-index: 130;
+      padding: 10px 12px;
+      border-radius: var(--sop-radius-control);
+      background: var(--sop-color-action-primary);
+      color: var(--sop-color-action-primary-text);
+      box-shadow: var(--sop-shadow-modal);
+      opacity: 0;
+      transform: translateY(8px);
+      pointer-events: none;
+      transition: opacity var(--sop-motion-control), transform var(--sop-motion-control);
+    }
+    .toast.is-visible { opacity: 1; transform: translateY(0); }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; transition-duration: 0s !important; } }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" aria-label="主导航">
+      <button class="brand brand-button" type="button" aria-label="返回 Cameras 首页" data-brand-home><img class="brand-logo" src="../assets/logo/logo1.png" alt=""><span class="brand-name">SOP Vision</span></button>
+      <p class="nav-label">Workspace</p>
+      <nav class="nav">
+        <button class="nav-button" type="button" data-nav="cameras" aria-current="page">
+          <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M14.5 6.5 18 4v16l-3.5-2.5"/><rect x="3" y="6" width="12" height="12" rx="2"/></svg>
+          <span>Cameras</span><span class="nav-meta" data-camera-count>4</span>
+        </button>
+        <button class="nav-button" type="button" data-nav="tasks">
+          <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4M8 11h6M11 8v6"/></svg>
+          <span>Detection Tasks</span><span class="nav-meta" data-task-count>3</span>
+        </button>
+      </nav>
+    </aside>
+
+    <main class="main">
+      <header class="header">
+        <button class="button plain header-back" type="button" data-back-cameras hidden>
+          <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="m15 18-6-6 6-6"/></svg>
+          返回 Cameras
+        </button>
+        <button class="button plain header-back" type="button" data-back-tasks hidden>
+          <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="m15 18-6-6 6-6"/></svg>
+          返回 Detection Tasks
+        </button>
+        <div class="breadcrumb" aria-label="面包屑">
+          <button class="breadcrumb-button" type="button" data-breadcrumb-root aria-current="page">Cameras</button>
+          <span class="breadcrumb-muted" data-breadcrumb-separator hidden>/</span>
+          <span class="breadcrumb-muted" data-breadcrumb-current hidden></span>
+        </div>
+        <div class="header-theme">
+          <button class="icon-button" type="button" aria-label="切换为深色主题" title="切换为深色主题" data-theme-trigger>
+            <svg aria-hidden="true" data-theme-trigger-icon viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.42 1.42M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.42-1.42M17.66 6.34l1.41-1.41"/></svg>
+          </button>
+        </div>
+      </header>
+
+      <section class="page" data-page="cameras">
+        <div class="page-section" data-camera-list-view>
+          <div class="toolbar">
+            <label class="search">
+              <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
+              <input type="search" placeholder="搜索摄像头名称或 IP" aria-label="搜索摄像头名称或 IP" data-camera-search>
+            </label>
+            <button class="button primary" type="button" data-open-camera-dialog>
+              <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 5v14M5 12h14"/></svg>
+              添加摄像头
+            </button>
+          </div>
+          <div class="camera-grid" data-camera-grid></div>
+          <div class="empty-state" data-search-empty hidden>
+            <span class="empty-state-icon"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg></span>
+            <h2>没有匹配的摄像头</h2>
+            <p>请尝试搜索其他摄像头名称或 IP 地址。</p>
+          </div>
+          <div class="empty-state" data-system-empty hidden>
+            <span class="empty-state-icon"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M14.5 6.5 18 4v16l-3.5-2.5"/><rect x="3" y="6" width="12" height="12" rx="2"/></svg></span>
+            <h2>尚未添加摄像头</h2>
+            <p>添加摄像头连接信息和至少一路视频源后，即可在此预览。</p>
+            <button class="button primary" type="button" data-open-camera-dialog>添加摄像头</button>
+          </div>
+        </div>
+
+        <div class="detail-view" data-camera-detail-view hidden>
+          <div class="detail-heading">
+            <div class="detail-identity">
+              <div><h1 class="detail-title" data-detail-name></h1><p class="detail-subtitle">摄像头连接信息与默认预览</p></div>
+              <span class="badge success" data-camera-status><span class="status-dot"></span>在线</span>
+            </div>
+            <div class="detail-actions">
+              <button class="button" type="button" data-toggle-preview>
+                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 6v12M15 6v12"/></svg><span>停止预览</span>
+              </button>
+              <button class="button" type="button" data-edit-camera>
+                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="m14 5 5 5L8 21H3v-5L14 5Z"/></svg>
+                编辑摄像头
+              </button>
+            </div>
+          </div>
+
+          <div class="overview-grid">
+            <div class="live-preview" data-live-preview><span class="live-preview-label">LIVE · <span data-live-source></span></span></div>
+            <section class="surface connection-surface" aria-labelledby="connection-title">
+              <div class="surface-body">
+                <div class="section-heading"><div><h2 class="section-title" id="connection-title">连接信息</h2><p class="section-description">当前保存的设备连接参数</p></div></div>
+                <dl class="info-list">
+                  <div class="info-row"><dt>IP 地址</dt><dd class="mono" data-detail-ip></dd></div>
+                  <div class="info-row"><dt>RTSP 端口</dt><dd class="mono" data-detail-port></dd></div>
+                  <div class="info-row"><dt>用户名</dt><dd class="mono" data-detail-user></dd></div>
+                  <div class="info-row"><dt>密码</dt><dd class="mono" data-detail-password></dd></div>
+                  <div class="info-row"><dt>预览源</dt><dd data-detail-preview></dd></div>
+                </dl>
+              </div>
+            </section>
+          </div>
+
+          <section class="surface" aria-labelledby="sources-title">
+            <div class="surface-body">
+              <div class="section-heading">
+                <div><h2 class="section-title" id="sources-title">Camera Sources</h2><p class="section-description">选择一路信号作为该摄像头的默认预览源</p></div>
+                <span class="badge muted" data-source-count></span>
+              </div>
+              <div class="source-list" role="table" aria-label="摄像头视频源">
+                <div class="source-row source-header" role="row"><span role="columnheader" class="radio-cell">预览</span><span role="columnheader">源名称</span><span role="columnheader">完整 RTSP 地址</span><span role="columnheader">状态</span></div>
+                <div data-source-list></div>
+              </div>
+            </div>
+          </section>
+        </div>
+      </section>
+
+      <section class="page tasks-page" data-page="tasks" hidden>
+        <div class="task-list-view" data-task-list-view>
+          <div class="toolbar task-toolbar">
+            <button class="button primary" type="button" data-add-task><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 5v14M5 12h14"/></svg>创建任务</button>
+          </div>
+          <section class="surface" aria-labelledby="task-list-title">
+            <header class="task-panel-header"><div><h1 class="task-panel-title" id="task-list-title">检测任务</h1><p class="task-panel-description"><span data-task-summary-count>3</span> 个已配置任务</p></div></header>
+            <div class="task-list-header" aria-hidden="true"><span>任务名称</span><span>摄像头源</span><span>算法</span><span>状态</span><span></span></div>
+            <div class="task-list" data-task-list></div>
+            <div class="empty-state" data-task-empty hidden>
+              <span class="empty-state-icon"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4M8 11h6M11 8v6"/></svg></span>
+              <h2>尚未创建检测任务</h2><p>创建任务并绑定一路摄像头源和一套算法。</p>
+              <button class="button primary" type="button" data-add-task>创建任务</button>
+            </div>
+          </section>
+        </div>
+
+        <div class="task-detail-view" data-task-detail-view hidden>
+          <div class="detail-heading task-detail-heading">
+            <div class="task-heading"><div class="task-heading-copy"><h1 class="detail-title" data-task-title></h1><p class="task-heading-description" data-task-description></p></div><span class="badge success" data-task-status><span class="status-dot"></span>运行中</span></div>
+            <div class="task-actions">
+              <button class="button" type="button" data-edit-task><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="m14 5 5 5L8 21H3v-5L14 5Z"/></svg>编辑</button>
+              <button class="button" type="button" data-reload-task><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 4v6h6M20 20v-6h-6M5.5 15a7 7 0 0 0 11.7 2.5L20 14M4 10l2.8-3.5A7 7 0 0 1 18.5 9"/></svg><span>重载</span></button>
+              <button class="button" type="button" data-restart-task><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M20 12a8 8 0 1 1-2.34-5.66M20 4v6h-6"/></svg><span>重启</span></button>
+              <button class="button danger" type="button" data-toggle-task><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="7" y="7" width="10" height="10"/></svg><span>停止</span></button>
+              <button class="button danger" type="button" data-delete-task><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 7h16M9 7V4h6v3M8 10v7M12 10v7M16 10v7M6 7l1 14h10l1-14"/></svg>删除</button>
+            </div>
+          </div>
+          <div class="task-binding">
+            <div><div class="task-binding-label">任务 ID</div><div class="task-binding-value mono" data-task-id></div></div>
+            <div><div class="task-binding-label">绑定摄像头源</div><div class="task-binding-value" data-task-source></div></div>
+            <div><div class="task-binding-label">算法</div><div class="task-binding-value" data-task-algorithm></div></div>
+            <div><div class="task-binding-label">算法参数</div><div class="task-binding-value" data-task-parameters></div></div>
+          </div>
+          <div class="task-preview-toolbar">
+            <div><h2 class="section-title">检测预览</h2><p class="section-description">检测结果框始终显示，<span data-task-roi-summary>0</span> 个 ROI 可统一显隐。</p></div>
+          </div>
+          <div class="roi-legend" aria-label="ROI 显示设置与图例">
+            <label class="roi-toggle"><input type="checkbox" data-toggle-roi checked>显示 ROI</label>
+            <span class="roi-legend-divider" aria-hidden="true"></span>
+            <div class="roi-legend-items" data-roi-legend-items></div>
+          </div>
+          <div class="task-video-wrap">
+            <div class="task-video" data-task-video role="img" aria-label="检测任务实时标注画面">
+              <span class="task-video-label">LIVE · <span data-task-camera></span></span>
+              <svg class="roi-overlay" data-roi-overlay viewBox="0 0 100 56.25" preserveAspectRatio="none" aria-hidden="true"></svg>
+              <div class="detection-frame"><span data-detection-label></span></div>
+              <span class="task-video-meta" data-task-frame-meta></span>
+              <div class="task-video-stopped"><div><strong>任务已停止</strong><span>enabled = false</span></div></div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div class="dialog-backdrop" data-dialog-backdrop hidden>
+    <section class="dialog" role="dialog" aria-modal="true" aria-labelledby="camera-dialog-title" aria-describedby="camera-dialog-description">
+      <header class="dialog-header">
+        <div><h2 class="dialog-title" id="camera-dialog-title" data-dialog-title>添加摄像头</h2><p class="dialog-description" id="camera-dialog-description">配置设备连接信息和一路或多路视频源。</p></div>
+        <button class="icon-button" type="button" aria-label="关闭" data-close-dialog>
+          <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="m6 6 12 12M18 6 6 18"/></svg>
+        </button>
+      </header>
+      <div class="dialog-body">
+        <div class="form-grid">
+          <label class="field full">摄像头名称<input class="field-control" data-form-name autocomplete="off"></label>
+          <label class="field">IP 地址<input class="field-control" data-form-ip inputmode="decimal" autocomplete="off"></label>
+          <label class="field">RTSP 端口<input class="field-control" data-form-port type="number" min="1" max="65535"></label>
+          <label class="field">用户名<input class="field-control" data-form-user autocomplete="username"></label>
+          <label class="field">密码<input class="field-control" data-form-password type="text" autocomplete="current-password"></label>
+        </div>
+        <section class="form-section" aria-labelledby="form-sources-title">
+          <div class="source-head">
+            <div><h3 class="section-title" id="form-sources-title">Camera Sources</h3><p class="section-description">填写 URL 后缀，并用单选框指定默认预览源。</p></div>
+            <button class="button" type="button" data-add-source>
+              <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 5v14M5 12h14"/></svg>
+              添加一路
+            </button>
+          </div>
+          <div class="source-edit-list" data-source-edit-list></div>
+          <div class="generated-url mono" data-generated-url>完整填写连接信息后生成预览地址。</div>
+        </section>
+        <p class="form-error" id="camera-form-error" role="alert" data-form-error hidden></p>
+      </div>
+      <footer class="dialog-footer">
+        <button class="button" type="button" data-close-dialog>取消</button>
+        <button class="button primary" type="button" data-save-camera>保存摄像头</button>
+      </footer>
+    </section>
+  </div>
+
+  <div class="dialog-backdrop" data-task-dialog-backdrop hidden>
+    <section class="dialog task-config-dialog" role="dialog" aria-modal="true" aria-labelledby="task-dialog-title" aria-describedby="task-dialog-description" data-task-dialog>
+      <header class="dialog-header">
+        <div><h2 class="dialog-title" id="task-dialog-title" data-task-dialog-title>创建检测任务</h2><p class="dialog-description" id="task-dialog-description" data-task-dialog-description>绑定一路摄像头源和一套算法；新任务保存后保持停止，需要手动启动。</p></div>
+        <button class="icon-button" type="button" aria-label="关闭" data-close-task-dialog><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="m6 6 12 12M18 6 6 18"/></svg></button>
+      </header>
+      <div class="dialog-body">
+        <div class="form-grid">
+          <label class="field full">任务名称<input class="field-control" data-task-form-name autocomplete="off"></label>
+          <label class="field full">任务描述<textarea class="field-control" data-task-form-description maxlength="100" placeholder="例如：一楼洗手区早班人员检测，用于与同类任务区分"></textarea><span class="field-hint">选填，最多 100 个字符</span></label>
+          <label class="field">摄像头源<select class="field-control" data-task-form-source></select></label>
+          <label class="field">算法<select class="field-control" data-task-form-algorithm></select></label>
+          <section class="algorithm-parameters" aria-labelledby="algorithm-parameters-title">
+            <div class="algorithm-parameters-head"><h3 class="section-title" id="algorithm-parameters-title">算法参数</h3><p class="section-description">参数字段与默认值由所选算法的接口定义动态生成。</p></div>
+            <div class="dynamic-parameter-grid" data-task-dynamic-parameters></div>
+          </section>
+        </div>
+        <section class="roi-editor-section" aria-labelledby="roi-editor-title">
+          <div class="roi-editor-header">
+            <div><h3 class="section-title" id="roi-editor-title">算法 ROI</h3><p class="section-description">ROI 的 ID、标签和数量由算法接口返回；请逐个绘制边界。</p></div>
+            <div class="roi-editor-actions">
+              <button class="button" type="button" data-draw-selected-roi><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="m14 5 5 5L8 21H3v-5L14 5Z"/></svg><span>绘制所选 ROI</span></button>
+              <button class="button" type="button" data-undo-roi-point hidden>撤销一点</button>
+              <button class="button primary" type="button" data-finish-roi hidden>完成绘制</button>
+            </div>
+          </div>
+          <div class="roi-requirement"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="width:16px;height:16px;flex:none"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg><span data-roi-requirement></span></div>
+          <div class="roi-editor-layout">
+            <div class="roi-canvas" data-roi-canvas>
+              <svg class="roi-editor-svg" data-roi-editor-svg viewBox="0 0 100 56.25" preserveAspectRatio="none" aria-label="ROI 多边形编辑画布"></svg>
+              <span class="roi-editor-hint" data-roi-editor-hint>选择一个 ROI 后可拖动顶点调整区域</span>
+            </div>
+            <aside class="roi-side" aria-label="算法 ROI 列表"><div class="roi-side-title">算法要求 · <span data-roi-count>0</span></div><div class="roi-list" data-roi-list></div></aside>
+          </div>
+        </section>
+        <p class="form-error" id="task-form-error" role="alert" data-task-form-error hidden></p>
+      </div>
+      <footer class="dialog-footer">
+        <button class="button" type="button" data-close-task-dialog>取消</button>
+        <button class="button primary" type="button" data-save-task>保存任务</button>
+      </footer>
+    </section>
+  </div>
+
+  <div class="dialog-backdrop" data-delete-task-backdrop hidden>
+    <section class="dialog" role="alertdialog" aria-modal="true" aria-labelledby="delete-task-title" aria-describedby="delete-task-description" data-delete-task-dialog style="width:min(440px,calc(100vw - 48px))">
+      <header class="dialog-header"><div><h2 class="dialog-title" id="delete-task-title">删除检测任务</h2><p class="dialog-description" id="delete-task-description">删除后无法从本原型中恢复。</p></div><button class="icon-button" type="button" aria-label="关闭" data-close-delete-task><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="m6 6 12 12M18 6 6 18"/></svg></button></header>
+      <div class="dialog-body"><p style="margin:0">确定删除“<strong data-delete-task-name></strong>”吗？</p></div>
+      <footer class="dialog-footer"><button class="button" type="button" data-close-delete-task>取消</button><button class="button danger" type="button" data-confirm-delete-task>删除任务</button></footer>
+    </section>
+  </div>
+
+  <div class="toast" role="status" aria-live="polite" data-toast></div>
+
+  <script>
+    (() => {
+      const $ = (selector, parent = document) => parent.querySelector(selector);
+      const $$ = (selector, parent = document) => [...parent.querySelectorAll(selector)];
+      const cameras = [
+        { id: 'wash-01', name: '洗手区 01', ip: '192.168.1.64', port: '554', user: 'admin', password: 'hikvision123', preview: 0, tone: '', taskCount: 2, sources: [
+          { name: '通道 1 主码流', suffix: 'Streaming/Channels/101', health: 'online' }, { name: '通道 1 子码流', suffix: 'Streaming/Channels/102', health: 'online' }
+        ]},
+        { id: 'packing-02', name: '包装工位 02', ip: '192.168.1.81', port: '554', user: 'admin', password: 'packing123', preview: 0, tone: 'packing', taskCount: 1, sources: [
+          { name: '通道 1 主码流', suffix: 'Streaming/Channels/101', health: 'online' }, { name: '通道 1 子码流', suffix: 'Streaming/Channels/102', health: 'degraded' }
+        ]},
+        { id: 'gate-01', name: '仓库入口 01', ip: '192.168.1.92', port: '554', user: 'operator', password: 'warehouse123', preview: 0, tone: 'gate', taskCount: 0, sources: [
+          { name: '通道 1 主码流', suffix: 'Streaming/Channels/101', health: 'offline' }
+        ]},
+        { id: 'storage-03', name: '原料库 03', ip: '192.168.1.103', port: '554', user: 'admin', password: 'storage123', preview: 1, tone: 'storage', taskCount: 0, sources: [
+          { name: '通道 2 主码流', suffix: 'Streaming/Channels/201', health: 'online' }, { name: '通道 2 子码流', suffix: 'Streaming/Channels/202', health: 'online' }
+        ]}
+      ];
+
+      const algorithms = [
+        {
+          id: 'region-person-detection', name: '区域人员检测', version: 'v2.1.0',
+          parameters: [
+            { key: 'confidence', label: '置信度阈值', type: 'number', default: 0.55, min: 0, max: 1, step: 0.05 },
+            { key: 'minStaySeconds', label: '最短停留时间', type: 'number', default: 2, min: 0, max: 60, step: 1, unit: '秒' },
+            { key: 'trackingMode', label: '跟踪模式', type: 'select', default: 'balanced', options: [{ value: 'fast', label: '快速' }, { value: 'balanced', label: '均衡' }, { value: 'accurate', label: '精确' }] }
+          ],
+          roiDefinitions: [
+            { id: 'washing_area', label: '洗手池监测区' },
+            { id: 'sanitizing_area', label: '消毒监测区' }
+          ]
+        },
+        {
+          id: 'ppe-compliance', name: '安全着装检测', version: 'v1.3.0',
+          parameters: [
+            { key: 'confidence', label: '置信度阈值', type: 'number', default: 0.6, min: 0, max: 1, step: 0.05 },
+            { key: 'violationFrames', label: '连续违规帧数', type: 'number', default: 8, min: 1, max: 120, step: 1, unit: '帧' },
+            { key: 'detectHelmet', label: '检测安全帽', type: 'boolean', default: true },
+            { key: 'detectVest', label: '检测反光衣', type: 'boolean', default: true }
+          ],
+          roiDefinitions: [
+            { id: 'packing_station_a', label: '包装工位 A' },
+            { id: 'packing_station_b', label: '包装工位 B' }
+          ]
+        },
+        {
+          id: 'passage-counter', name: '通行计数', version: 'v1.0.2',
+          parameters: [
+            { key: 'confidence', label: '置信度阈值', type: 'number', default: 0.5, min: 0, max: 1, step: 0.05 },
+            { key: 'direction', label: '计数方向', type: 'select', default: 'both', options: [{ value: 'in', label: '仅进入' }, { value: 'out', label: '仅离开' }, { value: 'both', label: '双向' }] },
+            { key: 'debounceSeconds', label: '重复计数间隔', type: 'number', default: 3, min: 0, max: 30, step: 1, unit: '秒' }
+          ],
+          roiDefinitions: [
+            { id: 'entry_zone', label: '入口判定区' },
+            { id: 'exit_zone', label: '出口判定区' }
+          ]
+        }
+      ];
+
+      const tasks = [
+        {
+          id: 'task-person-01', name: '区域人员检测', description: '一楼洗手区早班人员停留检测', sourceRef: 'wash-01::0', algorithmId: 'region-person-detection',
+          parameters: { confidence: 0.55, minStaySeconds: 2, trackingMode: 'balanced' }, enabled: true, runtime: 'running', showRoi: true, rois: [
+            { id: 'washing_area', label: '洗手池监测区', color: '#5aa7ff', points: [[8, 12], [48, 9], [45, 49], [10, 52]] },
+            { id: 'sanitizing_area', label: '消毒监测区', color: '#bd7af5', points: [[56, 10], [91, 15], [88, 49], [60, 45], [53, 29]] }
+          ],
+          label: 'person #12 · 96%', frameMeta: 'frame 18272 · 14:20:00.123'
+        },
+        {
+          id: 'task-ppe-02', name: '安全着装检测', description: '包装二线白班安全帽与反光衣检查', sourceRef: 'packing-02::0', algorithmId: 'ppe-compliance',
+          parameters: { confidence: 0.6, violationFrames: 8, detectHelmet: true, detectVest: true }, enabled: true, runtime: 'degraded', showRoi: true, rois: [
+            { id: 'packing_station_a', label: '包装工位 A', color: '#5aa7ff', points: [[6, 8], [47, 11], [43, 50], [9, 47]] },
+            { id: 'packing_station_b', label: '包装工位 B', color: '#ffb224', points: [[53, 10], [94, 8], [90, 48], [58, 51], [50, 31]] }
+          ],
+          label: 'helmet missing · 91%', frameMeta: 'frame 9641 · 14:19:58.804'
+        },
+        {
+          id: 'task-count-03', name: '通行计数', description: '洗手区侧门双向人员通行统计', sourceRef: 'wash-01::1', algorithmId: 'passage-counter',
+          parameters: { confidence: 0.5, direction: 'both', debounceSeconds: 3 }, enabled: false, runtime: 'stopped', showRoi: false, rois: [
+            { id: 'entry_zone', label: '入口判定区', color: '#5aa7ff', points: [[12, 7], [44, 7], [41, 50], [15, 52], [9, 30]] },
+            { id: 'exit_zone', label: '出口判定区', color: '#ffb224', points: [[56, 7], [88, 9], [92, 31], [84, 51], [59, 48]] }
+          ],
+          label: '等待检测结果', frameMeta: '等待任务启动'
+        }
+      ];
+
+      let currentCameraId = null;
+      let editingCameraId = null;
+      let previewPaused = false;
+      let lastDialogTrigger = null;
+      let currentTaskId = tasks[0].id;
+      let editingTaskId = null;
+      let lastTaskDialogTrigger = null;
+      let lastDeleteTaskTrigger = null;
+      let workingRois = [];
+      let selectedRoiId = null;
+      let drawingPoints = null;
+      let draggingVertex = null;
+      let toastTimer;
+      const ROI_COLORS = ['#5aa7ff', '#bd7af5', '#ffb224', '#65d896', '#ff6b8a', '#4dd4d0'];
+
+      const grid = $('[data-camera-grid]');
+      const listView = $('[data-camera-list-view]');
+      const detailView = $('[data-camera-detail-view]');
+      const dialogBackdrop = $('[data-dialog-backdrop]');
+      const dialog = $('.dialog', dialogBackdrop);
+      const taskDialogBackdrop = $('[data-task-dialog-backdrop]');
+      const taskDialog = $('[data-task-dialog]');
+      const deleteTaskBackdrop = $('[data-delete-task-backdrop]');
+      const deleteTaskDialog = $('[data-delete-task-dialog]');
+      const taskListView = $('[data-task-list-view]');
+      const taskDetailView = $('[data-task-detail-view]');
+      const searchInput = $('[data-camera-search]');
+      const themeTrigger = $('[data-theme-trigger]');
+
+      const escapeHtml = value => String(value).replace(/[&<>'"]/g, char => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', "'":'&#39;', '"':'&quot;' })[char]);
+      const sourceUrl = (camera, source) => `rtsp://${camera.user}:${camera.password}@${camera.ip}:${camera.port}/${source.suffix.replace(/^\/+/, '')}`;
+      const getCurrentCamera = () => cameras.find(camera => camera.id === currentCameraId);
+      const healthMeta = {
+        online: { label: '在线', badge: 'success', dot: '', preview: 'LIVE' },
+        partial: { label: '部分异常', badge: 'warning', dot: 'warning', preview: '信号异常' },
+        degraded: { label: '异常', badge: 'warning', dot: 'warning', preview: '信号异常' },
+        offline: { label: '离线', badge: 'danger', dot: 'danger', preview: '无信号' }
+      };
+      const taskStateMeta = {
+        running: { label: '运行中', badge: 'success', dot: '' },
+        degraded: { label: '性能下降', badge: 'warning', dot: 'warning' },
+        stopped: { label: '已停止', badge: 'neutral', dot: 'danger' }
+      };
+
+      function cameraHealth(camera) {
+        const states = camera.sources.map(source => source.health || 'online');
+        if (states.length && states.every(state => state === 'offline')) return 'offline';
+        if (states.some(state => state !== 'online')) return 'partial';
+        return 'online';
+      }
+
+      function statusBadge(state, extraAttributes = '') {
+        const meta = healthMeta[state] || healthMeta.offline;
+        return `<span class="badge ${meta.badge}" ${extraAttributes}><span class="status-dot ${meta.dot}"></span>${meta.label}</span>`;
+      }
+
+      function taskState(task) {
+        if (!task.enabled) return 'stopped';
+        return task.runtime === 'degraded' ? 'degraded' : 'running';
+      }
+
+      function taskStatusBadge(task) {
+        const meta = taskStateMeta[taskState(task)];
+        return `<span class="badge ${meta.badge}"><span class="status-dot ${meta.dot}"></span>${meta.label}</span>`;
+      }
+
+      function getTaskSource(task) {
+        const [cameraId, sourceIndexText] = task.sourceRef.split('::');
+        const camera = cameras.find(item => item.id === cameraId);
+        const source = camera?.sources[Number(sourceIndexText)];
+        return { camera, source, sourceIndex: Number(sourceIndexText) };
+      }
+
+      function getTaskAlgorithm(task) {
+        return algorithms.find(item => item.id === task.algorithmId) || algorithms[0];
+      }
+
+      function applyTheme(theme, persist = true) {
+        const selectedTheme = theme === 'dark' ? 'dark' : 'light';
+        document.documentElement.dataset.theme = selectedTheme;
+        const actionLabel = selectedTheme === 'dark' ? '切换为浅色主题' : '切换为深色主题';
+        themeTrigger.setAttribute('aria-label', actionLabel);
+        themeTrigger.setAttribute('title', actionLabel);
+        $('[data-theme-trigger-icon]').innerHTML = selectedTheme === 'dark'
+          ? '<path d="M20.5 14.2A8.5 8.5 0 0 1 9.8 3.5 8.5 8.5 0 1 0 20.5 14.2Z"/>'
+          : '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.42 1.42M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.42-1.42M17.66 6.34l1.41-1.41"/>';
+        if (persist) {
+          try { localStorage.setItem('sop-vision-theme', selectedTheme); } catch (_) {}
+        }
+      }
+
+      function cameraCard(camera) {
+        const source = camera.sources[camera.preview] || camera.sources[0];
+        const state = cameraHealth(camera);
+        const previewStatus = healthMeta[source.health || 'online'];
+        const onlineSourceCount = camera.sources.filter(item => (item.health || 'online') === 'online').length;
+        const taskCount = tasks.filter(task => task.sourceRef.startsWith(`${camera.id}::`)).length;
+        return `<button class="camera-card" type="button" data-camera-id="${escapeHtml(camera.id)}" aria-label="查看摄像头 ${escapeHtml(camera.name)}，状态${healthMeta[state].label}">
+          <div class="camera-preview ${escapeHtml(camera.tone)} ${source.health === 'offline' ? 'is-offline' : source.health === 'degraded' ? 'is-degraded' : ''}"><span class="preview-live"><span class="status-dot ${previewStatus.dot}"></span>${previewStatus.preview}</span><span class="preview-label">${escapeHtml(source.name)}</span></div>
+          <div class="camera-body"><div class="camera-heading"><span class="camera-name">${escapeHtml(camera.name)}</span>${statusBadge(state)}</div><div class="camera-address">${escapeHtml(camera.ip)}:${escapeHtml(camera.port)}</div><div class="camera-meta"><span>${onlineSourceCount}/${camera.sources.length} 路在线</span><span>${taskCount} 个任务</span></div></div>
+        </button>`;
+      }
+
+      function renderCards() {
+        const query = searchInput.value.trim().toLowerCase();
+        const filtered = cameras.filter(camera => camera.name.toLowerCase().includes(query) || camera.ip.includes(query));
+        grid.innerHTML = filtered.map(cameraCard).join('');
+        $('[data-camera-count]').textContent = cameras.length;
+        $('[data-system-empty]').hidden = cameras.length !== 0;
+        $('[data-search-empty]').hidden = cameras.length === 0 || filtered.length !== 0;
+        grid.hidden = filtered.length === 0;
+        $$('[data-camera-id]', grid).forEach(button => button.addEventListener('click', () => showCameraDetail(button.dataset.cameraId)));
+      }
+
+      function updateBreadcrumb(root, current = '') {
+        const rootButton = $('[data-breadcrumb-root]');
+        rootButton.textContent = root;
+        if (current) rootButton.removeAttribute('aria-current');
+        else rootButton.setAttribute('aria-current', 'page');
+        $('[data-breadcrumb-separator]').hidden = !current;
+        $('[data-breadcrumb-current]').hidden = !current;
+        $('[data-breadcrumb-current]').textContent = current;
+      }
+
+      function showCameraList() {
+        currentCameraId = null;
+        listView.hidden = false;
+        detailView.hidden = true;
+        $('[data-back-cameras]').hidden = true;
+        $('[data-back-tasks]').hidden = true;
+        updateBreadcrumb('Cameras');
+        history.replaceState(null, '', '#cameras');
+        searchInput.focus();
+      }
+
+      function showCameraDetail(id) {
+        const camera = cameras.find(item => item.id === id);
+        if (!camera) return;
+        currentCameraId = id;
+        previewPaused = false;
+        listView.hidden = true;
+        detailView.hidden = false;
+        $('[data-back-cameras]').hidden = false;
+        $('[data-back-tasks]').hidden = true;
+        updateBreadcrumb('Cameras', camera.name);
+        history.replaceState(null, '', `#camera-${id}`);
+        renderDetail();
+        $('[data-back-cameras]').focus();
+      }
+
+      function renderDetail() {
+        const camera = getCurrentCamera();
+        if (!camera) return;
+        const previewSource = camera.sources[camera.preview] || camera.sources[0];
+        const state = cameraHealth(camera);
+        const stateMeta = healthMeta[state];
+        $('[data-detail-name]').textContent = camera.name;
+        $('[data-detail-ip]').textContent = camera.ip;
+        $('[data-detail-port]').textContent = camera.port;
+        $('[data-detail-user]').textContent = camera.user;
+        $('[data-detail-password]').textContent = camera.password;
+        $('[data-detail-preview]').textContent = previewSource.name;
+        $('[data-live-source]').textContent = previewSource.name;
+        const cameraStatus = $('[data-camera-status]');
+        cameraStatus.className = `badge ${stateMeta.badge}`;
+        cameraStatus.innerHTML = `<span class="status-dot ${stateMeta.dot}"></span>${stateMeta.label}`;
+        $('[data-source-count]').textContent = `${camera.sources.length} 路源`;
+        $('[data-live-preview]').classList.toggle('is-paused', previewPaused);
+        $('[data-toggle-preview] span').textContent = previewPaused ? '开始预览' : '停止预览';
+        $('[data-toggle-preview] svg').innerHTML = previewPaused ? '<path d="m8 5 11 7-11 7V5Z"/>' : '<path d="M9 6v12M15 6v12"/>';
+        $('[data-source-list]').innerHTML = camera.sources.map((source, index) => `<div class="source-row" role="row">
+          <span class="radio-cell" role="cell"><input type="radio" name="detail-preview-source" value="${index}" ${camera.preview === index ? 'checked' : ''} aria-label="将 ${escapeHtml(source.name)} 设为预览源"></span>
+          <span role="cell">${escapeHtml(source.name)}</span>
+          <span role="cell" class="source-url mono" title="${escapeHtml(sourceUrl(camera, source))}">${escapeHtml(sourceUrl(camera, source))}</span>
+          <span role="cell">${statusBadge(source.health || 'online')}</span>
+        </div>`).join('');
+        $$('input[name="detail-preview-source"]').forEach(input => input.addEventListener('change', () => {
+          camera.preview = Number(input.value);
+          renderDetail();
+          renderCards();
+          notify(`默认预览源已切换为 ${camera.sources[camera.preview].name}`);
+        }));
+      }
+
+      function renderTaskList() {
+        const list = $('[data-task-list]');
+        $('[data-task-count]').textContent = tasks.length;
+        $('[data-task-summary-count]').textContent = tasks.length;
+        $('[data-task-empty]').hidden = tasks.length !== 0;
+        if (!tasks.length) {
+          list.innerHTML = '';
+          return;
+        }
+        if (!tasks.some(task => task.id === currentTaskId)) currentTaskId = tasks[0].id;
+        list.innerHTML = tasks.map(task => {
+          const { camera, source } = getTaskSource(task);
+          const algorithm = getTaskAlgorithm(task);
+          const sourceLabel = camera && source ? `${camera.name} / ${source.name}` : '摄像头源不可用';
+          return `<button class="task-list-item" type="button" data-task-row-id="${escapeHtml(task.id)}" aria-label="查看检测任务 ${escapeHtml(task.name)}">
+            <span class="task-item-copy"><span class="task-item-name">${escapeHtml(task.name)}</span><span class="task-item-description">${escapeHtml(task.description || '未填写描述')}</span></span>
+            <span>${escapeHtml(sourceLabel)}</span>
+            <span>${escapeHtml(algorithm.name)} · ${escapeHtml(algorithm.version)}</span>
+            <span>${taskStatusBadge(task)}</span>
+            <svg class="task-row-arrow" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="m9 18 6-6-6-6"/></svg>
+          </button>`;
+        }).join('');
+        $$('[data-task-row-id]', list).forEach(button => button.addEventListener('click', () => {
+          showTaskDetail(button.dataset.taskRowId);
+        }));
+      }
+
+      function showTaskList() {
+        taskListView.hidden = false;
+        taskDetailView.hidden = true;
+        $('[data-back-tasks]').hidden = true;
+        updateBreadcrumb('Detection Tasks');
+        history.replaceState(null, '', '#tasks');
+        renderTaskList();
+      }
+
+      function showTaskDetail(id) {
+        const task = tasks.find(item => item.id === id);
+        if (!task) { showTaskList(); return; }
+        currentTaskId = id;
+        taskListView.hidden = true;
+        taskDetailView.hidden = false;
+        $('[data-back-tasks]').hidden = false;
+        updateBreadcrumb('Detection Tasks', task.name);
+        history.replaceState(null, '', `#task-detail-${encodeURIComponent(id)}`);
+        renderTaskDetail();
+        $('[data-back-tasks]').focus();
+      }
+
+      const cloneRois = rois => (rois || []).map(roi => ({ ...roi, points: roi.points.map(point => [...point]) }));
+      const polygonPoints = points => points.map(point => `${point[0]},${point[1]}`).join(' ');
+
+      function createRoiSlots(algorithmId, existingRois = []) {
+        const algorithm = algorithms.find(item => item.id === algorithmId) || algorithms[0];
+        return algorithm.roiDefinitions.map((definition, index) => {
+          const existing = existingRois.find(roi => roi.id === definition.id);
+          return {
+          id: definition.id,
+          label: definition.label,
+          color: ROI_COLORS[index % ROI_COLORS.length],
+          points: existing?.points?.map(point => [...point]) || []
+        }});
+      }
+
+      function parameterDefaults(algorithm) {
+        return Object.fromEntries(algorithm.parameters.map(parameter => [parameter.key, parameter.default]));
+      }
+
+      function parameterDisplay(algorithm, parameter, value) {
+        if (parameter.type === 'boolean') return value ? '开启' : '关闭';
+        if (parameter.type === 'select') return parameter.options.find(option => option.value === value)?.label || value;
+        return `${value}${parameter.unit ? ` ${parameter.unit}` : ''}`;
+      }
+
+      function parameterSummary(task, algorithm) {
+        return algorithm.parameters.slice(0, 2).map(parameter => `${parameter.label} ${parameterDisplay(algorithm, parameter, task.parameters?.[parameter.key] ?? parameter.default)}`).join(' · ');
+      }
+
+      function renderDetailRois(task) {
+        const overlay = $('[data-roi-overlay]');
+        const rois = (task.rois || []).filter(roi => roi.points?.length >= 3);
+        $('[data-roi-legend-items]').innerHTML = rois.map(roi => `<span class="roi-legend-item"><span class="roi-legend-color" style="background:${escapeHtml(roi.color)}"></span>${escapeHtml(roi.label)}</span>`).join('');
+        if (!task.showRoi) {
+          overlay.innerHTML = '';
+          return;
+        }
+        overlay.innerHTML = rois.map(roi => `<polygon class="roi-polygon" points="${polygonPoints(roi.points)}" fill="${escapeHtml(roi.color)}" stroke="${escapeHtml(roi.color)}"></polygon>`).join('');
+      }
+
+      function renderTaskDetail() {
+        const task = tasks.find(item => item.id === currentTaskId);
+        if (!task) return;
+        const { camera, source } = getTaskSource(task);
+        const algorithm = getTaskAlgorithm(task);
+        const state = taskState(task);
+        const stateMeta = taskStateMeta[state];
+        const sourceLabel = camera && source ? `${camera.name} / ${source.name}` : '摄像头源不可用';
+        $('[data-task-title]').textContent = task.name;
+        const description = $('[data-task-description]');
+        description.textContent = task.description || '';
+        description.hidden = !task.description;
+        $('[data-task-id]').textContent = task.id;
+        $('[data-task-source]').textContent = sourceLabel;
+        $('[data-task-algorithm]').textContent = `${algorithm.id} · ${algorithm.version}`;
+        $('[data-task-parameters]').textContent = parameterSummary(task, algorithm);
+        $('[data-task-camera]').textContent = camera?.name || '摄像头不可用';
+        $('[data-detection-label]').textContent = task.label;
+        $('[data-task-frame-meta]').textContent = task.frameMeta;
+        const status = $('[data-task-status]');
+        status.className = `badge ${stateMeta.badge}`;
+        status.innerHTML = `<span class="status-dot ${stateMeta.dot}"></span>${stateMeta.label}`;
+        $('[data-task-video]').classList.toggle('is-stopped', !task.enabled);
+        renderDetailRois(task);
+        $('[data-task-roi-summary]').textContent = (task.rois || []).length;
+        $('[data-toggle-roi]').checked = Boolean(task.showRoi);
+        const toggle = $('[data-toggle-task]');
+        toggle.className = task.enabled ? 'button danger' : 'button';
+        toggle.innerHTML = task.enabled
+          ? '<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="7" y="7" width="10" height="10"/></svg><span>停止</span>'
+          : '<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="m8 5 11 7-11 7V5Z"/></svg><span>启动</span>';
+        const restart = $('[data-restart-task]');
+        restart.disabled = !task.enabled;
+        restart.title = task.enabled ? '使用当前配置重新启动任务' : '任务停止时不能重启';
+        const reload = $('[data-reload-task]');
+        reload.disabled = !task.enabled;
+        reload.title = task.enabled ? '不中断任务进程，重新载入当前配置' : '任务停止时不能重载';
+      }
+
+      function populateTaskSourceOptions() {
+        $('[data-task-form-source]').innerHTML = cameras.map(camera => `<optgroup label="${escapeHtml(camera.name)}">${camera.sources.map((source, index) => `<option value="${escapeHtml(`${camera.id}::${index}`)}">${escapeHtml(source.name)} · ${healthMeta[source.health || 'online'].label}</option>`).join('')}</optgroup>`).join('');
+      }
+
+      function populateAlgorithmOptions() {
+        $('[data-task-form-algorithm]').innerHTML = algorithms.map(algorithm => `<option value="${escapeHtml(algorithm.id)}">${escapeHtml(algorithm.name)} · ${escapeHtml(algorithm.version)}</option>`).join('');
+      }
+
+      function clearTaskFormError() {
+        const error = $('[data-task-form-error]');
+        error.hidden = true;
+        error.textContent = '';
+        $$('.field-control', taskDialog).forEach(input => { input.removeAttribute('aria-invalid'); input.removeAttribute('aria-describedby'); });
+      }
+
+      function showTaskFormError(message, target) {
+        const error = $('[data-task-form-error]');
+        error.textContent = message;
+        error.hidden = false;
+        if (target) {
+          target.setAttribute('aria-invalid', 'true');
+          target.setAttribute('aria-describedby', 'task-form-error');
+          target.focus();
+        }
+      }
+
+      function selectedAlgorithm() {
+        const id = $('[data-task-form-algorithm]').value;
+        return algorithms.find(item => item.id === id) || algorithms[0];
+      }
+
+      function renderDynamicParameters(values = {}) {
+        const algorithm = selectedAlgorithm();
+        $('[data-task-dynamic-parameters]').innerHTML = algorithm.parameters.map(parameter => {
+          const value = values[parameter.key] ?? parameter.default;
+          if (parameter.type === 'select') {
+            return `<label class="field">${escapeHtml(parameter.label)}<select class="field-control" data-algorithm-parameter="${escapeHtml(parameter.key)}" data-parameter-type="select">${parameter.options.map(option => `<option value="${escapeHtml(option.value)}" ${option.value === value ? 'selected' : ''}>${escapeHtml(option.label)}</option>`).join('')}</select></label>`;
+          }
+          if (parameter.type === 'boolean') {
+            return `<label class="parameter-boolean"><input type="checkbox" data-algorithm-parameter="${escapeHtml(parameter.key)}" data-parameter-type="boolean" ${value ? 'checked' : ''}><span>${escapeHtml(parameter.label)}</span></label>`;
+          }
+          return `<label class="field">${escapeHtml(parameter.label)}<input class="field-control" type="number" data-algorithm-parameter="${escapeHtml(parameter.key)}" data-parameter-type="number" value="${escapeHtml(value)}" min="${parameter.min}" max="${parameter.max}" step="${parameter.step}"><span class="field-hint">范围 ${parameter.min}–${parameter.max}${parameter.unit ? ` · 单位：${escapeHtml(parameter.unit)}` : ''}</span></label>`;
+        }).join('');
+      }
+
+      function readDynamicParameters() {
+        const algorithm = selectedAlgorithm();
+        const values = {};
+        for (const parameter of algorithm.parameters) {
+          const input = $(`[data-algorithm-parameter="${parameter.key}"]`);
+          let value = input.value;
+          if (parameter.type === 'number') {
+            value = Number(value);
+            if (!Number.isFinite(value) || value < parameter.min || value > parameter.max) {
+              showTaskFormError(`${parameter.label}必须在 ${parameter.min} 到 ${parameter.max} 之间。`, input);
+              return null;
+            }
+          } else if (parameter.type === 'boolean') value = input.checked;
+          values[parameter.key] = value;
+        }
+        return values;
+      }
+
+      function updateRoiRequirement() {
+        const algorithm = selectedAlgorithm();
+        const complete = workingRois.filter(roi => roi.points.length >= 3).length;
+        $('[data-roi-requirement]').textContent = `接口要求 ${algorithm.roiDefinitions.length} 个 ROI，ID 与标签不可修改。已完成 ${complete}/${algorithm.roiDefinitions.length} 个。`;
+      }
+
+      function roiPointFromEvent(event) {
+        const svg = $('[data-roi-editor-svg]');
+        const rect = svg.getBoundingClientRect();
+        return [
+          Math.max(0, Math.min(100, ((event.clientX - rect.left) / rect.width) * 100)),
+          Math.max(0, Math.min(56.25, ((event.clientY - rect.top) / rect.height) * 56.25))
+        ];
+      }
+
+      function renderRoiEditor() {
+        const svg = $('[data-roi-editor-svg]');
+        const list = $('[data-roi-list]');
+        const drawing = Array.isArray(drawingPoints);
+        const polygonMarkup = workingRois.filter(roi => roi.points.length >= 3).map(roi => `<polygon class="roi-editor-polygon ${roi.id === selectedRoiId ? 'is-selected' : ''}" data-select-roi-svg="${escapeHtml(roi.id)}" points="${polygonPoints(roi.points)}" fill="${escapeHtml(roi.color)}" stroke="${escapeHtml(roi.color)}"></polygon>`).join('');
+        const selected = workingRois.find(roi => roi.id === selectedRoiId);
+        const vertexMarkup = selected?.points.length >= 3 ? selected.points.map((point, index) => `<circle class="roi-vertex" data-roi-id="${escapeHtml(selected.id)}" data-roi-vertex-index="${index}" cx="${point[0]}" cy="${point[1]}" r="1.15" fill="${escapeHtml(selected.color)}"></circle>`).join('') : '';
+        const draftMarkup = drawing && drawingPoints.length
+          ? `<polyline class="roi-editor-draft" points="${polygonPoints(drawingPoints)}"></polyline>${drawingPoints.map(point => `<circle class="roi-vertex" cx="${point[0]}" cy="${point[1]}" r="1.05" fill="#fff"></circle>`).join('')}`
+          : '';
+        svg.innerHTML = polygonMarkup + vertexMarkup + draftMarkup;
+
+        list.innerHTML = workingRois.map(roi => `<div class="roi-list-item ${roi.id === selectedRoiId ? 'is-selected' : ''}">
+          <button class="roi-list-select" type="button" data-select-roi="${escapeHtml(roi.id)}"><span class="roi-list-name"><span class="roi-color" style="display:inline-block;background:${escapeHtml(roi.color)};margin-right:6px"></span>${escapeHtml(roi.label)}</span><span class="roi-id">${escapeHtml(roi.id)}</span></button>
+          <span class="roi-state ${roi.points.length >= 3 ? 'complete' : ''}">${roi.points.length >= 3 ? `${roi.points.length} 顶点` : '待绘制'}</span>
+        </div>`).join('');
+
+        $('[data-roi-count]').textContent = workingRois.length;
+        const drawButton = $('[data-draw-selected-roi]');
+        drawButton.disabled = drawing || !selected;
+        $('span', drawButton).textContent = selected?.points.length >= 3 ? '重绘所选 ROI' : '绘制所选 ROI';
+        $('[data-finish-roi]').hidden = !drawing;
+        $('[data-undo-roi-point]').hidden = !drawing;
+        $('[data-undo-roi-point]').disabled = !drawingPoints?.length;
+        $('[data-roi-canvas]').classList.toggle('is-editing', !drawing);
+        $('[data-roi-editor-hint]').textContent = drawing
+          ? `正在绘制“${selected?.label}”：单击添加顶点（${drawingPoints.length}/至少 3）`
+          : selected?.points.length >= 3 ? `正在编辑“${selected.label}”：拖动顶点，或点击重绘` : `已选择“${selected?.label || ''}”：点击绘制所选 ROI`;
+        updateRoiRequirement();
+
+        $$('[data-select-roi]', list).forEach(button => button.addEventListener('click', () => {
+          selectedRoiId = button.dataset.selectRoi;
+          renderRoiEditor();
+        }));
+      }
+
+      function startRoiDrawing() {
+        const selected = workingRois.find(roi => roi.id === selectedRoiId);
+        if (!selected) return;
+        clearTaskFormError();
+        drawingPoints = [];
+        renderRoiEditor();
+      }
+
+      function finishRoiDrawing() {
+        if (!drawingPoints || drawingPoints.length < 3) {
+          showTaskFormError('一个不规则 ROI 至少需要 3 个顶点。');
+          return;
+        }
+        const roi = workingRois.find(item => item.id === selectedRoiId);
+        if (!roi) return;
+        roi.points = drawingPoints.map(point => [...point]);
+        drawingPoints = null;
+        clearTaskFormError();
+        renderRoiEditor();
+      }
+
+      function openTaskDialog(task = null, trigger = document.activeElement) {
+        lastTaskDialogTrigger = trigger;
+        editingTaskId = task?.id || null;
+        populateTaskSourceOptions();
+        populateAlgorithmOptions();
+        $('[data-task-dialog-title]').textContent = task ? '编辑检测任务' : '创建检测任务';
+        $('[data-task-dialog-description]').textContent = task
+          ? '修改任务配置不会改变当前运行状态。'
+          : '绑定一路摄像头源和一套算法；新任务保存后保持停止，需要手动启动。';
+        $('[data-task-form-name]').value = task?.name || '';
+        $('[data-task-form-description]').value = task?.description || '';
+        $('[data-task-form-source]').value = task?.sourceRef || (cameras[0]?.sources.length ? `${cameras[0].id}::0` : '');
+        $('[data-task-form-algorithm]').value = task?.algorithmId || algorithms[0].id;
+        const algorithm = selectedAlgorithm();
+        renderDynamicParameters(task?.parameters || parameterDefaults(algorithm));
+        workingRois = createRoiSlots(algorithm.id, task?.rois || []);
+        selectedRoiId = workingRois[0]?.id || null;
+        drawingPoints = null;
+        draggingVertex = null;
+        clearTaskFormError();
+        taskDialogBackdrop.hidden = false;
+        document.body.style.overflow = 'hidden';
+        requestAnimationFrame(() => { renderRoiEditor(); $('[data-task-form-name]').focus(); });
+      }
+
+      function closeTaskDialog() {
+        taskDialogBackdrop.hidden = true;
+        document.body.style.overflow = '';
+        drawingPoints = null;
+        draggingVertex = null;
+        clearTaskFormError();
+        lastTaskDialogTrigger?.focus();
+      }
+
+      function saveTask() {
+        clearTaskFormError();
+        const nameInput = $('[data-task-form-name]');
+        const descriptionInput = $('[data-task-form-description]');
+        const sourceInput = $('[data-task-form-source]');
+        const algorithmInput = $('[data-task-form-algorithm]');
+        const name = nameInput.value.trim();
+        const description = descriptionInput.value.trim();
+        if (!name) { showTaskFormError('请填写任务名称。', nameInput); return; }
+        if (description.length > 100) { showTaskFormError('任务描述不能超过 100 个字符。', descriptionInput); return; }
+        if (!sourceInput.value) { showTaskFormError('请选择摄像头源。', sourceInput); return; }
+        if (!algorithmInput.value) { showTaskFormError('请选择算法。', algorithmInput); return; }
+        const parameters = readDynamicParameters();
+        if (!parameters) return;
+        if (drawingPoints) { showTaskFormError('请先完成正在绘制的 ROI。'); return; }
+        const algorithm = selectedAlgorithm();
+        const incomplete = workingRois.filter(roi => roi.points.length < 3);
+        if (incomplete.length) {
+          selectedRoiId = incomplete[0].id;
+          renderRoiEditor();
+          showTaskFormError(`请绘制算法要求的 ROI：“${incomplete[0].label}”（${incomplete[0].id}）。`);
+          return;
+        }
+        const values = { name, description, sourceRef: sourceInput.value, algorithmId: algorithmInput.value, parameters, rois: cloneRois(workingRois) };
+        const wasEditing = Boolean(editingTaskId);
+        if (wasEditing) {
+          const task = tasks.find(item => item.id === editingTaskId);
+          Object.assign(task, values);
+          currentTaskId = task.id;
+          notify('任务配置已保存');
+        } else {
+          const now = Date.now();
+          const task = {
+            id: `task-${String(now).slice(-6)}`, ...values, enabled: false, runtime: 'stopped', showRoi: true,
+            label: '等待检测结果', frameMeta: '等待任务启动'
+          };
+          tasks.push(task);
+          currentTaskId = task.id;
+          notify('任务已创建，当前停止；请在任务详情手动启动');
+        }
+        closeTaskDialog();
+        renderTaskList();
+        renderCards();
+        if (wasEditing) {
+          renderTaskDetail();
+          updateBreadcrumb('Detection Tasks', tasks.find(item => item.id === currentTaskId)?.name || '任务详情');
+          history.replaceState(null, '', `#task-detail-${encodeURIComponent(currentTaskId)}`);
+        }
+        else showTaskList();
+      }
+
+      function openDeleteTaskDialog(trigger = document.activeElement) {
+        const task = tasks.find(item => item.id === currentTaskId);
+        if (!task) return;
+        lastDeleteTaskTrigger = trigger;
+        $('[data-delete-task-name]').textContent = task.name;
+        deleteTaskBackdrop.hidden = false;
+        document.body.style.overflow = 'hidden';
+        requestAnimationFrame(() => $('[data-confirm-delete-task]').focus());
+      }
+
+      function closeDeleteTaskDialog(restoreFocus = true) {
+        deleteTaskBackdrop.hidden = true;
+        document.body.style.overflow = '';
+        if (restoreFocus) lastDeleteTaskTrigger?.focus();
+      }
+
+      function deleteCurrentTask() {
+        const index = tasks.findIndex(item => item.id === currentTaskId);
+        if (index < 0) return;
+        const [removed] = tasks.splice(index, 1);
+        currentTaskId = tasks[0]?.id || '';
+        closeDeleteTaskDialog(false);
+        renderCards();
+        showTaskList();
+        notify(`任务“${removed.name}”已删除`);
+      }
+
+      function showPage(page) {
+        $$('[data-page]').forEach(section => section.hidden = section.dataset.page !== page);
+        $$('[data-nav]').forEach(button => {
+          if (button.dataset.nav === page) button.setAttribute('aria-current', 'page');
+          else button.removeAttribute('aria-current');
+        });
+        if (page === 'cameras') {
+          showCameraList();
+        } else {
+          $('[data-back-cameras]').hidden = true;
+          showTaskList();
+        }
+      }
+
+      function createSourceEditor(source = { name: '', suffix: '' }, checked = false) {
+        const row = document.createElement('div');
+        row.className = 'source-edit-row';
+        row.dataset.health = source.health || 'online';
+        row.innerHTML = `<span class="radio-cell"><input type="radio" name="form-preview-source" ${checked ? 'checked' : ''} aria-label="设为默认预览源"></span>
+          <input class="field-control" data-source-name value="${escapeHtml(source.name)}" aria-label="视频源名称" placeholder="例如：通道 1 主码流">
+          <input class="field-control" data-source-suffix value="${escapeHtml(source.suffix)}" aria-label="URL 后缀" placeholder="例如：Streaming/Channels/101">
+          <button class="icon-button" type="button" data-remove-source aria-label="删除该视频源"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 7h16M9 7V4h6v3M8 10v7M12 10v7M16 10v7M6 7l1 14h10l1-14"/></svg></button>`;
+        $('[data-remove-source]', row).addEventListener('click', () => {
+          const list = $('[data-source-edit-list]');
+          if (list.children.length === 1) {
+            showFormError('至少需要保留一路视频源。');
+            return;
+          }
+          const wasChecked = $('input[type="radio"]', row).checked;
+          row.remove();
+          if (wasChecked) $('input[type="radio"]', list).checked = true;
+          updateGeneratedUrl();
+        });
+        $$('input', row).forEach(input => input.addEventListener('input', updateGeneratedUrl));
+        $('input[type="radio"]', row).addEventListener('change', updateGeneratedUrl);
+        return row;
+      }
+
+      function clearFormError() {
+        const error = $('[data-form-error]');
+        error.hidden = true;
+        error.textContent = '';
+        $$('.field-control', dialog).forEach(input => { input.removeAttribute('aria-invalid'); input.removeAttribute('aria-describedby'); });
+      }
+
+      function showFormError(message, target) {
+        const error = $('[data-form-error]');
+        error.textContent = message;
+        error.hidden = false;
+        if (target) {
+          target.setAttribute('aria-invalid', 'true');
+          target.setAttribute('aria-describedby', 'camera-form-error');
+          target.focus();
+        }
+      }
+
+      function updateGeneratedUrl() {
+        clearFormError();
+        const selected = $('input[name="form-preview-source"]:checked');
+        const row = selected?.closest('.source-edit-row');
+        const ip = $('[data-form-ip]').value.trim();
+        const port = $('[data-form-port]').value.trim();
+        const user = $('[data-form-user]').value.trim();
+        const password = $('[data-form-password]').value;
+        const suffix = row ? $('[data-source-suffix]', row).value.trim().replace(/^\/+/, '') : '';
+        $('[data-generated-url]').textContent = ip && port && user && password && suffix
+          ? `预览地址：rtsp://${user}:${password}@${ip}:${port}/${suffix}`
+          : '完整填写连接信息并选择预览源后生成预览地址。';
+      }
+
+      function openDialog(camera = null, trigger = document.activeElement) {
+        lastDialogTrigger = trigger;
+        editingCameraId = camera?.id || null;
+        $('[data-dialog-title]').textContent = camera ? '编辑摄像头' : '添加摄像头';
+        $('[data-form-name]').value = camera?.name || '';
+        $('[data-form-ip]').value = camera?.ip || '';
+        $('[data-form-port]').value = camera?.port || '554';
+        $('[data-form-user]').value = camera?.user || 'admin';
+        $('[data-form-password]').value = camera?.password || '';
+        const sourceList = $('[data-source-edit-list]');
+        sourceList.innerHTML = '';
+        (camera?.sources || [{ name: '通道 1 主码流', suffix: 'Streaming/Channels/101' }]).forEach((source, index) => sourceList.appendChild(createSourceEditor(source, camera ? camera.preview === index : index === 0)));
+        clearFormError();
+        updateGeneratedUrl();
+        dialogBackdrop.hidden = false;
+        document.body.style.overflow = 'hidden';
+        requestAnimationFrame(() => $('[data-form-name]').focus());
+      }
+
+      function closeDialog() {
+        dialogBackdrop.hidden = true;
+        document.body.style.overflow = '';
+        clearFormError();
+        lastDialogTrigger?.focus();
+      }
+
+      function validateAndSave() {
+        clearFormError();
+        const fields = {
+          name: $('[data-form-name]'), ip: $('[data-form-ip]'), port: $('[data-form-port]'),
+          user: $('[data-form-user]'), password: $('[data-form-password]')
+        };
+        for (const [label, field] of [['摄像头名称', fields.name], ['IP 地址', fields.ip], ['RTSP 端口', fields.port], ['用户名', fields.user], ['密码', fields.password]]) {
+          if (!field.value.trim()) { showFormError(`请填写${label}。`, field); return; }
+        }
+        const sourceRows = $$('.source-edit-row', $('[data-source-edit-list]'));
+        if (!sourceRows.length) { showFormError('请至少添加一路视频源。'); return; }
+        const sources = [];
+        let preview = -1;
+        for (let index = 0; index < sourceRows.length; index += 1) {
+          const nameInput = $('[data-source-name]', sourceRows[index]);
+          const suffixInput = $('[data-source-suffix]', sourceRows[index]);
+          if (!nameInput.value.trim()) { showFormError('请填写视频源名称。', nameInput); return; }
+          if (!suffixInput.value.trim()) { showFormError('请填写视频源 URL 后缀。', suffixInput); return; }
+          sources.push({ name: nameInput.value.trim(), suffix: suffixInput.value.trim().replace(/^\/+/, ''), health: sourceRows[index].dataset.health || 'online' });
+          if ($('input[type="radio"]', sourceRows[index]).checked) preview = index;
+        }
+        if (preview < 0) { showFormError('请选择一路信号作为默认预览源。'); return; }
+        const values = { name: fields.name.value.trim(), ip: fields.ip.value.trim(), port: fields.port.value.trim(), user: fields.user.value.trim(), password: fields.password.value, sources, preview };
+        const wasEditing = Boolean(editingCameraId);
+        if (wasEditing) {
+          const camera = cameras.find(item => item.id === editingCameraId);
+          Object.assign(camera, values);
+          currentCameraId = camera.id;
+          renderDetail();
+          notify('摄像头配置已保存');
+        } else {
+          const id = `camera-${Date.now()}`;
+          cameras.push({ id, ...values, tone: 'gate', taskCount: 0 });
+          notify('摄像头已添加');
+        }
+        closeDialog();
+        if (wasEditing) {
+          renderCards();
+        } else {
+          searchInput.value = '';
+          showCameraList();
+          renderCards();
+        }
+      }
+
+      function notify(message) {
+        const toast = $('[data-toast]');
+        clearTimeout(toastTimer);
+        toast.textContent = message;
+        toast.classList.add('is-visible');
+        toastTimer = setTimeout(() => toast.classList.remove('is-visible'), 2400);
+      }
+
+      function trapDialogFocus(event) {
+        if (event.key !== 'Tab') return;
+        const activeDialog = !deleteTaskBackdrop.hidden ? deleteTaskDialog : !taskDialogBackdrop.hidden ? taskDialog : !dialogBackdrop.hidden ? dialog : null;
+        if (!activeDialog) return;
+        const focusable = $$('button:not(:disabled), input:not(:disabled), select:not(:disabled), [tabindex]:not([tabindex="-1"])', activeDialog);
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+        if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+      }
+
+      $('[data-brand-home]').addEventListener('click', () => showPage('cameras'));
+      $$('[data-nav]').forEach(button => button.addEventListener('click', () => showPage(button.dataset.nav)));
+      themeTrigger.addEventListener('click', () => applyTheme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark'));
+      $('[data-breadcrumb-root]').addEventListener('click', () => {
+        if ($('[data-breadcrumb-root]').textContent === 'Cameras' && currentCameraId) showCameraList();
+        else if ($('[data-breadcrumb-root]').textContent === 'Detection Tasks' && !taskDetailView.hidden) showTaskList();
+      });
+      $$('[data-open-camera-dialog]').forEach(button => button.addEventListener('click', () => openDialog(null, button)));
+      $$('[data-close-dialog]').forEach(button => button.addEventListener('click', closeDialog));
+      $('[data-add-source]').addEventListener('click', () => {
+        $('[data-source-edit-list]').appendChild(createSourceEditor({ name: '', suffix: '' }));
+        updateGeneratedUrl();
+      });
+      $('[data-save-camera]').addEventListener('click', validateAndSave);
+      $('[data-back-cameras]').addEventListener('click', showCameraList);
+      $('[data-back-tasks]').addEventListener('click', showTaskList);
+      $('[data-edit-camera]').addEventListener('click', event => openDialog(getCurrentCamera(), event.currentTarget));
+      $('[data-toggle-preview]').addEventListener('click', () => { previewPaused = !previewPaused; renderDetail(); notify(previewPaused ? '预览已停止' : '预览已开始'); });
+      $$('[data-add-task]').forEach(button => button.addEventListener('click', event => openTaskDialog(null, event.currentTarget)));
+      $('[data-edit-task]').addEventListener('click', event => openTaskDialog(tasks.find(task => task.id === currentTaskId), event.currentTarget));
+      $$('[data-close-task-dialog]').forEach(button => button.addEventListener('click', closeTaskDialog));
+      $('[data-save-task]').addEventListener('click', saveTask);
+      $('[data-task-form-algorithm]').addEventListener('change', event => {
+        const algorithm = algorithms.find(item => item.id === event.currentTarget.value) || algorithms[0];
+        renderDynamicParameters(parameterDefaults(algorithm));
+        workingRois = createRoiSlots(algorithm.id);
+        selectedRoiId = workingRois[0]?.id || null;
+        drawingPoints = null;
+        clearTaskFormError();
+        renderRoiEditor();
+      });
+      $('[data-draw-selected-roi]').addEventListener('click', startRoiDrawing);
+      $('[data-undo-roi-point]').addEventListener('click', () => {
+        drawingPoints?.pop();
+        clearTaskFormError();
+        renderRoiEditor();
+      });
+      $('[data-finish-roi]').addEventListener('click', finishRoiDrawing);
+      $('[data-roi-editor-svg]').addEventListener('click', event => {
+        if (drawingPoints) {
+          drawingPoints.push(roiPointFromEvent(event));
+          clearTaskFormError();
+          renderRoiEditor();
+          return;
+        }
+        const polygon = event.target.closest('[data-select-roi-svg]');
+        if (polygon) {
+          selectedRoiId = polygon.dataset.selectRoiSvg;
+          renderRoiEditor();
+        }
+      });
+      $('[data-roi-editor-svg]').addEventListener('pointerdown', event => {
+        const vertex = event.target.closest('[data-roi-vertex-index]');
+        if (!vertex || drawingPoints) return;
+        draggingVertex = { roiId: vertex.dataset.roiId, index: Number(vertex.dataset.roiVertexIndex) };
+        event.preventDefault();
+      });
+      document.addEventListener('pointermove', event => {
+        if (!draggingVertex || taskDialogBackdrop.hidden) return;
+        const roi = workingRois.find(item => item.id === draggingVertex.roiId);
+        if (!roi?.points[draggingVertex.index]) return;
+        roi.points[draggingVertex.index] = roiPointFromEvent(event);
+        renderRoiEditor();
+      });
+      document.addEventListener('pointerup', () => { draggingVertex = null; });
+      $('[data-toggle-roi]').addEventListener('change', event => {
+        const task = tasks.find(item => item.id === currentTaskId);
+        if (!task) return;
+        task.showRoi = event.currentTarget.checked;
+        renderDetailRois(task);
+      });
+      $('[data-toggle-task]').addEventListener('click', () => {
+        const task = tasks.find(item => item.id === currentTaskId);
+        if (!task) return;
+        task.enabled = !task.enabled;
+        if (task.enabled) {
+          task.runtime = 'running';
+          task.frameMeta = '等待检测结果';
+        }
+        task.label = task.enabled ? '等待检测结果' : task.label;
+        renderTaskList();
+        renderTaskDetail();
+        notify(task.enabled ? '任务已启动，enabled = true' : '任务已停止，enabled = false');
+      });
+      $('[data-reload-task]').addEventListener('click', event => {
+        const task = tasks.find(item => item.id === currentTaskId);
+        if (!task?.enabled) return;
+        const button = event.currentTarget;
+        button.disabled = true;
+        button.classList.add('is-loading');
+        button.setAttribute('aria-busy', 'true');
+        button.innerHTML = '<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 4v6h6M20 20v-6h-6M5.5 15a7 7 0 0 0 11.7 2.5L20 14M4 10l2.8-3.5A7 7 0 0 1 18.5 9"/></svg><span>重载中</span>';
+        setTimeout(() => {
+          button.disabled = false;
+          button.classList.remove('is-loading');
+          button.removeAttribute('aria-busy');
+          button.innerHTML = '<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 4v6h6M20 20v-6h-6M5.5 15a7 7 0 0 0 11.7 2.5L20 14M4 10l2.8-3.5A7 7 0 0 1 18.5 9"/></svg><span>重载</span>';
+          task.frameMeta = '配置已重载 · 等待下一帧';
+          renderTaskDetail();
+          notify('任务配置已重载，任务进程保持运行');
+        }, 700);
+      });
+      $('[data-restart-task]').addEventListener('click', event => {
+        const task = tasks.find(item => item.id === currentTaskId);
+        if (!task?.enabled) return;
+        const button = event.currentTarget;
+        button.disabled = true;
+        button.classList.add('is-loading');
+        button.setAttribute('aria-busy', 'true');
+        button.innerHTML = '<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M20 12a8 8 0 1 1-2.34-5.66M20 4v6h-6"/></svg><span>重启中</span>';
+        setTimeout(() => {
+          button.disabled = false;
+          button.classList.remove('is-loading');
+          button.removeAttribute('aria-busy');
+          button.innerHTML = '<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M20 12a8 8 0 1 1-2.34-5.66M20 4v6h-6"/></svg><span>重启</span>';
+          task.runtime = 'running';
+          task.frameMeta = '等待检测结果';
+          renderTaskList();
+          renderTaskDetail();
+          notify('任务已使用当前配置重新启动');
+        }, 900);
+      });
+      $('[data-delete-task]').addEventListener('click', event => openDeleteTaskDialog(event.currentTarget));
+      $$('[data-close-delete-task]').forEach(button => button.addEventListener('click', closeDeleteTaskDialog));
+      $('[data-confirm-delete-task]').addEventListener('click', deleteCurrentTask);
+      searchInput.addEventListener('input', renderCards);
+      dialogBackdrop.addEventListener('mousedown', event => { if (event.target === dialogBackdrop) closeDialog(); });
+      taskDialogBackdrop.addEventListener('mousedown', event => { if (event.target === taskDialogBackdrop) closeTaskDialog(); });
+      deleteTaskBackdrop.addEventListener('mousedown', event => { if (event.target === deleteTaskBackdrop) closeDeleteTaskDialog(); });
+      document.addEventListener('keydown', event => {
+        if (event.key === 'Escape' && !taskDialogBackdrop.hidden && drawingPoints) {
+          drawingPoints = null;
+          clearTaskFormError();
+          renderRoiEditor();
+        }
+        else if (event.key === 'Escape' && !deleteTaskBackdrop.hidden) closeDeleteTaskDialog();
+        else if (event.key === 'Escape' && !taskDialogBackdrop.hidden) closeTaskDialog();
+        else if (event.key === 'Escape' && !dialogBackdrop.hidden) closeDialog();
+        trapDialogFocus(event);
+      });
+      $$('[data-form-ip], [data-form-port], [data-form-user], [data-form-password]').forEach(input => input.addEventListener('input', updateGeneratedUrl));
+
+      let initialTheme = 'light';
+      try { initialTheme = localStorage.getItem('sop-vision-theme') || 'light'; } catch (_) {}
+      applyTheme(initialTheme, false);
+      renderCards();
+      renderTaskList();
+      if (location.hash.startsWith('#task-detail-')) {
+        $$('[data-page]').forEach(section => section.hidden = section.dataset.page !== 'tasks');
+        $$('[data-nav]').forEach(button => {
+          if (button.dataset.nav === 'tasks') button.setAttribute('aria-current', 'page');
+          else button.removeAttribute('aria-current');
+        });
+        showTaskDetail(decodeURIComponent(location.hash.replace('#task-detail-', '')));
+      } else if (location.hash === '#tasks') showPage('tasks');
+      else if (location.hash.startsWith('#camera-')) showCameraDetail(location.hash.replace('#camera-', ''));
+    })();
+  </script>
+</body>
+</html>

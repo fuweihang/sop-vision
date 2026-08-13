@@ -1,0 +1,876 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SOP Vision · Prototype v0.3</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --sop-color-background-page: light-dark(#fafafa, #000);
+      --sop-color-background-surface: light-dark(#fff, #0a0a0a);
+      --sop-color-background-subtle: light-dark(#fafafa, #1a1a1a);
+      --sop-color-background-active: light-dark(#ebebeb, #292929);
+      --sop-color-text-primary: light-dark(#171717, #ededed);
+      --sop-color-text-secondary: light-dark(#4d4d4d, #a1a1a1);
+      --sop-color-text-muted: #8f8f8f;
+      --sop-color-text-inverse: #fff;
+      --sop-color-text-link: light-dark(#0068d6, #8abfff);
+      --sop-color-border-default: light-dark(#ebebeb, #292929);
+      --sop-color-border-strong: light-dark(#c9c9c9, #454545);
+      --sop-color-action-primary: light-dark(#171717, #ededed);
+      --sop-color-action-primary-hover: light-dark(#4d4d4d, #fff);
+      --sop-color-action-primary-text: light-dark(#fff, #171717);
+      --sop-color-action-focus: #0072f5;
+      --sop-color-status-success: #46a758;
+      --sop-color-status-warning: light-dark(#a35200, #ffb224);
+      --sop-color-status-danger: #e5484d;
+      --sop-space-inline-compact: 8px;
+      --sop-space-inline: 12px;
+      --sop-space-component: 16px;
+      --sop-space-card: 20px;
+      --sop-space-page: 24px;
+      --sop-space-section: 32px;
+      --sop-radius-control: 6px;
+      --sop-radius-card: 6px;
+      --sop-radius-popover: 12px;
+      --sop-radius-badge: 9999px;
+      --sop-size-control-small: 32px;
+      --sop-size-control-medium: 36px;
+      --sop-size-sidebar: 256px;
+      --sop-size-header: 56px;
+      --sop-shadow-surface: 0 0 0 1px light-dark(#00000014, #ffffff21);
+      --sop-shadow-control-focus: 0 0 0 1px #00000057, 0 0 0 4px #00000029;
+      --sop-shadow-keyboard-focus: 0 0 0 2px var(--sop-color-background-page), 0 0 0 4px #0072f5;
+      --sop-shadow-modal: 0 0 0 1px light-dark(#00000014, #ffffff21), 0 24px 32px -8px #00000026;
+      --sop-motion-control: 150ms cubic-bezier(.4, 0, .2, 1);
+    }
+    :root[data-theme="light"] { color-scheme: light; }
+    :root[data-theme="dark"] { color-scheme: dark; }
+
+    * { box-sizing: border-box; }
+    html, body { min-width: 1120px; min-height: 100%; margin: 0; }
+    body {
+      background: var(--sop-color-background-page);
+      color: var(--sop-color-text-primary);
+      font: 400 14px/20px GeistSans, Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    button, input, select { font: inherit; }
+    button { color: inherit; }
+    [hidden] { display: none !important; }
+
+    .app-shell { min-height: 100vh; padding-left: var(--sop-size-sidebar); }
+    .sidebar {
+      position: fixed;
+      inset: 0 auto 0 0;
+      z-index: 30;
+      width: var(--sop-size-sidebar);
+      padding: var(--sop-space-component) var(--sop-space-inline);
+      overflow-y: auto;
+      background: var(--sop-color-background-page);
+      border-right: 1px solid var(--sop-color-border-default);
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: var(--sop-space-inline-compact);
+      height: 40px;
+      padding: 0 10px;
+      margin-bottom: var(--sop-space-component);
+      font-weight: 600;
+      letter-spacing: -.2px;
+    }
+    .brand-mark {
+      width: 18px;
+      height: 18px;
+      border: 5px solid var(--sop-color-text-primary);
+      border-radius: 50%;
+      box-shadow: inset 0 0 0 2px var(--sop-color-background-page);
+    }
+    .nav-label {
+      padding: 0 10px;
+      margin: 0 0 var(--sop-space-inline-compact);
+      color: var(--sop-color-text-muted);
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: .2px;
+      text-transform: uppercase;
+    }
+    .nav { display: grid; gap: 4px; }
+    .nav-button {
+      display: grid;
+      grid-template-columns: 16px minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 10px;
+      width: 100%;
+      height: var(--sop-size-control-medium);
+      padding: 0 10px;
+      border: 0;
+      border-radius: var(--sop-radius-control);
+      background: transparent;
+      text-align: left;
+      cursor: pointer;
+      transition: background var(--sop-motion-control);
+    }
+    .nav-button:hover { background: var(--sop-color-background-subtle); }
+    .nav-button[aria-current="page"] { background: var(--sop-color-background-active); font-weight: 500; }
+    .nav-button svg, .button svg, .icon-button svg, .search svg, .empty-state svg, .notice svg { width: 16px; height: 16px; stroke-width: 1.8; }
+    .nav-meta { color: var(--sop-color-text-muted); font-size: 12px; font-weight: 400; }
+
+    .main { min-width: 0; }
+    .header {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      display: grid;
+      place-items: center;
+      height: var(--sop-size-header);
+      background: color-mix(in srgb, var(--sop-color-background-page) 92%, transparent);
+      border-bottom: 1px solid var(--sop-color-border-default);
+      backdrop-filter: blur(8px);
+    }
+    .header-back { position: absolute; left: var(--sop-space-page); }
+    .header-theme { position: absolute; right: var(--sop-space-page); }
+    .breadcrumb { display: flex; align-items: center; gap: var(--sop-space-inline-compact); font-weight: 500; }
+    .breadcrumb-button {
+      padding: 0;
+      border: 0;
+      border-radius: 2px;
+      background: transparent;
+      color: inherit;
+      cursor: pointer;
+    }
+    .breadcrumb-button:hover { color: inherit; text-decoration: none; }
+    .breadcrumb-button[aria-current="page"] { cursor: default; }
+    .breadcrumb-button[aria-current="page"]:hover { color: inherit; text-decoration: none; }
+    .breadcrumb-muted { color: var(--sop-color-text-muted); font-weight: 400; }
+    .page { padding: var(--sop-space-page); }
+    .page-section { display: grid; gap: var(--sop-space-page); }
+
+    .toolbar { display: flex; align-items: center; gap: var(--sop-space-inline-compact); }
+    .search {
+      position: relative;
+      flex: 1;
+      min-width: 0;
+    }
+    .search svg {
+      position: absolute;
+      left: 12px;
+      top: 10px;
+      color: var(--sop-color-text-muted);
+      pointer-events: none;
+    }
+    .search input { padding-left: 36px; }
+    .field-control, .search input {
+      width: 100%;
+      height: var(--sop-size-control-medium);
+      padding-right: 12px;
+      border: 0;
+      border-radius: var(--sop-radius-control);
+      outline: 0;
+      background: var(--sop-color-background-surface);
+      color: var(--sop-color-text-primary);
+      box-shadow: var(--sop-shadow-surface);
+      transition: box-shadow var(--sop-motion-control);
+    }
+    .field-control { padding-left: 12px; }
+    .field-control:focus, .search input:focus { box-shadow: var(--sop-shadow-control-focus); }
+    .field-control[aria-invalid="true"] { box-shadow: 0 0 0 1px var(--sop-color-status-danger); }
+    input::placeholder { color: var(--sop-color-text-muted); }
+
+    .button, .icon-button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: var(--sop-space-inline-compact);
+      min-height: var(--sop-size-control-medium);
+      padding: 0 10px;
+      border: 0;
+      border-radius: var(--sop-radius-control);
+      background: var(--sop-color-background-surface);
+      color: var(--sop-color-text-primary);
+      box-shadow: var(--sop-shadow-surface);
+      white-space: nowrap;
+      cursor: pointer;
+      transition: background var(--sop-motion-control), color var(--sop-motion-control), box-shadow var(--sop-motion-control);
+    }
+    .button:hover, .icon-button:hover { background: var(--sop-color-background-subtle); }
+    .button.primary { background: var(--sop-color-action-primary); color: var(--sop-color-action-primary-text); box-shadow: none; }
+    .button.primary:hover { background: var(--sop-color-action-primary-hover); }
+    .button.ghost { background: transparent; box-shadow: none; }
+    .button.ghost:hover { background: var(--sop-color-background-active); }
+    .button.plain { background: transparent; box-shadow: none; }
+    .button.plain:hover { background: transparent; color: inherit; }
+    .button.danger { color: var(--sop-color-status-danger); box-shadow: 0 0 0 1px var(--sop-color-status-danger); }
+    .button:disabled { background: var(--sop-color-background-subtle); color: var(--sop-color-text-muted); cursor: not-allowed; }
+    .icon-button { width: var(--sop-size-control-small); min-height: var(--sop-size-control-small); padding: 0; }
+    :is(button, input, select):focus-visible { outline: 0; box-shadow: var(--sop-shadow-keyboard-focus); }
+
+    .camera-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: var(--sop-space-component);
+    }
+    .camera-card {
+      min-width: 0;
+      padding: 0;
+      overflow: hidden;
+      border: 0;
+      border-radius: var(--sop-radius-card);
+      background: var(--sop-color-background-surface);
+      color: inherit;
+      box-shadow: var(--sop-shadow-surface);
+      text-align: left;
+      cursor: pointer;
+      transition: box-shadow var(--sop-motion-control), background var(--sop-motion-control);
+    }
+    .camera-card:hover { background: var(--sop-color-background-subtle); box-shadow: 0 0 0 1px var(--sop-color-border-strong); }
+    .camera-card:focus-visible { outline: 0; box-shadow: var(--sop-shadow-keyboard-focus); }
+    .camera-preview {
+      position: relative;
+      aspect-ratio: 16 / 8.5;
+      overflow: hidden;
+      background:
+        linear-gradient(180deg, transparent 55%, #00000085),
+        radial-gradient(circle at 70% 30%, #80929a 0 7%, transparent 7.5%),
+        linear-gradient(150deg, #5c6c72 0 30%, #263239 30% 54%, #80929a 54% 68%, #34464d 68%);
+    }
+    .camera-preview.packing { background: linear-gradient(180deg, transparent 55%, #00000085), linear-gradient(140deg, #827b6d 0 25%, #443f37 25% 55%, #a19a89 55% 70%, #514c43 70%); }
+    .camera-preview.gate { background: linear-gradient(180deg, transparent 55%, #00000085), linear-gradient(155deg, #6e8177 0 32%, #273e37 32% 52%, #9aa69f 52% 67%, #3b4e46 67%); }
+    .camera-preview.storage { background: linear-gradient(180deg, transparent 55%, #00000085), linear-gradient(145deg, #786d76 0 28%, #3d343d 28% 58%, #938592 58% 72%, #494048 72%); }
+    .preview-label { position: absolute; left: 12px; bottom: 10px; color: #fff; font-size: 12px; }
+    .preview-live { position: absolute; top: 10px; right: 10px; display: flex; align-items: center; gap: 6px; height: 20px; padding: 0 8px; border-radius: var(--sop-radius-badge); background: #00000099; color: #fff; font-size: 11px; }
+    .camera-preview.is-degraded { filter: saturate(.72); }
+    .camera-preview.is-offline { filter: grayscale(1); }
+    .camera-preview.is-offline::after { content: ""; position: absolute; inset: 0; background: #00000066; }
+    .camera-preview.is-offline > * { z-index: 1; }
+    .status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--sop-color-status-success); }
+    .status-dot.warning { background: var(--sop-color-status-warning); }
+    .status-dot.danger { background: var(--sop-color-status-danger); }
+    .camera-body { padding: var(--sop-space-card); }
+    .camera-heading, .detail-heading, .section-heading, .source-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .camera-name { overflow: hidden; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+    .camera-address { margin-top: 4px; color: var(--sop-color-text-secondary); font-family: "Geist Mono", "SFMono-Regular", monospace; font-size: 12px; }
+    .camera-meta { display: flex; justify-content: space-between; margin-top: var(--sop-space-component); color: var(--sop-color-text-muted); font-size: 12px; }
+    .badge { display: inline-flex; align-items: center; gap: 6px; height: 20px; padding: 0 8px; border-radius: var(--sop-radius-badge); background: var(--sop-color-background-subtle); color: var(--sop-color-text-secondary); font-size: 11px; font-weight: 500; letter-spacing: .2px; white-space: nowrap; }
+    .badge.success { color: light-dark(#297a3a, #65c777); }
+    .badge.warning { color: var(--sop-color-status-warning); }
+    .badge.danger { color: var(--sop-color-status-danger); }
+    .badge.muted { color: var(--sop-color-text-muted); }
+
+    .detail-view { display: grid; width: 100%; max-width: 1320px; gap: var(--sop-space-page); margin: 0 auto; }
+    .detail-heading { align-items: flex-start; }
+    .detail-identity { display: flex; align-items: center; gap: var(--sop-space-inline); min-width: 0; }
+    .detail-title { margin: 0; font-size: 20px; line-height: 26px; letter-spacing: -.4px; }
+    .detail-subtitle { margin-top: 4px; color: var(--sop-color-text-secondary); }
+    .detail-actions { display: flex; gap: var(--sop-space-inline-compact); }
+    .surface { overflow: hidden; border-radius: var(--sop-radius-card); background: var(--sop-color-background-surface); box-shadow: var(--sop-shadow-surface); }
+    .surface-body { padding: var(--sop-space-card); }
+    .overview-grid { display: grid; grid-template-columns: minmax(0, 1.65fr) minmax(300px, .75fr); align-items: start; gap: var(--sop-space-page); }
+    .live-preview {
+      position: relative;
+      display: grid;
+      place-items: center;
+      width: 100%;
+      min-width: 0;
+      aspect-ratio: 16 / 9;
+      overflow: hidden;
+      border-radius: var(--sop-radius-card);
+      box-shadow: var(--sop-shadow-surface);
+      background: linear-gradient(150deg, #526168 0 30%, #222d32 30% 54%, #75858c 54% 68%, #2d3d43 68%);
+      color: #fff;
+    }
+    .live-preview::after { content: ""; position: absolute; inset: auto 0 0; height: 45%; background: linear-gradient(transparent, #00000085); }
+    .live-preview.is-paused::before { content: "预览已停止"; position: relative; z-index: 2; font-weight: 600; }
+    .live-preview.is-paused { background: #171717; }
+    .live-preview-label { position: absolute; z-index: 2; left: 16px; bottom: 16px; }
+    .live-preview.is-paused .live-preview-label { display: none; }
+    .connection-surface { min-width: 0; }
+    .info-list { display: grid; margin: 0; }
+    .info-row { display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--sop-color-border-default); }
+    .info-row:first-child { padding-top: 0; }
+    .info-row:last-child { padding-bottom: 0; border-bottom: 0; }
+    .info-row dt { color: var(--sop-color-text-muted); }
+    .info-row dd { min-width: 0; margin: 0; overflow-wrap: anywhere; }
+    .mono { font-family: "Geist Mono", "SFMono-Regular", Menlo, monospace; font-size: 12px; }
+    .section-heading { margin-bottom: var(--sop-space-component); }
+    .section-title { margin: 0; font-size: 16px; font-weight: 600; line-height: 24px; }
+    .section-description { margin: 2px 0 0; color: var(--sop-color-text-secondary); }
+    .source-list { display: grid; border-top: 1px solid var(--sop-color-border-default); }
+    .source-row { display: grid; grid-template-columns: 56px minmax(140px, .55fr) minmax(320px, 1.45fr) 72px; align-items: center; min-height: 56px; border-bottom: 1px solid var(--sop-color-border-default); }
+    .source-row:last-child { border-bottom: 0; }
+    .source-row > * { min-width: 0; padding: 10px 12px; }
+    .source-header { min-height: 40px; background: var(--sop-color-background-subtle); color: var(--sop-color-text-muted); font-size: 12px; font-weight: 500; }
+    .source-url { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .radio-cell { text-align: center; }
+    input[type="radio"] { width: 16px; height: 16px; margin: 0; accent-color: var(--sop-color-action-primary); }
+
+    .empty-state { display: grid; justify-items: center; max-width: 420px; margin: 96px auto; text-align: center; }
+    .empty-state-icon { display: grid; place-items: center; width: 40px; height: 40px; margin-bottom: 24px; border-radius: var(--sop-radius-control); background: var(--sop-color-background-active); }
+    .empty-state h2 { margin: 0; font-size: 16px; line-height: 24px; }
+    .empty-state p { margin: 8px 0 20px; color: var(--sop-color-text-secondary); }
+    .notice { display: flex; align-items: flex-start; gap: 12px; max-width: 720px; min-height: 36px; padding: 12px; margin: 64px auto; border: 1px solid var(--sop-color-border-default); border-radius: var(--sop-radius-control); background: var(--sop-color-background-surface); }
+    .notice strong { display: block; margin-bottom: 4px; }
+    .notice p { margin: 0; color: var(--sop-color-text-secondary); }
+
+    .dialog-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 100;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+      background: #00000072;
+    }
+    .dialog {
+      display: flex;
+      flex-direction: column;
+      width: min(760px, calc(100vw - 48px));
+      max-height: calc(100vh - 48px);
+      overflow: hidden;
+      border-radius: var(--sop-radius-popover);
+      background: var(--sop-color-background-surface);
+      box-shadow: var(--sop-shadow-modal);
+    }
+    .dialog-header, .dialog-footer { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 16px 20px; }
+    .dialog-header { border-bottom: 1px solid var(--sop-color-border-default); }
+    .dialog-footer { justify-content: flex-end; border-top: 1px solid var(--sop-color-border-default); background: var(--sop-color-background-subtle); }
+    .dialog-title { margin: 0; font-size: 16px; line-height: 24px; }
+    .dialog-description { margin: 2px 0 0; color: var(--sop-color-text-secondary); }
+    .dialog-body { padding: 20px; overflow-y: auto; }
+    .form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+    .field { display: grid; gap: 8px; font-weight: 500; }
+    .field.full { grid-column: 1 / -1; }
+    .field-hint { color: var(--sop-color-text-muted); font-size: 12px; font-weight: 400; }
+    .form-section { padding-top: 20px; margin-top: 20px; border-top: 1px solid var(--sop-color-border-default); }
+    .source-edit-list { display: grid; gap: 8px; margin-top: 16px; }
+    .source-edit-row { display: grid; grid-template-columns: 40px minmax(150px, .65fr) minmax(260px, 1.35fr) 32px; align-items: center; gap: 8px; }
+    .source-edit-row .field-control { min-width: 0; }
+    .generated-url { margin-top: 12px; padding: 12px; border-radius: var(--sop-radius-control); background: var(--sop-color-background-subtle); color: var(--sop-color-text-secondary); overflow-wrap: anywhere; }
+    .form-error { margin: 12px 0 0; color: var(--sop-color-status-danger); }
+    .toast {
+      position: fixed;
+      right: 24px;
+      bottom: 24px;
+      z-index: 130;
+      padding: 10px 12px;
+      border-radius: var(--sop-radius-control);
+      background: var(--sop-color-action-primary);
+      color: var(--sop-color-action-primary-text);
+      box-shadow: var(--sop-shadow-modal);
+      opacity: 0;
+      transform: translateY(8px);
+      pointer-events: none;
+      transition: opacity var(--sop-motion-control), transform var(--sop-motion-control);
+    }
+    .toast.is-visible { opacity: 1; transform: translateY(0); }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; transition-duration: 0s !important; } }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" aria-label="主导航">
+      <div class="brand"><span class="brand-mark" aria-hidden="true"></span><span>SOP Vision</span></div>
+      <p class="nav-label">Workspace</p>
+      <nav class="nav">
+        <button class="nav-button" type="button" data-nav="cameras" aria-current="page">
+          <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M14.5 6.5 18 4v16l-3.5-2.5"/><rect x="3" y="6" width="12" height="12" rx="2"/></svg>
+          <span>Cameras</span><span class="nav-meta" data-camera-count>4</span>
+        </button>
+        <button class="nav-button" type="button" data-nav="tasks">
+          <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4M8 11h6M11 8v6"/></svg>
+          <span>Detection Tasks</span><span class="nav-meta">待确认</span>
+        </button>
+      </nav>
+    </aside>
+
+    <main class="main">
+      <header class="header">
+        <button class="button plain header-back" type="button" data-back-cameras hidden>
+          <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="m15 18-6-6 6-6"/></svg>
+          返回 Cameras
+        </button>
+        <div class="breadcrumb" aria-label="面包屑">
+          <button class="breadcrumb-button" type="button" data-breadcrumb-root aria-current="page">Cameras</button>
+          <span class="breadcrumb-muted" data-breadcrumb-separator hidden>/</span>
+          <span class="breadcrumb-muted" data-breadcrumb-current hidden></span>
+        </div>
+        <div class="header-theme">
+          <button class="icon-button" type="button" aria-label="切换为深色主题" title="切换为深色主题" data-theme-trigger>
+            <svg aria-hidden="true" data-theme-trigger-icon viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.42 1.42M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.42-1.42M17.66 6.34l1.41-1.41"/></svg>
+          </button>
+        </div>
+      </header>
+
+      <section class="page" data-page="cameras">
+        <div class="page-section" data-camera-list-view>
+          <div class="toolbar">
+            <label class="search">
+              <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
+              <input type="search" placeholder="搜索摄像头名称或 IP" aria-label="搜索摄像头名称或 IP" data-camera-search>
+            </label>
+            <button class="button primary" type="button" data-open-camera-dialog>
+              <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 5v14M5 12h14"/></svg>
+              添加摄像头
+            </button>
+          </div>
+          <div class="camera-grid" data-camera-grid></div>
+          <div class="empty-state" data-search-empty hidden>
+            <span class="empty-state-icon"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg></span>
+            <h2>没有匹配的摄像头</h2>
+            <p>请尝试搜索其他摄像头名称或 IP 地址。</p>
+          </div>
+          <div class="empty-state" data-system-empty hidden>
+            <span class="empty-state-icon"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M14.5 6.5 18 4v16l-3.5-2.5"/><rect x="3" y="6" width="12" height="12" rx="2"/></svg></span>
+            <h2>尚未添加摄像头</h2>
+            <p>添加摄像头连接信息和至少一路视频源后，即可在此预览。</p>
+            <button class="button primary" type="button" data-open-camera-dialog>添加摄像头</button>
+          </div>
+        </div>
+
+        <div class="detail-view" data-camera-detail-view hidden>
+          <div class="detail-heading">
+            <div class="detail-identity">
+              <div><h1 class="detail-title" data-detail-name></h1><p class="detail-subtitle">摄像头连接信息与默认预览</p></div>
+              <span class="badge success" data-camera-status><span class="status-dot"></span>在线</span>
+            </div>
+            <div class="detail-actions">
+              <button class="button" type="button" data-toggle-preview>
+                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 6v12M15 6v12"/></svg><span>停止预览</span>
+              </button>
+              <button class="button" type="button" data-edit-camera>
+                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="m14 5 5 5L8 21H3v-5L14 5Z"/></svg>
+                编辑摄像头
+              </button>
+            </div>
+          </div>
+
+          <div class="overview-grid">
+            <div class="live-preview" data-live-preview><span class="live-preview-label">LIVE · <span data-live-source></span></span></div>
+            <section class="surface connection-surface" aria-labelledby="connection-title">
+              <div class="surface-body">
+                <div class="section-heading"><div><h2 class="section-title" id="connection-title">连接信息</h2><p class="section-description">当前保存的设备连接参数</p></div></div>
+                <dl class="info-list">
+                  <div class="info-row"><dt>IP 地址</dt><dd class="mono" data-detail-ip></dd></div>
+                  <div class="info-row"><dt>RTSP 端口</dt><dd class="mono" data-detail-port></dd></div>
+                  <div class="info-row"><dt>用户名</dt><dd class="mono" data-detail-user></dd></div>
+                  <div class="info-row"><dt>密码</dt><dd class="mono" data-detail-password></dd></div>
+                  <div class="info-row"><dt>预览源</dt><dd data-detail-preview></dd></div>
+                </dl>
+              </div>
+            </section>
+          </div>
+
+          <section class="surface" aria-labelledby="sources-title">
+            <div class="surface-body">
+              <div class="section-heading">
+                <div><h2 class="section-title" id="sources-title">Camera Sources</h2><p class="section-description">选择一路信号作为该摄像头的默认预览源</p></div>
+                <span class="badge muted" data-source-count></span>
+              </div>
+              <div class="source-list" role="table" aria-label="摄像头视频源">
+                <div class="source-row source-header" role="row"><span role="columnheader" class="radio-cell">预览</span><span role="columnheader">源名称</span><span role="columnheader">完整 RTSP 地址</span><span role="columnheader">状态</span></div>
+                <div data-source-list></div>
+              </div>
+            </div>
+          </section>
+        </div>
+      </section>
+
+      <section class="page" data-page="tasks" hidden>
+        <div class="notice">
+          <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg>
+          <div><strong>Detection Tasks 暂未纳入 v3 设计范围</strong><p>本版本仅落实 Cameras 功能和后台整体框架；检测任务的数据结构与操作流程将在需求确认后补充。</p></div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div class="dialog-backdrop" data-dialog-backdrop hidden>
+    <section class="dialog" role="dialog" aria-modal="true" aria-labelledby="camera-dialog-title" aria-describedby="camera-dialog-description">
+      <header class="dialog-header">
+        <div><h2 class="dialog-title" id="camera-dialog-title" data-dialog-title>添加摄像头</h2><p class="dialog-description" id="camera-dialog-description">配置设备连接信息和一路或多路视频源。</p></div>
+        <button class="icon-button" type="button" aria-label="关闭" data-close-dialog>
+          <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="m6 6 12 12M18 6 6 18"/></svg>
+        </button>
+      </header>
+      <div class="dialog-body">
+        <div class="form-grid">
+          <label class="field full">摄像头名称<input class="field-control" data-form-name autocomplete="off"></label>
+          <label class="field">IP 地址<input class="field-control" data-form-ip inputmode="decimal" autocomplete="off"></label>
+          <label class="field">RTSP 端口<input class="field-control" data-form-port type="number" min="1" max="65535"></label>
+          <label class="field">用户名<input class="field-control" data-form-user autocomplete="username"></label>
+          <label class="field">密码<input class="field-control" data-form-password type="text" autocomplete="current-password"></label>
+        </div>
+        <section class="form-section" aria-labelledby="form-sources-title">
+          <div class="source-head">
+            <div><h3 class="section-title" id="form-sources-title">Camera Sources</h3><p class="section-description">填写 URL 后缀，并用单选框指定默认预览源。</p></div>
+            <button class="button" type="button" data-add-source>
+              <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 5v14M5 12h14"/></svg>
+              添加一路
+            </button>
+          </div>
+          <div class="source-edit-list" data-source-edit-list></div>
+          <div class="generated-url mono" data-generated-url>完整填写连接信息后生成预览地址。</div>
+        </section>
+        <p class="form-error" id="camera-form-error" role="alert" data-form-error hidden></p>
+      </div>
+      <footer class="dialog-footer">
+        <button class="button" type="button" data-close-dialog>取消</button>
+        <button class="button primary" type="button" data-save-camera>保存摄像头</button>
+      </footer>
+    </section>
+  </div>
+
+  <div class="toast" role="status" aria-live="polite" data-toast></div>
+
+  <script>
+    (() => {
+      const $ = (selector, parent = document) => parent.querySelector(selector);
+      const $$ = (selector, parent = document) => [...parent.querySelectorAll(selector)];
+      const cameras = [
+        { id: 'wash-01', name: '洗手区 01', ip: '192.168.1.64', port: '554', user: 'admin', password: 'hikvision123', preview: 0, tone: '', taskCount: 2, sources: [
+          { name: '通道 1 主码流', suffix: 'Streaming/Channels/101', health: 'online' }, { name: '通道 1 子码流', suffix: 'Streaming/Channels/102', health: 'online' }
+        ]},
+        { id: 'packing-02', name: '包装工位 02', ip: '192.168.1.81', port: '554', user: 'admin', password: 'packing123', preview: 0, tone: 'packing', taskCount: 1, sources: [
+          { name: '通道 1 主码流', suffix: 'Streaming/Channels/101', health: 'online' }, { name: '通道 1 子码流', suffix: 'Streaming/Channels/102', health: 'degraded' }
+        ]},
+        { id: 'gate-01', name: '仓库入口 01', ip: '192.168.1.92', port: '554', user: 'operator', password: 'warehouse123', preview: 0, tone: 'gate', taskCount: 0, sources: [
+          { name: '通道 1 主码流', suffix: 'Streaming/Channels/101', health: 'offline' }
+        ]},
+        { id: 'storage-03', name: '原料库 03', ip: '192.168.1.103', port: '554', user: 'admin', password: 'storage123', preview: 1, tone: 'storage', taskCount: 0, sources: [
+          { name: '通道 2 主码流', suffix: 'Streaming/Channels/201', health: 'online' }, { name: '通道 2 子码流', suffix: 'Streaming/Channels/202', health: 'online' }
+        ]}
+      ];
+
+      let currentCameraId = null;
+      let editingCameraId = null;
+      let previewPaused = false;
+      let lastDialogTrigger = null;
+      let toastTimer;
+
+      const grid = $('[data-camera-grid]');
+      const listView = $('[data-camera-list-view]');
+      const detailView = $('[data-camera-detail-view]');
+      const dialogBackdrop = $('[data-dialog-backdrop]');
+      const dialog = $('.dialog', dialogBackdrop);
+      const searchInput = $('[data-camera-search]');
+      const themeTrigger = $('[data-theme-trigger]');
+
+      const escapeHtml = value => String(value).replace(/[&<>'"]/g, char => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', "'":'&#39;', '"':'&quot;' })[char]);
+      const sourceUrl = (camera, source) => `rtsp://${camera.user}:${camera.password}@${camera.ip}:${camera.port}/${source.suffix.replace(/^\/+/, '')}`;
+      const getCurrentCamera = () => cameras.find(camera => camera.id === currentCameraId);
+      const healthMeta = {
+        online: { label: '在线', badge: 'success', dot: '', preview: 'LIVE' },
+        partial: { label: '部分异常', badge: 'warning', dot: 'warning', preview: '信号异常' },
+        degraded: { label: '异常', badge: 'warning', dot: 'warning', preview: '信号异常' },
+        offline: { label: '离线', badge: 'danger', dot: 'danger', preview: '无信号' }
+      };
+
+      function cameraHealth(camera) {
+        const states = camera.sources.map(source => source.health || 'online');
+        if (states.length && states.every(state => state === 'offline')) return 'offline';
+        if (states.some(state => state !== 'online')) return 'partial';
+        return 'online';
+      }
+
+      function statusBadge(state, extraAttributes = '') {
+        const meta = healthMeta[state] || healthMeta.offline;
+        return `<span class="badge ${meta.badge}" ${extraAttributes}><span class="status-dot ${meta.dot}"></span>${meta.label}</span>`;
+      }
+
+      function applyTheme(theme, persist = true) {
+        const selectedTheme = theme === 'dark' ? 'dark' : 'light';
+        document.documentElement.dataset.theme = selectedTheme;
+        const actionLabel = selectedTheme === 'dark' ? '切换为浅色主题' : '切换为深色主题';
+        themeTrigger.setAttribute('aria-label', actionLabel);
+        themeTrigger.setAttribute('title', actionLabel);
+        $('[data-theme-trigger-icon]').innerHTML = selectedTheme === 'dark'
+          ? '<path d="M20.5 14.2A8.5 8.5 0 0 1 9.8 3.5 8.5 8.5 0 1 0 20.5 14.2Z"/>'
+          : '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.42 1.42M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.42-1.42M17.66 6.34l1.41-1.41"/>';
+        if (persist) {
+          try { localStorage.setItem('sop-vision-theme', selectedTheme); } catch (_) {}
+        }
+      }
+
+      function cameraCard(camera) {
+        const source = camera.sources[camera.preview] || camera.sources[0];
+        const state = cameraHealth(camera);
+        const previewStatus = healthMeta[source.health || 'online'];
+        const onlineSourceCount = camera.sources.filter(item => (item.health || 'online') === 'online').length;
+        return `<button class="camera-card" type="button" data-camera-id="${escapeHtml(camera.id)}" aria-label="查看摄像头 ${escapeHtml(camera.name)}，状态${healthMeta[state].label}">
+          <div class="camera-preview ${escapeHtml(camera.tone)} ${source.health === 'offline' ? 'is-offline' : source.health === 'degraded' ? 'is-degraded' : ''}"><span class="preview-live"><span class="status-dot ${previewStatus.dot}"></span>${previewStatus.preview}</span><span class="preview-label">${escapeHtml(source.name)}</span></div>
+          <div class="camera-body"><div class="camera-heading"><span class="camera-name">${escapeHtml(camera.name)}</span>${statusBadge(state)}</div><div class="camera-address">${escapeHtml(camera.ip)}:${escapeHtml(camera.port)}</div><div class="camera-meta"><span>${onlineSourceCount}/${camera.sources.length} 路在线</span><span>${camera.taskCount} 个任务</span></div></div>
+        </button>`;
+      }
+
+      function renderCards() {
+        const query = searchInput.value.trim().toLowerCase();
+        const filtered = cameras.filter(camera => camera.name.toLowerCase().includes(query) || camera.ip.includes(query));
+        grid.innerHTML = filtered.map(cameraCard).join('');
+        $('[data-camera-count]').textContent = cameras.length;
+        $('[data-system-empty]').hidden = cameras.length !== 0;
+        $('[data-search-empty]').hidden = cameras.length === 0 || filtered.length !== 0;
+        grid.hidden = filtered.length === 0;
+        $$('[data-camera-id]', grid).forEach(button => button.addEventListener('click', () => showCameraDetail(button.dataset.cameraId)));
+      }
+
+      function updateBreadcrumb(root, current = '') {
+        const rootButton = $('[data-breadcrumb-root]');
+        rootButton.textContent = root;
+        if (current) rootButton.removeAttribute('aria-current');
+        else rootButton.setAttribute('aria-current', 'page');
+        $('[data-breadcrumb-separator]').hidden = !current;
+        $('[data-breadcrumb-current]').hidden = !current;
+        $('[data-breadcrumb-current]').textContent = current;
+      }
+
+      function showCameraList() {
+        currentCameraId = null;
+        listView.hidden = false;
+        detailView.hidden = true;
+        $('[data-back-cameras]').hidden = true;
+        updateBreadcrumb('Cameras');
+        history.replaceState(null, '', '#cameras');
+        searchInput.focus();
+      }
+
+      function showCameraDetail(id) {
+        const camera = cameras.find(item => item.id === id);
+        if (!camera) return;
+        currentCameraId = id;
+        previewPaused = false;
+        listView.hidden = true;
+        detailView.hidden = false;
+        $('[data-back-cameras]').hidden = false;
+        updateBreadcrumb('Cameras', camera.name);
+        history.replaceState(null, '', `#camera-${id}`);
+        renderDetail();
+        $('[data-back-cameras]').focus();
+      }
+
+      function renderDetail() {
+        const camera = getCurrentCamera();
+        if (!camera) return;
+        const previewSource = camera.sources[camera.preview] || camera.sources[0];
+        const state = cameraHealth(camera);
+        const stateMeta = healthMeta[state];
+        $('[data-detail-name]').textContent = camera.name;
+        $('[data-detail-ip]').textContent = camera.ip;
+        $('[data-detail-port]').textContent = camera.port;
+        $('[data-detail-user]').textContent = camera.user;
+        $('[data-detail-password]').textContent = camera.password;
+        $('[data-detail-preview]').textContent = previewSource.name;
+        $('[data-live-source]').textContent = previewSource.name;
+        const cameraStatus = $('[data-camera-status]');
+        cameraStatus.className = `badge ${stateMeta.badge}`;
+        cameraStatus.innerHTML = `<span class="status-dot ${stateMeta.dot}"></span>${stateMeta.label}`;
+        $('[data-source-count]').textContent = `${camera.sources.length} 路源`;
+        $('[data-live-preview]').classList.toggle('is-paused', previewPaused);
+        $('[data-toggle-preview] span').textContent = previewPaused ? '开始预览' : '停止预览';
+        $('[data-toggle-preview] svg').innerHTML = previewPaused ? '<path d="m8 5 11 7-11 7V5Z"/>' : '<path d="M9 6v12M15 6v12"/>';
+        $('[data-source-list]').innerHTML = camera.sources.map((source, index) => `<div class="source-row" role="row">
+          <span class="radio-cell" role="cell"><input type="radio" name="detail-preview-source" value="${index}" ${camera.preview === index ? 'checked' : ''} aria-label="将 ${escapeHtml(source.name)} 设为预览源"></span>
+          <span role="cell">${escapeHtml(source.name)}</span>
+          <span role="cell" class="source-url mono" title="${escapeHtml(sourceUrl(camera, source))}">${escapeHtml(sourceUrl(camera, source))}</span>
+          <span role="cell">${statusBadge(source.health || 'online')}</span>
+        </div>`).join('');
+        $$('input[name="detail-preview-source"]').forEach(input => input.addEventListener('change', () => {
+          camera.preview = Number(input.value);
+          renderDetail();
+          renderCards();
+          notify(`默认预览源已切换为 ${camera.sources[camera.preview].name}`);
+        }));
+      }
+
+      function showPage(page) {
+        $$('[data-page]').forEach(section => section.hidden = section.dataset.page !== page);
+        $$('[data-nav]').forEach(button => {
+          if (button.dataset.nav === page) button.setAttribute('aria-current', 'page');
+          else button.removeAttribute('aria-current');
+        });
+        if (page === 'cameras') {
+          showCameraList();
+        } else {
+          $('[data-back-cameras]').hidden = true;
+          updateBreadcrumb('Detection Tasks');
+          history.replaceState(null, '', '#tasks');
+        }
+      }
+
+      function createSourceEditor(source = { name: '', suffix: '' }, checked = false) {
+        const row = document.createElement('div');
+        row.className = 'source-edit-row';
+        row.dataset.health = source.health || 'online';
+        row.innerHTML = `<span class="radio-cell"><input type="radio" name="form-preview-source" ${checked ? 'checked' : ''} aria-label="设为默认预览源"></span>
+          <input class="field-control" data-source-name value="${escapeHtml(source.name)}" aria-label="视频源名称" placeholder="例如：通道 1 主码流">
+          <input class="field-control" data-source-suffix value="${escapeHtml(source.suffix)}" aria-label="URL 后缀" placeholder="例如：Streaming/Channels/101">
+          <button class="icon-button" type="button" data-remove-source aria-label="删除该视频源"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 7h16M9 7V4h6v3M8 10v7M12 10v7M16 10v7M6 7l1 14h10l1-14"/></svg></button>`;
+        $('[data-remove-source]', row).addEventListener('click', () => {
+          const list = $('[data-source-edit-list]');
+          if (list.children.length === 1) {
+            showFormError('至少需要保留一路视频源。');
+            return;
+          }
+          const wasChecked = $('input[type="radio"]', row).checked;
+          row.remove();
+          if (wasChecked) $('input[type="radio"]', list).checked = true;
+          updateGeneratedUrl();
+        });
+        $$('input', row).forEach(input => input.addEventListener('input', updateGeneratedUrl));
+        $('input[type="radio"]', row).addEventListener('change', updateGeneratedUrl);
+        return row;
+      }
+
+      function clearFormError() {
+        const error = $('[data-form-error]');
+        error.hidden = true;
+        error.textContent = '';
+        $$('.field-control', dialog).forEach(input => { input.removeAttribute('aria-invalid'); input.removeAttribute('aria-describedby'); });
+      }
+
+      function showFormError(message, target) {
+        const error = $('[data-form-error]');
+        error.textContent = message;
+        error.hidden = false;
+        if (target) {
+          target.setAttribute('aria-invalid', 'true');
+          target.setAttribute('aria-describedby', 'camera-form-error');
+          target.focus();
+        }
+      }
+
+      function updateGeneratedUrl() {
+        clearFormError();
+        const selected = $('input[name="form-preview-source"]:checked');
+        const row = selected?.closest('.source-edit-row');
+        const ip = $('[data-form-ip]').value.trim();
+        const port = $('[data-form-port]').value.trim();
+        const user = $('[data-form-user]').value.trim();
+        const password = $('[data-form-password]').value;
+        const suffix = row ? $('[data-source-suffix]', row).value.trim().replace(/^\/+/, '') : '';
+        $('[data-generated-url]').textContent = ip && port && user && password && suffix
+          ? `预览地址：rtsp://${user}:${password}@${ip}:${port}/${suffix}`
+          : '完整填写连接信息并选择预览源后生成预览地址。';
+      }
+
+      function openDialog(camera = null, trigger = document.activeElement) {
+        lastDialogTrigger = trigger;
+        editingCameraId = camera?.id || null;
+        $('[data-dialog-title]').textContent = camera ? '编辑摄像头' : '添加摄像头';
+        $('[data-form-name]').value = camera?.name || '';
+        $('[data-form-ip]').value = camera?.ip || '';
+        $('[data-form-port]').value = camera?.port || '554';
+        $('[data-form-user]').value = camera?.user || 'admin';
+        $('[data-form-password]').value = camera?.password || '';
+        const sourceList = $('[data-source-edit-list]');
+        sourceList.innerHTML = '';
+        (camera?.sources || [{ name: '通道 1 主码流', suffix: 'Streaming/Channels/101' }]).forEach((source, index) => sourceList.appendChild(createSourceEditor(source, camera ? camera.preview === index : index === 0)));
+        clearFormError();
+        updateGeneratedUrl();
+        dialogBackdrop.hidden = false;
+        document.body.style.overflow = 'hidden';
+        requestAnimationFrame(() => $('[data-form-name]').focus());
+      }
+
+      function closeDialog() {
+        dialogBackdrop.hidden = true;
+        document.body.style.overflow = '';
+        clearFormError();
+        lastDialogTrigger?.focus();
+      }
+
+      function validateAndSave() {
+        clearFormError();
+        const fields = {
+          name: $('[data-form-name]'), ip: $('[data-form-ip]'), port: $('[data-form-port]'),
+          user: $('[data-form-user]'), password: $('[data-form-password]')
+        };
+        for (const [label, field] of [['摄像头名称', fields.name], ['IP 地址', fields.ip], ['RTSP 端口', fields.port], ['用户名', fields.user], ['密码', fields.password]]) {
+          if (!field.value.trim()) { showFormError(`请填写${label}。`, field); return; }
+        }
+        const sourceRows = $$('.source-edit-row', $('[data-source-edit-list]'));
+        if (!sourceRows.length) { showFormError('请至少添加一路视频源。'); return; }
+        const sources = [];
+        let preview = -1;
+        for (let index = 0; index < sourceRows.length; index += 1) {
+          const nameInput = $('[data-source-name]', sourceRows[index]);
+          const suffixInput = $('[data-source-suffix]', sourceRows[index]);
+          if (!nameInput.value.trim()) { showFormError('请填写视频源名称。', nameInput); return; }
+          if (!suffixInput.value.trim()) { showFormError('请填写视频源 URL 后缀。', suffixInput); return; }
+          sources.push({ name: nameInput.value.trim(), suffix: suffixInput.value.trim().replace(/^\/+/, ''), health: sourceRows[index].dataset.health || 'online' });
+          if ($('input[type="radio"]', sourceRows[index]).checked) preview = index;
+        }
+        if (preview < 0) { showFormError('请选择一路信号作为默认预览源。'); return; }
+        const values = { name: fields.name.value.trim(), ip: fields.ip.value.trim(), port: fields.port.value.trim(), user: fields.user.value.trim(), password: fields.password.value, sources, preview };
+        const wasEditing = Boolean(editingCameraId);
+        if (wasEditing) {
+          const camera = cameras.find(item => item.id === editingCameraId);
+          Object.assign(camera, values);
+          currentCameraId = camera.id;
+          renderDetail();
+          notify('摄像头配置已保存');
+        } else {
+          const id = `camera-${Date.now()}`;
+          cameras.push({ id, ...values, tone: 'gate', taskCount: 0 });
+          notify('摄像头已添加');
+        }
+        closeDialog();
+        if (wasEditing) {
+          renderCards();
+        } else {
+          searchInput.value = '';
+          showCameraList();
+          renderCards();
+        }
+      }
+
+      function notify(message) {
+        const toast = $('[data-toast]');
+        clearTimeout(toastTimer);
+        toast.textContent = message;
+        toast.classList.add('is-visible');
+        toastTimer = setTimeout(() => toast.classList.remove('is-visible'), 2400);
+      }
+
+      function trapDialogFocus(event) {
+        if (dialogBackdrop.hidden || event.key !== 'Tab') return;
+        const focusable = $$('button:not(:disabled), input:not(:disabled), select:not(:disabled), [tabindex]:not([tabindex="-1"])', dialog);
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+        if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+      }
+
+      $$('[data-nav]').forEach(button => button.addEventListener('click', () => showPage(button.dataset.nav)));
+      themeTrigger.addEventListener('click', () => applyTheme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark'));
+      $('[data-breadcrumb-root]').addEventListener('click', () => {
+        if ($('[data-breadcrumb-root]').textContent === 'Cameras' && currentCameraId) showCameraList();
+      });
+      $$('[data-open-camera-dialog]').forEach(button => button.addEventListener('click', () => openDialog(null, button)));
+      $$('[data-close-dialog]').forEach(button => button.addEventListener('click', closeDialog));
+      $('[data-add-source]').addEventListener('click', () => {
+        $('[data-source-edit-list]').appendChild(createSourceEditor({ name: '', suffix: '' }));
+        updateGeneratedUrl();
+      });
+      $('[data-save-camera]').addEventListener('click', validateAndSave);
+      $('[data-back-cameras]').addEventListener('click', showCameraList);
+      $('[data-edit-camera]').addEventListener('click', event => openDialog(getCurrentCamera(), event.currentTarget));
+      $('[data-toggle-preview]').addEventListener('click', () => { previewPaused = !previewPaused; renderDetail(); notify(previewPaused ? '预览已停止' : '预览已开始'); });
+      searchInput.addEventListener('input', renderCards);
+      dialogBackdrop.addEventListener('mousedown', event => { if (event.target === dialogBackdrop) closeDialog(); });
+      document.addEventListener('keydown', event => {
+        if (event.key === 'Escape' && !dialogBackdrop.hidden) closeDialog();
+        trapDialogFocus(event);
+      });
+      $$('[data-form-ip], [data-form-port], [data-form-user], [data-form-password]').forEach(input => input.addEventListener('input', updateGeneratedUrl));
+
+      let initialTheme = 'light';
+      try { initialTheme = localStorage.getItem('sop-vision-theme') || 'light'; } catch (_) {}
+      applyTheme(initialTheme, false);
+      renderCards();
+      if (location.hash === '#tasks') showPage('tasks');
+      else if (location.hash.startsWith('#camera-')) showCameraDetail(location.hash.replace('#camera-', ''));
+    })();
+  </script>
+</body>
+</html>

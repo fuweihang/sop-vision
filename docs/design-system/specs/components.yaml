@@ -1,0 +1,200 @@
+version: 1.0.0
+status: normalized-from-observation
+defaults:
+  typography:
+    font_family: "{semantic.typography.body.fontFamily}"
+    font_size: "{semantic.typography.body.fontSize}"
+    font_weight: "{semantic.typography.body.fontWeight}"
+    line_height: "{semantic.typography.body.lineHeight}"
+  control_height: "{semantic.size.controlMedium}"
+  control_radius: "{semantic.radius.control}"
+  icon_size: "{semantic.size.icon}"
+  transition:
+    duration: "{semantic.motion.controlDuration}"
+    easing: "{semantic.motion.standardEasing}"
+
+components:
+  button:
+    anatomy: [container, leading_icon, label, trailing_icon, spinner]
+    sizes:
+      small:
+        height: "{semantic.size.controlSmall}"
+        padding_inline: 6px
+        icon: "{size.icon.small}"
+      medium:
+        height: "{semantic.size.controlMedium}"
+        padding_inline: 10px
+        icon: "{size.icon.medium}"
+      large:
+        height: "{semantic.size.controlLarge}"
+        padding_inline: 12px
+        icon: "{size.icon.medium}"
+    variants:
+      primary:
+        background: "{semantic.color.action.primary}"
+        foreground: "{semantic.color.action.primaryText}"
+        hover_background: "{semantic.color.action.primaryHover}"
+      secondary:
+        background: "{semantic.color.background.surface}"
+        foreground: "{semantic.color.text.primary}"
+        shadow: "{semantic.shadow.surface}"
+      ghost:
+        background: transparent
+        foreground: "{semantic.color.text.primary}"
+        hover_background: "{semantic.color.background.active}"
+      danger:
+        foreground: "{semantic.color.status.danger}"
+        background: "{semantic.color.background.surface}"
+        border: "{semantic.color.status.danger}"
+    states:
+      focus_visible:
+        shadow: "{semantic.shadow.keyboardFocus}"
+      disabled:
+        foreground: "{semantic.color.text.muted}"
+        background: "{semantic.color.background.subtle}"
+        cursor: not-allowed
+      loading:
+        preserve_width: true
+        announce_busy: true
+    accessibility:
+      icon_only_requires_accessible_name: true
+      minimum_hit_area: 32px
+
+  text_input:
+    anatomy: [container, prefix, input, suffix, validation_message]
+    height: "{semantic.size.controlMedium}"
+    padding_inline: 12px
+    radius: "{semantic.radius.control}"
+    background: "{semantic.color.background.surface}"
+    foreground: "{semantic.color.text.primary}"
+    placeholder: "{semantic.color.text.muted}"
+    default_shadow: "{semantic.shadow.surface}"
+    states:
+      focus:
+        shadow: "{semantic.shadow.controlFocus}"
+      focus_visible:
+        shadow: "{semantic.shadow.keyboardFocus}"
+      disabled:
+        background: "{semantic.color.background.subtle}"
+        foreground: "{semantic.color.text.muted}"
+      invalid:
+        status: danger
+        describe_error_with: aria-describedby
+    accessibility:
+      visible_label_preferred: true
+      autocomplete_required_when_applicable: true
+
+  select:
+    anatomy: [container, value, chevron, menu]
+    height: "{semantic.size.controlMedium}"
+    padding_inline_start: 12px
+    padding_inline_end: 36px
+    radius: "{semantic.radius.control}"
+    background: "{semantic.color.background.surface}"
+    default_shadow: "{semantic.shadow.surface}"
+    menu_reference: popover
+    accessibility:
+      keyboard_navigation: required
+      current_value_announced: true
+
+  card:
+    anatomy: [header, body, footer]
+    radius: "{semantic.radius.card}"
+    background: "{semantic.color.background.surface}"
+    shadow: "{semantic.shadow.surface}"
+    body_padding: 20px
+    footer:
+      min_height: 56px
+      padding: 12px 12px 12px 20px
+      background: "{semantic.color.background.subtle}"
+      border_block_start: "1px solid {semantic.color.border.default}"
+    rules:
+      - Use the footer for help text and trailing actions.
+      - Do not add elevation unless the card becomes a floating surface.
+      - Card titles use semantic.typography.heading only on settings cards.
+
+  sidebar_navigation:
+    width: "{semantic.size.sidebar}"
+    row_height: "{semantic.size.controlMedium}"
+    item_radius: "{semantic.radius.control}"
+    item_padding_inline: 10px
+    icon_size: "{semantic.size.icon}"
+    states:
+      hover_background: "{semantic.color.background.subtle}"
+      active_background: "{semantic.color.background.active}"
+      focus_visible_shadow: "{semantic.shadow.keyboardFocus}"
+    rules:
+      - Group related destinations with a one-pixel separator.
+      - Keep labels concise and avoid more than two hierarchy levels.
+      - The active item requires more than an icon-color change.
+
+  badge:
+    height: 20px
+    padding_inline: 8px
+    radius: "{semantic.radius.badge}"
+    font_size: "{font.size.label}"
+    font_weight: "{font.weight.medium}"
+    letter_spacing: "{font.letterSpacing.badge}"
+    icon_size: "{size.icon.small}"
+    variants: [neutral, info, success, warning, danger]
+    rules:
+      - Use for concise status or plan labels, not full sentences.
+      - Preserve readable text contrast in every theme.
+
+  popover:
+    anatomy: [surface, optional_header, content, optional_footer]
+    min_width: 240px
+    observed_date_picker_width: 280px
+    radius: "{semantic.radius.popover}"
+    padding: 12px
+    background: "{semantic.color.background.surface}"
+    shadow: "{semantic.shadow.popover}"
+    motion:
+      duration: "{semantic.motion.popoverDuration}"
+      easing: "{semantic.motion.swiftEasing}"
+    behavior:
+      close_on_escape: true
+      close_on_outside_click: true
+      restore_focus_to_trigger: true
+      constrain_to_viewport: true
+
+  empty_state:
+    anatomy: [icon, title, description, optional_action]
+    content_max_width: 420px
+    alignment: center
+    icon_size: 32px
+    title_font_weight: "{font.weight.medium}"
+    description_color: "{semantic.color.text.secondary}"
+    rules:
+      - Explain what is absent and the next useful action.
+      - Avoid illustrations when a simple system icon is sufficient.
+      - Do not show a primary action if the user cannot resolve the state.
+
+  notice:
+    anatomy: [icon, content, optional_action]
+    min_height: 36px
+    padding: 6px 12px
+    gap: 12px
+    radius: "{semantic.radius.control}"
+    border: "1px solid {semantic.color.border.default}"
+    variants: [neutral, info, success, warning, danger]
+
+  switch:
+    anatomy: [track, thumb, label, description]
+    hit_area_height: 30px
+    label_gap: 12px
+    states: [off, on, focus_visible, disabled]
+    accessibility:
+      native_checkbox_or_switch_role: required
+      label_click_toggles_control: true
+      state_announced: true
+
+  filter_bar:
+    anatomy: [date_range, author, environment, repository, branch, status]
+    control_height: "{semantic.size.controlMedium}"
+    gap: 8px
+    wrapping: allowed
+    rules:
+      - Keep the most frequently used filter first.
+      - Show selected-count badges for multi-select filters.
+      - Preserve filters in URL state when technically feasible.

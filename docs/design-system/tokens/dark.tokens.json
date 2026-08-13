@@ -1,0 +1,45 @@
+{
+  "$description": "Dark theme mapping inferred from the live dashboard's dark-theme CSS variables; validate visually before release.",
+  "theme": {
+    "color": {
+      "$type": "color",
+      "background": {
+        "page": { "$value": "{color.dark.background.page}" },
+        "surface": { "$value": "{color.dark.background.surface}" },
+        "subtle": { "$value": "{color.dark.neutral.100}" },
+        "active": { "$value": "{color.dark.neutral.200}" }
+      },
+      "text": {
+        "primary": { "$value": "{color.dark.neutral.1000}" },
+        "secondary": { "$value": "{color.dark.neutral.900}" },
+        "muted": { "$value": "{color.dark.neutral.700}" },
+        "inverse": { "$value": "{color.black}" },
+        "link": { "$value": "{color.blue.700}" }
+      },
+      "border": {
+        "default": { "$value": "{color.alpha.white.14}" },
+        "strong": { "$value": "{color.alpha.white.24}" }
+      },
+      "action": {
+        "primary": { "$value": "{color.dark.neutral.1000}" },
+        "primaryHover": { "$value": "{color.dark.neutral.900}" },
+        "primaryText": { "$value": "{color.black}" },
+        "focus": { "$value": "{color.blue.900}" }
+      },
+      "status": {
+        "info": { "$value": "{color.blue.700}" },
+        "success": { "$value": "{color.green.700}" },
+        "warning": { "$value": "{color.amber.700}" },
+        "danger": { "$value": "{color.red.700}" }
+      }
+    },
+    "shadow": {
+      "$type": "shadow",
+      "surface": { "$value": "0 0 0 1px #FFFFFF24" },
+      "controlFocus": { "$value": "0 0 0 1px #FFFFFF82, 0 0 0 4px #FFFFFF3D" },
+      "keyboardFocus": { "$value": "0 0 0 2px #0A0A0A, 0 0 0 4px #005ED6" },
+      "popover": { "$value": "0 0 0 1px #FFFFFF25, 0 2px 2px #00000052, 0 8px 16px -4px #00000029" },
+      "modal": { "$value": "0 0 0 1px #FFFFFF25, 0 8px 16px -4px #00000052, 0 24px 32px -8px #00000029" }
+    }
+  }
+}

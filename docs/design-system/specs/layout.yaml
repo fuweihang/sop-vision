@@ -1,0 +1,96 @@
+version: 1.0.0
+status: normalized-from-observation
+baseline:
+  viewport:
+    width: 1280px
+    height: 720px
+    device_pixel_ratio: 1
+  theme: light
+
+shell:
+  sidebar:
+    width: "{size.sidebar}"
+    position: fixed
+    top: 0
+    bottom: 0
+    background: "{semantic.color.background.page}"
+    border_inline_end: "1px solid {semantic.color.border.default}"
+    navigation_row_height: "{size.control.medium}"
+    navigation_inline_padding: 8px
+    navigation_item_radius: "{semantic.radius.control}"
+    footer_height: 44px
+    overflow: auto
+  header:
+    height: "{size.header}"
+    position: sticky
+    top: 0
+    z_index: 75
+    background: "{semantic.color.background.page}"
+    border_block_end: "1px solid {semantic.color.border.default}"
+    breadcrumb_alignment: center
+  content:
+    offset_inline_start: "{size.sidebar}"
+    background: "{semantic.color.background.page}"
+    min_width: 0
+
+page_variants:
+  workspace:
+    description: Dashboard, list, deployment and observability pages.
+    inline_padding: "{semantic.space.page}"
+    block_padding_start: "{semantic.space.page}"
+    max_width: none
+    section_gap: "{semantic.space.section}"
+  settings:
+    description: Narrower card stack with a secondary settings navigation.
+    inline_padding: "{semantic.space.pageWide}"
+    block_padding_start: "{semantic.space.page}"
+    content_max_width: 914px
+    section_gap: "{semantic.space.section}"
+  centered_empty_state:
+    description: Empty or unavailable data state inside a bounded surface.
+    content_max_width: 420px
+    text_align: center
+    vertical_alignment: center
+    icon_to_title_gap: 24px
+    title_to_description_gap: 8px
+
+grid:
+  overview:
+    columns: "minmax(320px, 0.76fr) minmax(440px, 1fr)"
+    gap: 24px
+    collapse_below: 960px
+  two_column_form:
+    columns: "repeat(2, minmax(0, 1fr))"
+    gap: 16px
+    collapse_below: 768px
+
+responsive:
+  wide:
+    min_width: 1280px
+    sidebar: expanded
+    page_padding: 24px
+  medium:
+    min_width: 768px
+    max_width: 1279px
+    sidebar: collapsible
+    settings_padding: 24px
+  compact:
+    max_width: 767px
+    sidebar: drawer
+    header_height: 56px
+    page_padding: 16px
+    cards: single_column
+    controls: may_wrap
+  notes:
+    - Only the 1280x720 layout is directly evidenced.
+    - Medium and compact behavior are project decisions and require visual validation.
+    - Horizontal scrolling is prohibited for primary page content.
+
+scrolling:
+  shell: viewport_locked
+  sidebar_navigation: independently_scrollable
+  page_content: document_scroll
+  sticky_filters:
+    allowed: true
+    offset_top: "{size.header}"
+
