@@ -1,0 +1,7 @@
+# Downloaded model weights and inference output
+resources/models/*
+!resources/models/.gitkeep
+runs/
+
+# Local algorithm configuration
+.env

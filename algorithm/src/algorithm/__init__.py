@@ -1,2 +1,2 @@
 def main() -> None:
-    print("Hello from algorithm!")
+    print("Use `uv run detector --help` to start an algorithm worker.")

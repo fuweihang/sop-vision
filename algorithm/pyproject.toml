@@ -1,18 +1,29 @@
 [project]
 name = "algorithm"
 version = "0.1.0"
-description = "Add your description here"
+description = "SOP Vision algorithm services and reusable computer-vision components"
 readme = "README.md"
 authors = [
     { name = "narthil", email = "narthil.ch@gmail.com" }
 ]
 requires-python = ">=3.12"
 dependencies = [
+    "numpy>=2.2.6",
+    "opencv-python>=4.11.0.86",
+    "pydantic>=2.11.7",
+    "redis>=6.4.0,<8",
     "ultralytics>=8.4.118",
 ]
 
 [project.scripts]
 algorithm = "algorithm:main"
+detector = "algorithm.workers.detector.__main__:main"
+publish-roi = "algorithm.tools.publish_roi:main"
+
+[dependency-groups]
+dev = [
+    "pytest>=8.4.1",
+]
 
 [build-system]
 requires = ["uv_build>=0.12.3,<0.13.0"]

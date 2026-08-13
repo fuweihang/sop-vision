@@ -1,0 +1,1 @@
+"""Lightweight YOLO detector worker."""

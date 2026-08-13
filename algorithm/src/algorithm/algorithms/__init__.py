@@ -1,0 +1,1 @@
+"""Reusable computer-vision algorithms."""
