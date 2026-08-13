@@ -1,0 +1,19 @@
+[project]
+name = "algorithm"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "narthil", email = "narthil.ch@gmail.com" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "ultralytics>=8.4.118",
+]
+
+[project.scripts]
+algorithm = "algorithm:main"
+
+[build-system]
+requires = ["uv_build>=0.12.3,<0.13.0"]
+build-backend = "uv_build"
