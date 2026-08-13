@@ -1,4 +1,4 @@
-"""Command-line entry point for the detector worker."""
+"""Detector Worker 的命令行入口。"""
 
 from __future__ import annotations
 
@@ -13,6 +13,8 @@ from .app import run_detector
 
 
 def build_parser(defaults: DetectorConfig | None = None) -> argparse.ArgumentParser:
+    """构建 ``detector`` 命令的参数解析器，默认值取自环境配置。"""
+
     defaults = defaults or DetectorConfig.from_environment()
     parser = argparse.ArgumentParser(
         prog="detector",
@@ -43,6 +45,8 @@ def build_parser(defaults: DetectorConfig | None = None) -> argparse.ArgumentPar
 
 
 def main() -> None:
+    """组合命令行参数与默认配置并启动 detector。"""
+
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s %(levelname)s %(name)s: %(message)s",

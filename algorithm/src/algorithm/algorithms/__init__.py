@@ -1,1 +1,1 @@
-"""Reusable computer-vision algorithms."""
+"""可复用的计算机视觉算法。"""

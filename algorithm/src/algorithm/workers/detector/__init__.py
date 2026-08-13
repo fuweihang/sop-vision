@@ -1,1 +1,1 @@
-"""Lightweight YOLO detector worker."""
+"""轻量级 YOLO detector worker。"""

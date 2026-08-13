@@ -1,4 +1,4 @@
-"""ROI message schema, state management, and geometry helpers."""
+"""ROI 消息模型、状态管理与几何辅助函数。"""
 
 from __future__ import annotations
 
@@ -13,7 +13,7 @@ Bbox = tuple[float, float, float, float]
 
 
 class RoiUpdate(BaseModel):
-    """Versioned ROI update accepted from Redis Pub/Sub."""
+    """从 Redis Pub/Sub 接收的带版本号（versioned）ROI 更新。"""
 
     model_config = ConfigDict(extra="forbid", frozen=True)
 
@@ -47,10 +47,12 @@ class RoiUpdate(BaseModel):
 
 
 class RoiTaskMismatch(ValueError):
-    """Raised when an update is addressed to another detector task."""
+    """当更新消息指向其他 detector 任务时抛出。"""
 
 
 def parse_roi_update(payload: str | bytes, expected_task_id: str) -> RoiUpdate:
+    """解析 ROI 更新消息，并校验其目标任务是否匹配。"""
+
     update = RoiUpdate.model_validate_json(payload)
     if update.task_id != expected_task_id:
         raise RoiTaskMismatch(
@@ -60,25 +62,29 @@ def parse_roi_update(payload: str | bytes, expected_task_id: str) -> RoiUpdate:
 
 
 class RoiState:
-    """Thread-safe last-valid ROI snapshot."""
+    """线程安全（thread-safe）的最近一次有效 ROI 快照。"""
 
     def __init__(self) -> None:
         self._lock = threading.Lock()
         self._active: RoiUpdate | None = None
 
     def apply_payload(self, payload: str | bytes, expected_task_id: str) -> RoiUpdate:
+        """解析并原子化应用一条 ROI 更新，返回解析后的更新对象。"""
+
         update = parse_roi_update(payload, expected_task_id)
         with self._lock:
             self._active = update if update.enabled else None
         return update
 
     def snapshot(self) -> RoiUpdate | None:
+        """返回当前激活的 ROI 快照；未设置时为 ``None``。"""
+
         with self._lock:
             return self._active
 
 
 def bbox_center_is_inside_roi(bbox: Bbox, roi: RoiUpdate | None) -> bool:
-    """Return True when a bbox center is inside or on the active polygon."""
+    """当 bbox 中心位于激活多边形内部或边界上时返回 True。"""
 
     if roi is None:
         return True
@@ -88,7 +94,7 @@ def bbox_center_is_inside_roi(bbox: Bbox, roi: RoiUpdate | None) -> bool:
 
 
 def point_in_polygon(point: Point, polygon: tuple[Point, ...]) -> bool:
-    """Ray-casting test that treats polygon edges as inside."""
+    """射线法（ray-casting）判断，多边形边上的点视为在内部。"""
 
     x, y = point
     inside = False
@@ -109,6 +115,8 @@ def point_in_polygon(point: Point, polygon: tuple[Point, ...]) -> bool:
 def normalized_points_to_pixels(
     points: tuple[Point, ...], width: int, height: int
 ) -> tuple[tuple[int, int], ...]:
+    """将归一化的 [0, 1] 坐标点转换为像素坐标。"""
+
     if width <= 0 or height <= 0:
         raise ValueError("frame dimensions must be positive")
     return tuple(
@@ -117,6 +125,8 @@ def normalized_points_to_pixels(
 
 
 def _signed_area(points: tuple[Point, ...]) -> float:
+    """计算多边形有向面积（signed area）。"""
+
     return 0.5 * sum(
         x1 * y2 - x2 * y1
         for (x1, y1), (x2, y2) in zip(points, points[1:] + points[:1])
@@ -124,6 +134,8 @@ def _signed_area(points: tuple[Point, ...]) -> float:
 
 
 def _point_on_segment(point: Point, start: Point, end: Point) -> bool:
+    """判断点是否落在线段上（含端点）。"""
+
     x, y = point
     x1, y1 = start
     x2, y2 = end

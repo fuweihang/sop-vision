@@ -1,4 +1,4 @@
-"""Validate and publish one ROI update to Redis."""
+"""校验并通过 Redis 发布一条 ROI 更新。"""
 
 from __future__ import annotations
 
@@ -18,6 +18,8 @@ from algorithm.common.roi import RoiUpdate
 
 
 def build_parser() -> argparse.ArgumentParser:
+    """构建 ``publish-roi`` 命令的参数解析器。"""
+
     parser = argparse.ArgumentParser(
         prog="publish-roi",
         description="Publish a validated detector ROI update through Redis Pub/Sub.",
@@ -36,6 +38,8 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main() -> int:
+    """解析参数、校验并发布 ROI 更新；返回进程退出码。"""
+
     args = build_parser().parse_args()
     try:
         payload = (

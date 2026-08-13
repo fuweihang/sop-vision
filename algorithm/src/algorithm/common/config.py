@@ -1,4 +1,4 @@
-"""Configuration for the detector demo."""
+"""Detector demo 的配置（configuration）。"""
 
 from __future__ import annotations
 
@@ -17,17 +17,19 @@ DEFAULT_ROI_CHANNEL = f"vision:config:roi:{DEFAULT_TASK_ID}"
 
 
 def project_root() -> Path:
-    """Return the algorithm project root regardless of the current directory."""
+    """返回算法工程根目录，与当前工作目录无关。"""
 
     return Path(__file__).resolve().parents[3]
 
 
 def default_model_path() -> Path:
+    """返回默认的 YOLO 模型权重路径。"""
+
     return project_root() / "resources" / "models" / "yolo26n.pt"
 
 
 def redact_url(value: str) -> str:
-    """Remove credentials from a URL before it is written to logs."""
+    """在写入日志前移除 URL 中的凭据（credentials）。"""
 
     try:
         parsed = urlsplit(value)
@@ -59,8 +61,8 @@ class DetectorConfig:
     model_path: Path = default_model_path()
     image_size: int = 640
     confidence: float = 0.5
-    # Ultralytics accepts a CUDA device index as a string. Default to the first
-    # GPU so the detector never silently falls back to CPU.
+    # Ultralytics 接受以字符串形式表示的 CUDA 设备索引。默认使用第一张 GPU，
+    # 避免 detector 静默回退到 CPU。
     device: str | None = "0"
     reconnect_delay_seconds: float = 2.0
     window_name: str = "SOP Vision - Detector Demo"
@@ -83,7 +85,7 @@ class DetectorConfig:
 
     @classmethod
     def from_environment(cls) -> DetectorConfig:
-        """Build configuration from DETECTOR_* variables and code defaults."""
+        """从 DETECTOR_* 环境变量与代码默认值构建配置。"""
 
         default = cls()
         task_id = os.getenv("DETECTOR_TASK_ID", default.task_id)

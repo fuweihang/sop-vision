@@ -1,1 +1,1 @@
-"""Operational command-line tools for algorithm services."""
+"""算法服务使用的运维命令行工具。"""

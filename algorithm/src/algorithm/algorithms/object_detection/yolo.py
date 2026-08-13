@@ -1,4 +1,4 @@
-"""Thin Ultralytics YOLO adapter shared by workers."""
+"""供各 Worker 复用的轻量 Ultralytics YOLO 适配层。"""
 
 from __future__ import annotations
 
@@ -26,7 +26,7 @@ class DetectionBatch:
 
 
 class YoloDetector:
-    """Load one model and run synchronous inference on OpenCV frames."""
+    """加载一个模型，并对 OpenCV 帧执行同步推理。"""
 
     def __init__(
         self,
@@ -41,7 +41,7 @@ class YoloDetector:
         os.environ.setdefault("MPLCONFIGDIR", str(runtime_cache / "matplotlib"))
         os.environ.setdefault("YOLO_CONFIG_DIR", str(runtime_cache / "ultralytics"))
 
-        # Keep the heavyweight import out of CLI help and ROI-only tooling.
+        # 将重量级导入放在此处，避免拖慢 CLI help 与仅用 ROI 的工具。
         from ultralytics import YOLO
 
         model_path.parent.mkdir(parents=True, exist_ok=True)
@@ -52,6 +52,8 @@ class YoloDetector:
         self._device = device
 
     def predict(self, frame: np.ndarray) -> DetectionBatch:
+        """对一帧图像执行检测，返回不可变的检测结果。"""
+
         arguments: dict[str, Any] = {
             "source": frame,
             "imgsz": self._image_size,
@@ -66,7 +68,7 @@ class YoloDetector:
 
 
 def detections_from_result(result: Any) -> DetectionBatch:
-    """Convert an Ultralytics result into worker-owned immutable values."""
+    """将 Ultralytics 的推理结果转换为 Worker 持有的不可变值。"""
 
     boxes = result.boxes
     if boxes is None or len(boxes) == 0:
@@ -95,6 +97,8 @@ def detections_from_result(result: Any) -> DetectionBatch:
 
 
 def _class_name(names: dict[int, str] | list[str], class_id: int) -> str:
+    """按类别 ID 解析类别名称，未知 ID 回退为数字字符串。"""
+
     if isinstance(names, dict):
         return str(names.get(class_id, class_id))
     if 0 <= class_id < len(names):

@@ -1,4 +1,4 @@
-"""Redis Pub/Sub listener for runtime ROI updates."""
+"""监听 Redis Pub/Sub 的运行时 ROI 更新。"""
 
 from __future__ import annotations
 
@@ -22,7 +22,7 @@ class RedisStatus:
 
 
 class RedisRoiSubscriber:
-    """Maintain a background subscription without blocking video inference."""
+    """维护后台订阅（subscription），不阻塞视频推理。"""
 
     def __init__(
         self,
@@ -46,6 +46,8 @@ class RedisRoiSubscriber:
         self._pubsub: redis.client.PubSub | None = None
 
     def start(self) -> None:
+        """启动后台订阅线程；已启动时直接返回。"""
+
         if self._thread is not None:
             return
         self._thread = threading.Thread(
@@ -56,12 +58,16 @@ class RedisRoiSubscriber:
         self._thread.start()
 
     def status(self) -> RedisStatus:
+        """返回当前 Redis 订阅状态。"""
+
         with self._lock:
             return self._status
 
     def close(self) -> None:
+        """停止订阅线程并关闭所有 Redis 连接。"""
+
         self._stop.set()
-        # Closing the active subscription unblocks get_message immediately.
+        # 关闭激活中的订阅可立即解除 get_message 的阻塞。
         if self._pubsub is not None:
             try:
                 self._pubsub.close()
@@ -72,7 +78,7 @@ class RedisRoiSubscriber:
         self._close_connections()
 
     def apply_message(self, payload: str | bytes) -> bool:
-        """Validate one message and atomically apply it; invalid input is ignored."""
+        """校验并原子化应用一条消息；无效输入将被忽略。"""
 
         try:
             update = self._roi_state.apply_payload(payload, self._task_id)
@@ -92,6 +98,8 @@ class RedisRoiSubscriber:
         return True
 
     def _run(self) -> None:
+        """后台线程主循环：订阅频道并消费消息，断开时按间隔重连。"""
+
         safe_url = redact_url(self._redis_url)
         while not self._stop.is_set():
             self._set_status(False, "connecting")
@@ -124,6 +132,8 @@ class RedisRoiSubscriber:
         self._set_status(False, "stopped")
 
     def _close_connections(self) -> None:
+        """关闭 pubsub 订阅与 Redis 客户端连接。"""
+
         if self._pubsub is not None:
             try:
                 self._pubsub.close()
@@ -138,5 +148,7 @@ class RedisRoiSubscriber:
             self._client = None
 
     def _set_status(self, connected: bool, detail: str) -> None:
+        """在锁保护下更新订阅状态。"""
+
         with self._lock:
             self._status = RedisStatus(connected, detail)

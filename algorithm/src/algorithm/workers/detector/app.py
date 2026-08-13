@@ -1,4 +1,4 @@
-"""Detector process lifecycle and component orchestration."""
+"""Detector 进程生命周期与组件编排（process lifecycle & orchestration）。"""
 
 from __future__ import annotations
 
@@ -22,7 +22,7 @@ LOGGER = logging.getLogger(__name__)
 
 
 def run_detector(config: DetectorConfig) -> None:
-    """Run until the window closes, a quit key is pressed, or a signal arrives."""
+    """运行主循环，直到窗口关闭、按下退出键或收到信号（signal）为止。"""
 
     stop = threading.Event()
     previous_signal_handlers = _install_signal_handlers(stop)
@@ -118,6 +118,12 @@ def _detection_is_inside_roi(
     frame_width: int,
     frame_height: int,
 ) -> bool:
+    """判断检测框中心点是否落在当前激活的 ROI 多边形内。
+
+    先将检测框坐标归一化到 [0, 1] 区间，再做点内多边形（point-in-polygon）
+    判断；未设置 ROI 时所有检测均视为在区域内。
+    """
+
     if roi is None:
         return True
     x1, y1, x2, y2 = detection.bbox
@@ -131,6 +137,12 @@ def _detection_is_inside_roi(
 
 
 def _window_was_closed(window_name: str) -> bool:
+    """判断 OpenCV 窗口是否已被用户关闭。
+
+    窗口缺失或被销毁时会抛出 ``cv2.error``，此时按“已关闭”处理，
+    以便主循环优雅退出。
+    """
+
     try:
         return cv2.getWindowProperty(window_name, cv2.WND_PROP_VISIBLE) < 1
     except cv2.error:
@@ -140,6 +152,12 @@ def _window_was_closed(window_name: str) -> bool:
 def _install_signal_handlers(
     stop: threading.Event,
 ) -> dict[signal.Signals, signal.Handlers]:
+    """安装 SIGINT/SIGTERM 信号处理器，触发时设置 ``stop`` 事件。
+
+    仅当在主线程（main thread）中被调用时才会注册，因为信号处理器
+    必须注册在主线程。返回被替换前的旧处理器，便于调用方恢复。
+    """
+
     previous: dict[signal.Signals, signal.Handlers] = {}
 
     def request_stop(_signum: int, _frame: object) -> None:
@@ -155,5 +173,7 @@ def _install_signal_handlers(
 def _restore_signal_handlers(
     previous: dict[signal.Signals, signal.Handlers],
 ) -> None:
+    """恢复 :func:`_install_signal_handlers` 保存的原始信号处理器。"""
+
     for signum, handler in previous.items():
         signal.signal(signum, handler)

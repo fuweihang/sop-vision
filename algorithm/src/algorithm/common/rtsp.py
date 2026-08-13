@@ -1,4 +1,4 @@
-"""Latest-frame RTSP reader with bounded memory and reconnection."""
+"""只保留最新帧的 RTSP 读取器，内存有界并支持自动重连。"""
 
 from __future__ import annotations
 
@@ -39,7 +39,7 @@ class RtspStatus:
 
 
 def open_rtsp_capture(url: str) -> Capture:
-    """Open RTSP with finite network timeouts when the backend supports them."""
+    """打开 RTSP，在后端支持时为网络操作设置有限超时（timeout）。"""
 
     parameters: list[int] = []
     if hasattr(cv2, "CAP_PROP_OPEN_TIMEOUT_MSEC"):
@@ -57,7 +57,7 @@ def open_rtsp_capture(url: str) -> Capture:
 
 
 class LatestFrameReader:
-    """Continuously decode RTSP while retaining only the newest frame."""
+    """持续解码 RTSP，但只保留最新一帧（newest frame）。"""
 
     def __init__(
         self,
@@ -77,6 +77,8 @@ class LatestFrameReader:
         self._thread: threading.Thread | None = None
 
     def start(self) -> None:
+        """启动后台解码线程；已启动时直接返回。"""
+
         if self._thread is not None:
             return
         self._thread = threading.Thread(
@@ -89,6 +91,8 @@ class LatestFrameReader:
     def get_latest(
         self, after_sequence: int = 0, timeout: float = 0.5
     ) -> FramePacket | None:
+        """获取序号大于 ``after_sequence`` 的最新帧；超时返回 ``None``。"""
+
         deadline = time.monotonic() + timeout
         with self._condition:
             while not self._stop.is_set():
@@ -101,10 +105,14 @@ class LatestFrameReader:
         return None
 
     def status(self) -> RtspStatus:
+        """返回当前 RTSP 连接状态。"""
+
         with self._condition:
             return self._status
 
     def close(self) -> None:
+        """停止解码线程并释放视频捕获资源。"""
+
         self._stop.set()
         with self._condition:
             self._condition.notify_all()
@@ -115,6 +123,8 @@ class LatestFrameReader:
             self._capture = None
 
     def _run(self) -> None:
+        """后台线程主循环：持续读帧，断开时按间隔重连。"""
+
         sequence = 0
         safe_url = redact_url(self._url)
         while not self._stop.is_set():
@@ -150,6 +160,8 @@ class LatestFrameReader:
         self._set_status(False, "stopped")
 
     def _set_status(self, connected: bool, detail: str) -> None:
+        """在条件变量保护下更新连接状态并唤醒等待者。"""
+
         with self._condition:
             self._status = RtspStatus(connected, detail)
             self._condition.notify_all()

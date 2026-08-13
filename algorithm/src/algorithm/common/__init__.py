@@ -1,1 +1,1 @@
-"""Infrastructure shared by algorithm workers."""
+"""算法 Worker 共享的基础设施。"""

@@ -1,4 +1,4 @@
-"""OpenCV rendering for the detector demo."""
+"""为 detector demo 提供基于 OpenCV 的画面渲染。"""
 
 from __future__ import annotations
 
@@ -26,7 +26,7 @@ def render_detector_frame(
     redis_connected: bool,
     task_id: str,
 ) -> np.ndarray:
-    """Return an annotated copy suitable for ``cv2.imshow``."""
+    """返回一份带标注的副本，可直接用于 ``cv2.imshow`` 显示。"""
 
     canvas = frame.copy()
     height, width = canvas.shape[:2]
@@ -57,6 +57,8 @@ def render_detector_frame(
 
 
 def _draw_detection(frame: np.ndarray, detection: Detection) -> None:
+    """在 ``frame`` 上就地（in place）绘制检测框及其标签。"""
+
     height, width = frame.shape[:2]
     x1, y1, x2, y2 = (
         int(round(value)) for value in detection.bbox
@@ -80,6 +82,12 @@ def _put_label(
     origin: tuple[int, int],
     color: tuple[int, int, int],
 ) -> None:
+    """在 ``origin`` 上方绘制带实色背景的文字标签。
+
+    实色背景可提升复杂视频画面上的可读性；背景色与标签颜色一致，
+    文字使用深色（dark）绘制。
+    """
+
     font = cv2.FONT_HERSHEY_SIMPLEX
     scale = 0.52
     thickness = 1
@@ -110,6 +118,11 @@ def _put_label(
 def _draw_status_panel(
     frame: np.ndarray, lines: tuple[str, ...], all_connected: bool
 ) -> None:
+    """在画面顶部绘制半透明状态面板，内容为 ``lines``。
+
+    连接状态行在断开（disconnected）时显示红色，否则为白色。
+    """
+
     panel_height = 72
     overlay = frame.copy()
     cv2.rectangle(

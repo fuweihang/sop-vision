@@ -1,1 +1,1 @@
-"""Independently runnable algorithm workers."""
+"""可独立运行的算法 Worker。"""
