@@ -1,4 +1,4 @@
-version: 1.0.0
+version: 1.2.0
 status: normalized-from-observation
 baseline:
   viewport:
@@ -10,6 +10,7 @@ baseline:
 shell:
   sidebar:
     width: "{size.sidebar}"
+    collapsed_width: "{size.sidebarCollapsed}"
     position: fixed
     top: 0
     bottom: 0
@@ -32,6 +33,7 @@ shell:
     offset_inline_start: "{size.sidebar}"
     background: "{semantic.color.background.page}"
     min_width: 0
+    page_min_width: none
 
 page_variants:
   workspace:
@@ -66,31 +68,67 @@ grid:
 
 responsive:
   wide:
-    min_width: 1280px
+    min_width: 1200px
     sidebar: expanded
+    sidebar_user_collapsible: true
     page_padding: 24px
+    camera_grid_columns: 4
   medium:
     min_width: 768px
-    max_width: 1279px
+    max_width: 1199px
     sidebar: collapsible
+    sidebar_user_collapsible: true
     settings_padding: 24px
+    camera_grid_columns: 2
+    overview_layout: single_column
+    list_rows: stacked_metadata
   compact:
     max_width: 767px
     sidebar: drawer
     header_height: 56px
     page_padding: 16px
-    cards: single_column
+    cards: two_columns_then_single_below_520px
     controls: may_wrap
+    forms: single_column_below_640px
+    roi_editor: canvas_then_roi_list_below_640px
   notes:
     - Only the 1280x720 layout is directly evidenced.
     - Medium and compact behavior are project decisions and require visual validation.
     - Horizontal scrolling is prohibited for primary page content.
+    - Do not distinguish browser zoom from a narrow window; respond to the available CSS viewport width.
+    - Do not set a fixed min-width on html, body, the app shell, or primary page content.
+
+reflow:
+  required_target:
+    viewport_equivalent: 640px
+    reference: "1280px desktop viewport at 200% browser zoom"
+    requirements:
+      - No global horizontal scrolling.
+      - No clipped content, controls, status, or navigation.
+      - All primary actions remain reachable without changing zoom.
+  progressive_target:
+    viewport_equivalent: 320px
+    reference: "WCAG 2.2 SC 1.4.10 Reflow target"
+    requirements:
+      - Non-exempt content reflows into a single reading direction.
+      - Text and controls do not overlap or become unavailable.
+  patterns:
+    - Collapse the fixed sidebar into a drawer before it competes with page content.
+    - Stack overview columns, form columns, ROI panels, and metadata rows when space is insufficient.
+    - Wrap toolbars and action groups without hiding functionality.
+    - Prefer wrapping long identifiers and RTSP URLs over widening the page.
+  local_two_dimensional_overflow:
+    allowed_for: [video, roi_canvas, semantic_data_table, persistent_editor_toolbar]
+    containment: component
+    page_level_overflow: prohibited
+    rule: "Use local scrolling only when spatial relationships or minimum manipulation space would be lost by reflow."
 
 scrolling:
   shell: viewport_locked
   sidebar_navigation: independently_scrollable
   page_content: document_scroll
+  root_overflow_y: auto
+  root_scrollbar_gutter: stable
   sticky_filters:
     allowed: true
     offset_top: "{size.header}"
-

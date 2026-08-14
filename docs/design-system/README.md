@@ -48,9 +48,9 @@ Token 使用 DTCG 风格的 `$type`、`$value` 和 `$description` 字段。实�
 
 - 浅色和暗色主题的核心语义映射。
 - 字体、颜色、间距、尺寸、圆角、阴影与动效。
-- 固定侧栏后台、设置页和筛选列表页。
+- 可折叠固定侧栏后台、缩放时的 Drawer Shell、设置页和筛选列表页。
 - Button、Input、Select、Card、Navigation、Badge、Popover、Empty State 等基础组件。
-- Hover、Focus、Disabled、Loading 和键盘操作要求。
+- Dialog 与 ROI 多边形编辑器 MVP。
+- Hover、Focus、Disabled、Loading、键盘操作以及 200% 缩放 Reflow 要求。
 
-尚未覆盖：移动端实测、复杂数据表格、图表颜色、编辑器、拖放和品牌插画。新增这些场景时，应先补证据和规格，再扩展 token。
-
+尚未覆盖：移动端实测、复杂数据表格、图表颜色、高级编辑器、拖放和品牌插画。ROI 编辑器当前仅覆盖点击绘制与整体重绘 MVP，不包含顶点拖拽和键盘点位输入。

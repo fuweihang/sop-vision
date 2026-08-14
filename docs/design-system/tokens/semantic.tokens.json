@@ -21,9 +21,11 @@
         "strong": { "$value": "{theme.color.border.strong}" }
       },
       "action": {
-        "primary": { "$value": "{theme.color.action.primary}" },
-        "primaryHover": { "$value": "{theme.color.action.primaryHover}" },
-        "primaryText": { "$value": "{theme.color.action.primaryText}" },
+        "primaryBackground": { "$value": "{theme.color.action.primaryBackground}" },
+        "primaryBackgroundHover": { "$value": "{theme.color.action.primaryBackgroundHover}" },
+        "primaryForeground": { "$value": "{theme.color.action.primaryForeground}" },
+        "primaryBorder": { "$value": "{theme.color.action.primaryBorder}" },
+        "accent": { "$value": "{theme.color.action.accent}" },
         "focus": { "$value": "{theme.color.action.focus}" }
       },
       "status": {
@@ -31,6 +33,14 @@
         "success": { "$value": "{theme.color.status.success}" },
         "warning": { "$value": "{theme.color.status.warning}" },
         "danger": { "$value": "{theme.color.status.danger}" }
+      },
+      "badge": {
+        "foreground": {
+          "info": { "$value": "{theme.color.badge.foreground.info}" },
+          "success": { "$value": "{theme.color.badge.foreground.success}" },
+          "warning": { "$value": "{theme.color.badge.foreground.warning}" },
+          "danger": { "$value": "{theme.color.badge.foreground.danger}" }
+        }
       }
     },
     "space": {
@@ -57,6 +67,7 @@
       "controlLarge": { "$value": "{size.control.large}" },
       "icon": { "$value": "{size.icon.medium}" },
       "sidebar": { "$value": "{size.sidebar}" },
+      "sidebarCollapsed": { "$value": "{size.sidebarCollapsed}" },
       "header": { "$value": "{size.header}" }
     },
     "typography": {
@@ -96,4 +107,3 @@
     }
   }
 }
-

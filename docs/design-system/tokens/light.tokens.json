@@ -21,9 +21,11 @@
         "strong": { "$value": "{color.neutral.500}" }
       },
       "action": {
-        "primary": { "$value": "{color.neutral.1000}" },
-        "primaryHover": { "$value": "{color.neutral.900}" },
-        "primaryText": { "$value": "{color.white}" },
+        "primaryBackground": { "$value": "{color.transparent}" },
+        "primaryBackgroundHover": { "$value": "{color.blue.100}" },
+        "primaryForeground": { "$value": "{color.blue.800}" },
+        "primaryBorder": { "$value": "{color.blue.800}" },
+        "accent": { "$value": "{color.blue.800}" },
         "focus": { "$value": "{color.blue.700}" }
       },
       "status": {
@@ -31,6 +33,14 @@
         "success": { "$value": "{color.green.700}" },
         "warning": { "$value": "{color.amber.700}" },
         "danger": { "$value": "{color.red.700}" }
+      },
+      "badge": {
+        "foreground": {
+          "info": { "$value": "{color.blue.800}" },
+          "success": { "$value": "{color.green.900}" },
+          "warning": { "$value": "{color.amber.900}" },
+          "danger": { "$value": "{color.red.900}" }
+        }
       }
     },
     "shadow": {
@@ -43,4 +53,3 @@
     }
   }
 }
-

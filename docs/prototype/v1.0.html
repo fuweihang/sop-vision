@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>SOP Vision · Prototype v0.10</title>
+  <title>SOP Vision · Prototype v1.0</title>
   <style>
     :root {
       color-scheme: light dark;
@@ -18,9 +18,9 @@
       --sop-color-text-link: light-dark(#0068d6, #8abfff);
       --sop-color-border-default: light-dark(#ebebeb, #292929);
       --sop-color-border-strong: light-dark(#c9c9c9, #454545);
-      --sop-color-action-primary: light-dark(#171717, #ededed);
-      --sop-color-action-primary-hover: light-dark(#4d4d4d, #fff);
-      --sop-color-action-primary-text: light-dark(#fff, #171717);
+      --sop-color-action-primary: #0068d6;
+      --sop-color-action-primary-hover: #005ed6;
+      --sop-color-action-primary-text: #fff;
       --sop-color-action-focus: #0072f5;
       --sop-color-status-success: #46a758;
       --sop-color-status-warning: light-dark(#a35200, #ffb224);
@@ -46,16 +46,23 @@
       --sop-motion-control: 150ms cubic-bezier(.4, 0, .2, 1);
     }
     :root[data-theme="light"] { color-scheme: light; }
-    :root[data-theme="dark"] { color-scheme: dark; }
+    :root[data-theme="dark"] {
+      color-scheme: dark;
+      --sop-color-action-focus: #005ed6;
+      --sop-shadow-control-focus: 0 0 0 1px #ffffff82, 0 0 0 4px #ffffff3d;
+      --sop-shadow-keyboard-focus: 0 0 0 2px #0a0a0a, 0 0 0 4px #005ed6;
+    }
 
     * { box-sizing: border-box; }
+    h1, h2, h3, p, dl, dd { margin: 0; }
+    html { scrollbar-gutter: stable; }
     html, body { min-width: 1120px; min-height: 100%; margin: 0; }
     body {
       background: var(--sop-color-background-page);
       color: var(--sop-color-text-primary);
       font: 400 14px/20px GeistSans, Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     }
-    button, input, select { font: inherit; }
+    button, input, select, textarea { font: inherit; }
     button { color: inherit; }
     [hidden] { display: none !important; }
     .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
@@ -182,6 +189,7 @@
     .field-control { padding-left: 12px; }
     textarea.field-control { height: var(--sop-size-control-medium); min-height: var(--sop-size-control-medium); padding-top: 8px; padding-bottom: 8px; resize: vertical; line-height: 20px; }
     .field-control:focus, .search input:focus { box-shadow: var(--sop-shadow-control-focus); }
+    .field-control:focus-visible, .search input:focus-visible { box-shadow: var(--sop-shadow-keyboard-focus); }
     .field-control[aria-invalid="true"] { box-shadow: 0 0 0 1px var(--sop-color-status-danger); }
     input::placeholder, textarea::placeholder { color: var(--sop-color-text-muted); }
 
@@ -266,11 +274,11 @@
     .badge.neutral { color: var(--sop-color-text-secondary); }
     .badge.muted { color: var(--sop-color-text-muted); }
 
-    .detail-view { display: grid; width: 100%; max-width: 1320px; gap: var(--sop-space-page); margin: 0 auto; }
+    .detail-view { display: grid; width: 100%; gap: var(--sop-space-section); }
     .detail-heading { align-items: flex-start; }
     .detail-identity { display: flex; align-items: center; gap: var(--sop-space-inline); min-width: 0; }
     .detail-title { margin: 0; font-size: 20px; line-height: 26px; letter-spacing: -.4px; }
-    .detail-subtitle { margin-top: 4px; color: var(--sop-color-text-secondary); }
+    .detail-subtitle { margin: 4px 0 0; color: var(--sop-color-text-secondary); }
     .detail-actions { display: flex; gap: var(--sop-space-inline-compact); }
     .surface { overflow: hidden; border-radius: var(--sop-radius-card); background: var(--sop-color-background-surface); box-shadow: var(--sop-shadow-surface); }
     .surface-body { padding: var(--sop-space-card); }
@@ -323,7 +331,7 @@
 
     .tasks-page { display: block; }
     .task-list-view { display: grid; width: 100%; gap: var(--sop-space-page); }
-    .task-detail-view { display: grid; width: 100%; max-width: 1320px; gap: var(--sop-space-page); margin: 0 auto; }
+    .task-detail-view { display: grid; width: 100%; gap: var(--sop-space-section); }
     .task-list { display: grid; }
     .task-list-header, .task-list-item { display: grid; grid-template-columns: minmax(180px, 1fr) minmax(220px, 1.3fr) minmax(180px, 1fr) 100px 24px; align-items: center; gap: 16px; min-height: 56px; padding: 0 20px; }
     .task-list-header { min-height: 40px; background: var(--sop-color-background-subtle); color: var(--sop-color-text-muted); font-size: 12px; font-weight: 500; }
@@ -339,7 +347,7 @@
     .task-heading { display: flex; align-items: center; gap: 10px; min-width: 0; }
     .task-heading-copy { min-width: 0; }
     .task-heading-copy .detail-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .task-heading-description { max-width: 640px; margin: 3px 0 0; overflow: hidden; color: var(--sop-color-text-secondary); text-overflow: ellipsis; white-space: nowrap; }
+    .task-heading-description { max-width: 640px; margin: 4px 0 0; overflow: hidden; color: var(--sop-color-text-secondary); text-overflow: ellipsis; white-space: nowrap; }
     .task-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: var(--sop-space-inline-compact); }
     .task-overview { align-items: start; }
     .task-info-surface { min-width: 0; }
@@ -467,8 +475,8 @@
       z-index: 130;
       padding: 10px 12px;
       border-radius: var(--sop-radius-control);
-      background: var(--sop-color-action-primary);
-      color: var(--sop-color-action-primary-text);
+      background: var(--sop-color-background-surface);
+      color: var(--sop-color-text-primary);
       box-shadow: var(--sop-shadow-modal);
       opacity: 0;
       transform: translateY(8px);
@@ -548,7 +556,6 @@
           <div class="detail-heading">
             <div class="detail-identity">
               <div><h1 class="detail-title" data-detail-name></h1><p class="detail-subtitle">摄像头连接信息与默认预览</p></div>
-              <span class="badge success" data-camera-status><span class="status-dot"></span>在线</span>
             </div>
             <div class="detail-actions">
               <button class="button" type="button" data-toggle-preview>
@@ -565,7 +572,7 @@
             <div class="live-preview" data-live-preview><span class="live-preview-label">LIVE · <span data-live-source></span></span></div>
             <section class="surface connection-surface" aria-labelledby="connection-title">
               <div class="surface-body">
-                <div class="section-heading"><div><h2 class="section-title" id="connection-title">连接信息</h2><p class="section-description">当前保存的设备连接参数</p></div></div>
+                <div class="section-heading"><div><h2 class="section-title" id="connection-title">连接信息</h2><p class="section-description">当前保存的设备连接参数</p></div><span class="badge success" data-camera-status><span class="status-dot"></span>在线</span></div>
                 <dl class="info-list">
                   <div class="info-row"><dt>IP 地址</dt><dd class="mono" data-detail-ip></dd></div>
                   <div class="info-row"><dt>RTSP 端口</dt><dd class="mono" data-detail-port></dd></div>
@@ -618,7 +625,7 @@
 
         <div class="task-detail-view" data-task-detail-view hidden>
           <div class="detail-heading task-detail-heading">
-            <div class="detail-identity task-heading"><div class="task-heading-copy"><h1 class="detail-title" data-task-title></h1><p class="task-heading-description" data-task-description></p></div><span class="badge success" data-task-status><span class="status-dot"></span>运行中</span></div>
+            <div class="detail-identity task-heading"><div class="task-heading-copy"><h1 class="detail-title" data-task-title></h1><p class="task-heading-description" data-task-description></p></div></div>
             <div class="detail-actions task-actions">
               <button class="button" type="button" data-toggle-task><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="7" y="7" width="10" height="10"/></svg><span>停止</span></button>
               <button class="button" type="button" data-reload-task><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 4v6h6M20 20v-6h-6M5.5 15a7 7 0 0 0 11.7 2.5L20 14M4 10l2.8-3.5A7 7 0 0 1 18.5 9"/></svg><span>重载</span></button>
@@ -646,7 +653,7 @@
             </div>
             <section class="surface task-info-surface" aria-labelledby="task-info-title">
               <div class="surface-body">
-                <div class="section-heading"><div><h2 class="section-title" id="task-info-title">任务信息</h2><p class="section-description">当前保存的任务绑定与算法配置</p></div></div>
+                <div class="section-heading"><div><h2 class="section-title" id="task-info-title">任务信息</h2><p class="section-description">当前保存的任务绑定与算法配置</p></div><span class="badge success" data-task-status><span class="status-dot"></span>运行中</span></div>
                 <dl class="info-list">
                   <div class="info-row"><dt>任务 ID</dt><dd class="mono" data-task-id></dd></div>
                   <div class="info-row"><dt>摄像头源</dt><dd data-task-source></dd></div>

@@ -2,6 +2,7 @@
   "$description": "Framework-neutral primitive tokens normalized from the observed dashboard styles.",
   "color": {
     "$type": "color",
+    "transparent": { "$value": "#00000000" },
     "white": { "$value": "#FFFFFF" },
     "black": { "$value": "#000000" },
     "neutral": {
@@ -36,16 +37,21 @@
         "24": { "$value": "#FFFFFF3D" },
         "51": { "$value": "#FFFFFF82" },
         "92": { "$value": "#FFFFFFEB" }
+      },
+      "blue": {
+        "12": { "$value": "#0072F51F" }
       }
     },
     "blue": {
       "100": { "$value": "#F0F7FF" },
+      "500": { "$value": "#8ABFFF" },
       "700": { "$value": "#0072F5" },
       "800": { "$value": "#0068D6" },
       "900": { "$value": "#005ED6" }
     },
     "green": {
       "100": { "$value": "#F0FAF0" },
+      "500": { "$value": "#65C777" },
       "700": { "$value": "#46A758" },
       "900": { "$value": "#297A3A" }
     },
@@ -56,6 +62,7 @@
     },
     "red": {
       "100": { "$value": "#FFF0F0" },
+      "500": { "$value": "#FF8B8E" },
       "700": { "$value": "#E5484D" },
       "900": { "$value": "#CD2B31" }
     },
@@ -111,6 +118,7 @@
       "large": { "$value": "20px" }
     },
     "sidebar": { "$value": "256px" },
+    "sidebarCollapsed": { "$value": "48px" },
     "header": { "$value": "56px" },
     "pageMax": { "$value": "1200px" }
   },
@@ -170,4 +178,3 @@
     }
   }
 }
-
