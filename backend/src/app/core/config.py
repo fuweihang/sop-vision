@@ -22,7 +22,7 @@ class Settings(BaseSettings):
     mediamtx_api_timeout: float = Field(default=5.0, gt=0)
     public_webrtc_base_url: str = "http://localhost:8889"
     backend_cors_origins: CommaSeparatedList = Field(
-        default_factory=lambda: ["http://localhost:5173"]
+        default_factory=lambda: ["http://localhost:8000"]
     )
 
 

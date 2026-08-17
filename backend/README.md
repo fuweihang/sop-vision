@@ -32,7 +32,7 @@ uv sync
 uv run --env-file ../.env uvicorn app.main:app \
   --app-dir src \
   --host 0.0.0.0 \
-  --port 8000 \
+  --port 3001 \
   --reload
 ```
 
@@ -44,9 +44,9 @@ cp ../.env.example ../.env
 
 启动后可访问：
 
-- OpenAPI：<http://localhost:8000/docs>
-- 存活检查：<http://localhost:8000/api/v1/health/live>
-- 就绪检查：<http://localhost:8000/api/v1/health/ready>
+- OpenAPI：<http://localhost:3001/docs>
+- 存活检查：<http://localhost:3001/api/v1/health/live>
+- 就绪检查：<http://localhost:3001/api/v1/health/ready>
 
 `ready` 会访问 `${MEDIAMTX_API_URL}/v3/config/paths/list`。MediaMTX 未启动或
 Control API 未启用时返回 HTTP 503。
@@ -72,9 +72,9 @@ Backend 在 Compose 网络中通过 `http://mediamtx:9997` 访问 MediaMTX，并
 | `MEDIAMTX_API_TIMEOUT` | `5` | Control API 请求超时（秒） |
 | `DATABASE_URL` | `postgresql://...@postgres:5432/sop_vision` | PostgreSQL 内部连接地址（持久化代码待实现） |
 | `PUBLIC_WEBRTC_BASE_URL` | `http://localhost:8889` | 返回给浏览器的 WebRTC 公共地址 |
-| `BACKEND_PORT` | `8000` | Backend 映射到宿主机的端口 |
+| `BACKEND_PORT` | `3001` | Backend 映射到宿主机的端口 |
 | `BACKEND_LOG_LEVEL` | `info` | Uvicorn 日志级别 |
-| `BACKEND_CORS_ORIGINS` | `http://localhost:5173` | 允许的前端 Origin，多个值用逗号分隔 |
+| `BACKEND_CORS_ORIGINS` | `http://localhost:8000` | 允许的前端 Origin，多个值用逗号分隔 |
 
 应用尚未读写摄像头数据库。MediaMTX 当前 path 配置仍作为首期运行时状态来源。
 

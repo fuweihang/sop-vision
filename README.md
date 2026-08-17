@@ -96,8 +96,8 @@ docker compose up --build --wait
 验证当前服务：
 
 ```bash
-curl http://localhost:8000/api/v1/health/live
-curl http://localhost:8000/api/v1/health/ready
+curl http://localhost:3001/api/v1/health/live
+curl http://localhost:3001/api/v1/health/ready
 docker compose ps
 ```
 
@@ -105,10 +105,10 @@ docker compose ps
 
 | 地址 | 用途 |
 | --- | --- |
-| <http://localhost:8000/docs> | FastAPI OpenAPI |
-| <http://localhost:8000/api/v1/health/live> | Backend 存活检查 |
-| <http://localhost:8000/api/v1/health/ready> | Backend 与 MediaMTX 连通性检查 |
-| `http://localhost:8889/{path}/whep` | 浏览器 WHEP 播放地址 |
+| <http://localhost:3001/docs> | FastAPI OpenAPI |
+| <http://localhost:3001/api/v1/health/live> | Backend 存活检查 |
+| <http://localhost:3001/api/v1/health/ready> | Backend 与 MediaMTX 连通性检查 |
+| `http://localhost:3001/{path}/whep` | 浏览器 WHEP 播放地址 |
 
 停止服务：
 

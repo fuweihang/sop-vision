@@ -57,10 +57,10 @@ services:
       MEDIAMTX_API_URL: "${MEDIAMTX_API_URL:-http://mediamtx:9997}"
       MEDIAMTX_API_TIMEOUT: "${MEDIAMTX_API_TIMEOUT:-5}"
       PUBLIC_WEBRTC_BASE_URL: "${PUBLIC_WEBRTC_BASE_URL:-http://localhost:8889}"
-      BACKEND_CORS_ORIGINS: "${BACKEND_CORS_ORIGINS:-http://localhost:5173}"
+      BACKEND_CORS_ORIGINS: "${BACKEND_CORS_ORIGINS:-http://localhost:8000}"
       UVICORN_LOG_LEVEL: "${BACKEND_LOG_LEVEL:-info}"
     ports:
-      - "${BACKEND_PORT:-8000}:8000"
+      - "${BACKEND_PORT:-3001}:3001"
     depends_on:
       mediamtx:
         condition: service_started
@@ -73,7 +73,7 @@ services:
         - -c
         - >-
           import urllib.request;
-          urllib.request.urlopen('http://127.0.0.1:8000/api/v1/health/live', timeout=2)
+          urllib.request.urlopen('http://127.0.0.1:3001/api/v1/health/live', timeout=2)
       interval: 10s
       timeout: 3s
       retries: 3

@@ -19,6 +19,6 @@ RUN uv sync --locked --no-cache
 RUN useradd --create-home --uid 10001 app
 USER app
 
-EXPOSE 8000
+EXPOSE 3001
 
-CMD ["uv", "run", "--no-sync", "uvicorn", "app.main:app", "--app-dir", "src", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uv", "run", "--no-sync", "uvicorn", "app.main:app", "--app-dir", "src", "--host", "0.0.0.0", "--port", "3001"]
