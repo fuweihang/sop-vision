@@ -615,7 +615,7 @@ async def lifespan(application: FastAPI) -> AsyncGenerator[None]:
 前端通过 FastAPI WebSocket 获取实时检测数据：
 
 ```text
-ws://localhost:8000/api/v1/ws/detection-tasks/task_001
+ws://localhost:3001/api/v1/ws/detection-tasks/task_001
 ```
 
 示例接口：
