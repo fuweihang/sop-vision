@@ -1,6 +1,6 @@
 # React + TypeScript + Vite
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+This frontend uses React, TypeScript, and Vite.
 
 Currently, two official plugins are available:
 
@@ -11,22 +11,29 @@ Currently, two official plugins are available:
 
 The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
 
-## Expanding the Oxlint configuration
+## Linting
 
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
+The project uses ESLint flat config with type-aware `typescript-eslint` rules,
+the stable React Hooks recommendations, and Vite Fast Refresh checks.
 
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+```sh
+pnpm lint
+pnpm lint:fix
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+Generated files such as `src/routeTree.gen.ts` are excluded from linting. Type
+checking remains part of `pnpm build` and is not replaced by ESLint.
+
+## Formatting
+
+The project uses Prettier for deterministic code formatting. ESLint remains
+responsible for code-quality and type-aware diagnostics.
+
+```sh
+pnpm format
+pnpm format:check
+```
+
+VS Code workspace settings enable Prettier on save and run ESLint fixes on
+explicit saves. `src/routeTree.gen.ts` and other generated output are excluded
+from formatting.
