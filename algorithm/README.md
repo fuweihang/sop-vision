@@ -20,6 +20,72 @@ Worker 不创建 OpenCV 窗口。
 - ROI 是本地配置的一部分，修改后通过 `reload` 完整重启 Worker 生效。
 - 守护进程启动后不会自动启动任何 Worker，也不会持久化运行状态。
 
+## 目录结构
+
+```text
+algorithm/
+├── config.example.json                 # 本地 Worker 配置示例
+├── folder-alias.json                   # VS Code 资源树公共标注
+├── resources/
+│   ├── models/                         # YOLO PyTorch/ONNX 模型权重
+│   └── samples/
+│       └── roi.json                    # 归一化多边形 ROI 示例
+├── src/algorithm/
+│   ├── algorithms/                     # 与具体 Worker 生命周期解耦的算法实现
+│   │   └── object_detection/
+│   │       └── yolo.py                 # Ultralytics YOLO 推理适配器
+│   ├── common/                         # Worker 共享基础设施
+│   │   ├── config.py                   # 项目路径与敏感 URL 脱敏
+│   │   ├── redis_telemetry.py          # 检测结果和最新快照异步发布
+│   │   ├── roi.py                      # ROI 配置、状态和几何判断
+│   │   └── rtsp.py                     # 自动重连的 RTSP 最新帧读取器
+│   ├── contracts/
+│   │   └── detection.py                # Redis frame_detection 消息契约
+│   ├── daemon/                         # AIWorker 守护进程
+│   │   ├── __main__.py                 # algorithm-daemon CLI 入口
+│   │   ├── api.py                      # RESTful 控制面
+│   │   ├── config_loader.py            # config.json 加载、校验与版本化
+│   │   ├── manager.py                  # Worker 进程生命周期管理
+│   │   ├── models.py                   # 控制命令与健康响应模型
+│   │   └── registry.py                 # 受信任 Worker 类型注册表
+│   ├── workers/
+│   │   ├── base.py                     # spawn 子进程通用入口
+│   │   └── detector/
+│   │       ├── __main__.py             # 单个 Detector 调试入口
+│   │       ├── app.py                  # 无界面检测与结果发布主循环
+│   │       └── config.py               # Detector 本地配置模型
+│   └── tools/                          # 运维命令扩展位置
+├── tests/
+│   ├── unit/                           # 隔离外部依赖的单元测试
+│   │   └── daemon/                     # API、配置加载和进程管理测试
+│   └── integration/                    # 真实 Redis 等外部组件集成测试
+├── pyproject.toml                      # 项目元数据、依赖和 CLI 入口
+├── uv.lock                             # 可复现依赖锁文件
+└── 关于数据流.md                        # Redis、FastAPI 与前端数据流设计
+```
+
+`config.json` 是实际运行配置，包含视频源等敏感信息，因此不会提交到 Git；它通常由
+`config.example.json` 复制后按部署环境填写。各目录和核心文件的相同职责说明也维护在
+`folder-alias.json` 中，供 VS Code Folder Alias 扩展展示。
+
+### 目录职责
+
+| 目录 | 职责 | 放置原则 |
+| --- | --- | --- |
+| `resources/` | 保存模型权重和示例输入 | 不放业务逻辑；大型模型文件默认不提交 Git |
+| `algorithms/` | 封装 YOLO 等可复用算法能力 | 只负责模型加载、推理和输出转换，不管理进程、RTSP 或 Redis |
+| `common/` | 提供多个 Worker 共用的基础设施 | 放置配置辅助、视频读取、ROI 几何和消息发布等通用组件 |
+| `contracts/` | 定义跨组件传输的数据契约 | 使用严格、可版本化的 Pydantic 模型，不放具体业务流程 |
+| `daemon/` | 实现算法服务控制面 | 负责本地配置加载、REST 命令和 Worker 子进程生命周期，不参与推理和结果转发 |
+| `workers/` | 编排一种具体 AI 任务 | 组合视频源、算法、ROI 和输出组件；每个 Worker 可作为独立进程运行 |
+| `tools/` | 保存人工运维或诊断命令 | 只放非服务常驻进程使用的辅助 CLI，不承载 Worker 主流程 |
+| `tests/unit/` | 快速验证单个模块 | 使用假 Worker、RTSP 和 Redis，不能依赖真实摄像头或 GPU |
+| `tests/integration/` | 验证真实组件之间的协作 | 可连接真实 Redis 等外部服务，并与普通单元测试分开执行 |
+
+新增模型适配器应放在 `algorithms/`；新增守护进程管理能力应放在 `daemon/`；新增完整
+算法任务则在 `workers/<worker_name>/` 中编排，并优先复用 `common/` 与 `contracts/`
+中的组件，避免在不同 Worker 中复制基础设施代码。
+
 ## 安装
 
 要求 Python 3.12，推荐使用 `uv`：

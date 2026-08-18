@@ -1,0 +1,222 @@
+{
+  "resources": {
+    "description": "📦 运行资源",
+    "tooltip": "模型权重与示例配置等非源码资源"
+  },
+  "resources/models": {
+    "description": "🤖 模型权重",
+    "tooltip": "YOLO 的 PyTorch 与 ONNX 模型文件"
+  },
+  "resources/models/yolo26n.pt": {
+    "description": "🔥 PyTorch 权重",
+    "tooltip": "Detector 默认加载的 YOLO26n PyTorch 模型"
+  },
+  "resources/models/yolo26n.onnx": {
+    "description": "🔁 ONNX 模型",
+    "tooltip": "用于跨运行时部署的 YOLO26n ONNX 模型"
+  },
+  "resources/samples": {
+    "description": "📝 配置样例",
+    "tooltip": "可复制或参考的算法配置片段"
+  },
+  "resources/samples/roi.json": {
+    "description": "📐 ROI 样例",
+    "tooltip": "归一化多边形检测区域示例"
+  },
+  "src": {
+    "description": "💻 源代码",
+    "tooltip": "Python src-layout 源码根目录"
+  },
+  "src/algorithm": {
+    "description": "🧠 算法服务",
+    "tooltip": "SOP Vision 算法服务主包"
+  },
+  "src/algorithm/algorithms": {
+    "description": "🧩 可复用算法",
+    "tooltip": "不依赖具体 Worker 生命周期的视觉算法实现"
+  },
+  "src/algorithm/algorithms/object_detection": {
+    "description": "🎯 目标检测",
+    "tooltip": "目标检测模型及结果适配代码"
+  },
+  "src/algorithm/algorithms/object_detection/yolo.py": {
+    "description": "🔬 YOLO 推理适配器",
+    "tooltip": "加载 Ultralytics YOLO 并转换为服务内部检测结果"
+  },
+  "src/algorithm/common": {
+    "description": "🔧 公共基础设施",
+    "tooltip": "Worker 共用的配置、ROI、RTSP 与 Redis 组件"
+  },
+  "src/algorithm/common/config.py": {
+    "description": "⚙️ 共享配置工具",
+    "tooltip": "项目路径解析与敏感 URL 脱敏"
+  },
+  "src/algorithm/common/redis_telemetry.py": {
+    "description": "📡 Redis 结果发布器",
+    "tooltip": "异步发布实时检测结果与最新帧快照"
+  },
+  "src/algorithm/common/roi.py": {
+    "description": "📐 ROI 几何与状态",
+    "tooltip": "ROI 配置校验、状态快照和点在多边形内判断"
+  },
+  "src/algorithm/common/rtsp.py": {
+    "description": "📹 RTSP 最新帧读取器",
+    "tooltip": "持续解码视频流、自动重连并只保留最新帧"
+  },
+  "src/algorithm/contracts": {
+    "description": "📨 消息契约",
+    "tooltip": "跨 Worker、Redis 与平台共享的稳定数据模型"
+  },
+  "src/algorithm/contracts/detection.py": {
+    "description": "📦 检测结果契约",
+    "tooltip": "frame_detection 消息及目标、指标模型"
+  },
+  "src/algorithm/daemon": {
+    "description": "🛡️ 守护进程",
+    "tooltip": "通过 REST 命令管理 AIWorker 子进程"
+  },
+  "src/algorithm/daemon/__main__.py": {
+    "description": "🚪 守护进程入口",
+    "tooltip": "algorithm-daemon 命令行与 Uvicorn 启动配置"
+  },
+  "src/algorithm/daemon/api.py": {
+    "description": "🌐 REST 控制 API",
+    "tooltip": "健康检查及 Worker start、reload、restart、stop 接口"
+  },
+  "src/algorithm/daemon/config_loader.py": {
+    "description": "📥 本地配置加载器",
+    "tooltip": "严格读取、校验并版本化 config.json"
+  },
+  "src/algorithm/daemon/manager.py": {
+    "description": "🎛️ Worker 生命周期管理器",
+    "tooltip": "串行调度 Worker 的启动、重载、重启与停止"
+  },
+  "src/algorithm/daemon/models.py": {
+    "description": "📋 控制面响应模型",
+    "tooltip": "REST 命令与健康检查的公开数据模型"
+  },
+  "src/algorithm/daemon/registry.py": {
+    "description": "🗂️ Worker 类型注册表",
+    "tooltip": "受信任 Worker 类型、配置模型与运行入口映射"
+  },
+  "src/algorithm/tools": {
+    "description": "🧰 运维工具",
+    "tooltip": "算法服务的辅助命令行工具包"
+  },
+  "src/algorithm/workers": {
+    "description": "⚙️ AIWorker",
+    "tooltip": "由守护进程管理的独立算法进程"
+  },
+  "src/algorithm/workers/base.py": {
+    "description": "🧱 Worker 进程入口",
+    "tooltip": "以 spawn 模式重建配置、运行 Worker 并报告状态"
+  },
+  "src/algorithm/workers/detector": {
+    "description": "🔍 检测 Worker",
+    "tooltip": "RTSP 拉流、YOLO 推理、ROI 过滤与结果发布"
+  },
+  "src/algorithm/workers/detector/__main__.py": {
+    "description": "🧪 Detector 调试入口",
+    "tooltip": "绕过守护进程，从本地配置启动单个 Detector"
+  },
+  "src/algorithm/workers/detector/app.py": {
+    "description": "▶️ 无界面检测主循环",
+    "tooltip": "编排拉流、推理、ROI 过滤和 Redis 元数据发布"
+  },
+  "src/algorithm/workers/detector/config.py": {
+    "description": "⚙️ Detector 配置模型",
+    "tooltip": "校验视频源、模型、推理设备、ROI 与结果通道参数"
+  },
+  "tests": {
+    "description": "🧪 测试",
+    "tooltip": "算法服务的单元测试与集成测试"
+  },
+  "tests/integration": {
+    "description": "🔗 集成测试",
+    "tooltip": "依赖真实外部组件的跨模块验证"
+  },
+  "tests/integration/test_redis_telemetry_integration.py": {
+    "description": "📡 Redis 发布集成测试",
+    "tooltip": "验证实时频道和带 TTL 的最新帧快照"
+  },
+  "tests/unit": {
+    "description": "🧫 单元测试",
+    "tooltip": "使用假 Worker、RTSP 和 Redis 的快速隔离测试"
+  },
+  "tests/unit/daemon": {
+    "description": "🛡️ 守护进程测试",
+    "tooltip": "控制 API、配置加载和进程管理测试"
+  },
+  "tests/unit/daemon/test_api.py": {
+    "description": "🌐 控制 API 测试",
+    "tooltip": "验证最小 REST 接口和空命令请求体"
+  },
+  "tests/unit/daemon/test_config_loader.py": {
+    "description": "📥 配置加载测试",
+    "tooltip": "验证完整配置校验、路径解析、版本与凭据脱敏"
+  },
+  "tests/unit/daemon/test_manager.py": {
+    "description": "🎛️ 生命周期管理测试",
+    "tooltip": "验证 start、reload、restart、stop 与异常进程处理"
+  },
+  "tests/unit/test_config.py": {
+    "description": "⚙️ 公共配置测试",
+    "tooltip": "验证敏感 URL 脱敏"
+  },
+  "tests/unit/test_detection_contract.py": {
+    "description": "📦 检测契约测试",
+    "tooltip": "验证归一化 bbox 与检测消息约束"
+  },
+  "tests/unit/test_detector_app.py": {
+    "description": "🔍 检测主循环测试",
+    "tooltip": "验证 ROI 过滤、bbox 归一化和空帧消息"
+  },
+  "tests/unit/test_redis_telemetry.py": {
+    "description": "📡 Redis 发布器测试",
+    "tooltip": "验证实时发布、最新快照与积压覆盖"
+  },
+  "tests/unit/test_roi.py": {
+    "description": "📐 ROI 测试",
+    "tooltip": "验证多边形校验和目标中心点过滤"
+  },
+  "tests/unit/test_rtsp.py": {
+    "description": "📹 RTSP 读取器测试",
+    "tooltip": "验证最新帧读取、资源释放和线程退出"
+  },
+  "tests/unit/test_yolo.py": {
+    "description": "🔬 YOLO 适配器测试",
+    "tooltip": "验证 Ultralytics 输出到内部检测值的转换"
+  },
+  "README.md": {
+    "description": "📖 项目说明",
+    "tooltip": "算法服务架构、安装、控制命令和检测结果协议"
+  },
+  "关于数据流.md": {
+    "description": "🔄 数据流设计",
+    "tooltip": "算法服务、Redis、FastAPI 与前端之间的数据流说明"
+  },
+  "config.example.json": {
+    "description": "⚙️ 本地配置示例",
+    "tooltip": "AIWorker 参数和 ROI 的完整示例；复制为 config.json 使用"
+  },
+  "pyproject.toml": {
+    "description": "📦 Python 项目配置",
+    "tooltip": "项目元数据、依赖、构建后端与命令行入口"
+  },
+  "uv.lock": {
+    "description": "🔒 依赖锁文件",
+    "tooltip": "uv 解析生成的可复现 Python 依赖版本"
+  },
+  ".python-version": {
+    "description": "🐍 Python 版本",
+    "tooltip": "项目默认 Python 解释器版本"
+  },
+  ".gitignore": {
+    "description": "🙈 Git 忽略规则",
+    "tooltip": "排除本地配置、缓存、模型和其他生成文件"
+  },
+  "folder-alias.json": {
+    "description": "🏷️ 资源树公共标注",
+    "tooltip": "Folder Alias 扩展读取的团队共享路径标注"
+  }
+}
