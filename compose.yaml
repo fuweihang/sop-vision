@@ -1,10 +1,5 @@
 name: sop-vision
 
-networks:
-  default:
-    name: sop-vision
-    driver: bridge
-
 volumes:
   postgres-data:
 
@@ -16,7 +11,7 @@ services:
     environment:
       POSTGRES_DB: "${POSTGRES_DB:-sop_vision}"
       POSTGRES_USER: "${POSTGRES_USER:-sop_vision}"
-      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:-sop_vision_dev_password}"
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:-sop_vision}"
     ports:
       - "127.0.0.1:${POSTGRES_HOST_PORT:-5432}:5432"
     volumes:
@@ -35,10 +30,10 @@ services:
     restart: unless-stopped
     environment:
       MTX_API: "${MTX_API:-yes}"
-      MTX_APIADDRESS: "${MTX_APIADDRESS:-:9997}"
+      MTX_APIADDRESS: ":9997"
       MTX_WEBRTC: "${MTX_WEBRTC:-yes}"
-      MTX_WEBRTCADDRESS: "${MTX_WEBRTCADDRESS:-:8889}"
-      MTX_WEBRTCLOCALUDPADDRESS: "${MTX_WEBRTCLOCALUDPADDRESS:-:8189}"
+      MTX_WEBRTCADDRESS: ":8889"
+      MTX_WEBRTCLOCALUDPADDRESS: ":8189"
       MTX_WEBRTCADDITIONALHOSTS: "${MTX_WEBRTCADDITIONALHOSTS:-127.0.0.1}"
     ports:
       - "${MEDIAMTX_RTSP_PORT:-8554}:8554"
@@ -53,7 +48,7 @@ services:
       dockerfile: Dockerfile
     restart: unless-stopped
     environment:
-      DATABASE_URL: "${DATABASE_URL:-postgresql://sop_vision:sop_vision_dev_password@postgres:5432/sop_vision}"
+      DATABASE_URL: "${DATABASE_URL:-postgresql://sop_vision:sop_vision@postgres:5432/sop_vision}"
       MEDIAMTX_API_URL: "${MEDIAMTX_API_URL:-http://mediamtx:9997}"
       MEDIAMTX_API_TIMEOUT: "${MEDIAMTX_API_TIMEOUT:-5}"
       PUBLIC_WEBRTC_BASE_URL: "${PUBLIC_WEBRTC_BASE_URL:-http://localhost:8889}"
@@ -74,6 +69,24 @@ services:
         - >-
           import urllib.request;
           urllib.request.urlopen('http://127.0.0.1:3001/api/v1/health/live', timeout=2)
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_BASE_URL: "${FRONTEND_API_BASE_URL:-http://localhost:3001/api/v1}"
+    restart: unless-stopped
+    ports:
+      - "${FRONTEND_BIND_ADDRESS:-0.0.0.0}:${FRONTEND_PORT:-8000}:80"
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - wget -qO- http://127.0.0.1/ >/dev/null || exit 1
       interval: 10s
       timeout: 3s
       retries: 3

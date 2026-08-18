@@ -96,6 +96,7 @@ docker compose up --build --wait
 验证当前服务：
 
 ```bash
+curl http://localhost:8000/
 curl http://localhost:3001/api/v1/health/live
 curl http://localhost:3001/api/v1/health/ready
 docker compose ps
@@ -105,6 +106,7 @@ docker compose ps
 
 | 地址 | 用途 |
 | --- | --- |
+| <http://localhost:8000> | 前端应用；端口由 `.env` 中的 `FRONTEND_PORT` 控制 |
 | <http://localhost:3001/docs> | FastAPI OpenAPI |
 | <http://localhost:3001/api/v1/health/live> | Backend 存活检查 |
 | <http://localhost:3001/api/v1/health/ready> | Backend 与 MediaMTX 连通性检查 |
@@ -115,6 +117,10 @@ docker compose ps
 ```bash
 docker compose down
 ```
+
+前端默认通过宿主机 `8000` 端口对外提供服务，可在 `.env` 中使用 `FRONTEND_BIND_ADDRESS` 和 `FRONTEND_PORT` 调整绑定地址与端口。修改前端端口或公开访问地址时，还需要同步更新 `BACKEND_CORS_ORIGINS`。
+
+`FRONTEND_API_BASE_URL` 会通过 Compose build arg 在构建阶段写入前端静态产物；修改后需要执行 `docker compose build frontend` 并重新创建前端容器。
 
 局域网部署时，需要在 `.env` 中将 `MTX_WEBRTCADDITIONALHOSTS` 和 `PUBLIC_WEBRTC_BASE_URL` 配置为浏览器实际可达的宿主机 IP 或域名。容器之间通过 Compose 服务名通信，不使用 `localhost`。
 
