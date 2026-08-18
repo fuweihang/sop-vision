@@ -1,4 +1,4 @@
 def main() -> None:
-    """提示用户通过 ``uv run detector --help`` 启动算法 Worker。"""
+    """提示用户通过守护进程启动算法服务。"""
 
-    print("Use `uv run detector --help` to start an algorithm worker.")
+    print("Use `uv run algorithm-daemon --help` to start the algorithm service.")

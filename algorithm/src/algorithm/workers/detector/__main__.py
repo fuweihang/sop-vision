@@ -1,46 +1,29 @@
-"""Detector Worker 的命令行入口。"""
+"""绕过守护进程、从本地配置启动单个 Detector 的调试入口。"""
 
 from __future__ import annotations
 
 import argparse
 import logging
-from dataclasses import replace
+import os
 from pathlib import Path
 
-from algorithm.common.config import DetectorConfig
+from algorithm.daemon.config_loader import load_config
 
 from .app import run_detector
+from .config import DetectorConfig
 
 
-def build_parser(defaults: DetectorConfig | None = None) -> argparse.ArgumentParser:
-    """构建 ``detector`` 命令的参数解析器，默认值取自环境配置。"""
-
-    defaults = defaults or DetectorConfig.from_environment()
+def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="detector",
-        description="Run the SOP Vision YOLO26n RTSP detector demo.",
-    )
-    parser.add_argument("--rtsp-url", default=defaults.rtsp_url)
-    parser.add_argument("--redis-url", default=defaults.redis_url)
-    parser.add_argument("--task-id", default=defaults.task_id)
-    parser.add_argument(
-        "--roi-channel",
-        default=None,
-        help="Redis Pub/Sub channel; defaults to vision:config:roi:{task_id}",
-    )
-    parser.add_argument("--model", type=Path, default=defaults.model_path)
-    parser.add_argument("--image-size", type=int, default=defaults.image_size)
-    parser.add_argument("--confidence", type=float, default=defaults.confidence)
-    parser.add_argument(
-        "--device",
-        default=defaults.device,
-        help="Ultralytics device such as 0, cuda:0, cpu, or auto; default is GPU 0",
+        description="Run one configured detector without the daemon.",
     )
     parser.add_argument(
-        "--reconnect-delay",
-        type=float,
-        default=defaults.reconnect_delay_seconds,
+        "--config",
+        type=Path,
+        default=Path(os.getenv("ALGORITHM_CONFIG_PATH", "config.json")),
     )
+    parser.add_argument("--task-id", required=True)
     return parser
 
 
@@ -51,31 +34,13 @@ def main() -> None:
         level=logging.INFO,
         format="%(asctime)s %(levelname)s %(name)s: %(message)s",
     )
-    defaults = DetectorConfig.from_environment()
-    args = build_parser(defaults).parse_args()
-    if args.roi_channel is not None:
-        roi_channel = args.roi_channel
-    elif args.task_id == defaults.task_id:
-        roi_channel = defaults.roi_channel
-    else:
-        roi_channel = f"vision:config:roi:{args.task_id}"
-
-    config = replace(
-        defaults,
-        rtsp_url=args.rtsp_url,
-        redis_url=args.redis_url,
-        task_id=args.task_id,
-        roi_channel=roi_channel,
-        model_path=args.model,
-        image_size=args.image_size,
-        confidence=args.confidence,
-        device=(
-            None
-            if args.device is None or args.device.lower() == "auto"
-            else args.device
-        ),
-        reconnect_delay_seconds=args.reconnect_delay,
-    )
+    args = build_parser().parse_args()
+    loaded = load_config(args.config).workers.get(args.task_id)
+    if loaded is None:
+        raise SystemExit(f"worker {args.task_id!r} is not in {args.config}")
+    if not isinstance(loaded.config, DetectorConfig):
+        raise SystemExit(f"worker {args.task_id!r} is not a detector")
+    config = loaded.config
     run_detector(config)
 
 

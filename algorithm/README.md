@@ -1,128 +1,158 @@
 # SOP Vision Algorithm
 
-`algorithm` 是 SOP Vision 的算法服务层。每个 AI Worker 都是独立进程；模型推理、ROI、RTSP 和消息通信等能力按职责拆分，供多个 Worker 复用。
+`algorithm` 是 SOP Vision 的算法服务。守护进程通过本地 `config.json`
+管理独立 AIWorker；外部平台只发送启动、重载、重启和停止命令，不传递算法参数。
+Detector 从 RTSP 拉流、在 GPU 上执行 YOLO，并将检测元数据直接写入 Redis，整个
+Worker 不创建 OpenCV 窗口。
 
-当前包含一个轻量 `detector` demo：从 IP Camera 拉取 RTSP，使用预训练 `YOLO26n` 进行整帧目标检测，通过 Redis Pub/Sub 实时更新多边形 ROI，并使用 OpenCV 窗口展示状态。
-
-## 目录结构
+## 架构
 
 ```text
-algorithm/
-├── resources/
-│   ├── models/                  # 下载的模型权重，不提交 Git
-│   └── samples/                 # 示例 ROI，后续可放测试媒体
-├── src/algorithm/
-│   ├── algorithms/
-│   │   └── object_detection/    # 可复用的 YOLO 推理封装
-│   ├── common/                  # 配置、ROI、RTSP、Redis 基础设施
-│   ├── workers/
-│   │   └── detector/            # 独立 detector 进程
-│   └── tools/                   # ROI 发布等运维命令
-└── tests/
-    ├── unit/
-    └── integration/
+运维人员 ──修改──> config.json
+                      │
+平台 FastAPI ──HTTP──> Algorithm Daemon ──spawn/Event/Pipe──> AIWorker
+                                                          │
+平台 FastAPI <────────────────── Redis <────检测结果───────┘
 ```
 
-新增 Worker 时，在 `workers/<worker_name>` 编排进程生命周期；不要把可复用的模型逻辑或 Redis/视频客户端复制到 Worker 内。
+- 守护进程只提供控制面，不转发检测结果。
+- Worker 直接发布实时结果和最近一帧快照。
+- ROI 是本地配置的一部分，修改后通过 `reload` 完整重启 Worker 生效。
+- 守护进程启动后不会自动启动任何 Worker，也不会持久化运行状态。
 
-## 安装与启动
+## 安装
 
-要求 Python 3.12，并推荐使用 `uv`：
+要求 Python 3.12，推荐使用 `uv`：
 
 ```bash
 uv sync --dev
-uv run detector
+cp config.example.json config.json
 ```
 
-默认配置：
+`config.json` 包含视频源凭据，已被 `.gitignore` 排除。生产环境建议将文件权限设置为
+仅算法服务用户可读。相对模型路径以配置文件所在目录为基准。
 
-| 配置 | 默认值 |
-| --- | --- |
-| 模型 | `resources/models/yolo26n.pt` |
-| Redis | `redis://127.0.0.1:63793/0` |
-| Task ID | `detector-demo` |
-| ROI channel | `vision:config:roi:detector-demo` |
-| 输入尺寸 | `640` |
-| 置信度 | `0.25` |
-| 计算设备 | 第一张 NVIDIA GPU（`0`） |
+配置示例：
 
-代码中按 demo 要求提供了指定摄像头的默认 RTSP 地址。日志会隐藏 URL 中的用户名和密码。正式环境应使用环境变量或 Secret 覆盖，避免长期在代码中保留凭证：
-
-```bash
-DETECTOR_RTSP_URL='rtsp://user:password@camera/stream' \
-DETECTOR_REDIS_URL='redis://127.0.0.1:63793/0' \
-uv run detector
-```
-
-所有配置也可以用命令行覆盖：
-
-```bash
-uv run detector \
-  --rtsp-url 'rtsp://user:password@camera/stream' \
-  --redis-url redis://127.0.0.1:63793/0 \
-  --task-id detector-demo \
-  --confidence 0.25 \
-  --device 0
-```
-
-程序默认将 YOLO 推理固定到第一张 NVIDIA GPU；也可以用
-`DETECTOR_DEVICE=1` / `--device 1` 选择其他显卡。只有明确传入
-`--device auto` 时才交给 Ultralytics 自动选择，传入 `--device cpu` 则强制使用 CPU。
-
-启动前可以确认 PyTorch 是否能访问 CUDA：
-
-```bash
-uv run python -c 'import torch; print(torch.cuda.is_available(), torch.cuda.get_device_name(0) if torch.cuda.is_available() else "no CUDA device")'
-```
-
-执行 `uv run detector --help` 查看完整参数。按 `q`、`Esc` 或发送 `SIGINT`/`SIGTERM` 可退出。
-
-首次启动时 Ultralytics 会下载官方 `yolo26n.pt` 到 `resources/models/`。如果运行环境不能访问模型源，需要提前把同名权重放到该目录。
-
-## 发布 ROI
-
-ROI 使用归一化坐标，不依赖摄像头分辨率。至少提供三个多边形顶点；只有 bbox 中心点位于多边形内部或边界上的目标才会显示。
-
-使用示例文件发布：
-
-```bash
-uv run publish-roi --file resources/samples/roi.json
-```
-
-直接传 JSON：
-
-```bash
-uv run publish-roi --json '{
+```json
+{
   "schema_version": 1,
-  "type": "roi_update",
-  "task_id": "detector-demo",
-  "roi_id": "main",
-  "enabled": true,
-  "points": [[0.1, 0.1], [0.9, 0.1], [0.9, 0.9], [0.1, 0.9]]
-}'
+  "workers": {
+    "detector-001": {
+      "type": "detector",
+      "config": {
+        "camera_id": "camera-001",
+        "source_id": "source-001",
+        "rtsp_url": "rtsp://user:password@camera/stream",
+        "redis_url": "redis://127.0.0.1:63793/0",
+        "model_path": "resources/models/yolo26n.pt",
+        "image_size": 640,
+        "confidence": 0.5,
+        "device": "0",
+        "reconnect_delay_seconds": 2.0,
+        "algorithm_id": "yolo_object_detection",
+        "algorithm_version": "0.1.0",
+        "roi": {
+          "roi_id": "main",
+          "points": [[0.2, 0.2], [0.8, 0.2], [0.8, 0.8], [0.2, 0.8]]
+        }
+      }
+    }
+  }
+}
 ```
 
-清除 ROI、恢复全画面检测：
+`workers` 的 key 就是 `task_id`。将 `roi` 设置为 `null` 可执行全画面检测。
+ROI 坐标归一化到 `[0, 1]`，至少需要三个不重复且能组成非零面积多边形的点。
+
+更新配置时应先写临时文件，再在同一文件系统内原子重命名为 `config.json`，避免守护
+进程读取到半写入内容。
+
+## 启动与控制
+
+启动守护进程：
 
 ```bash
-uv run publish-roi --json '{
-  "schema_version": 1,
-  "type": "roi_update",
-  "task_id": "detector-demo",
-  "roi_id": "main",
-  "enabled": false,
-  "points": []
-}'
+uv run algorithm-daemon
 ```
 
-非法 JSON、未知字段、task 不匹配、越界坐标、少于三个点或零面积多边形都会被拒绝。Detector 只用合法消息替换当前 ROI。
+默认监听 `0.0.0.0:8090`，默认读取当前目录的 `config.json`。可以覆盖：
 
-## 运行语义
+```bash
+ALGORITHM_CONFIG_PATH=/etc/sop-vision/config.json \
+uv run algorithm-daemon --host 127.0.0.1 --port 8090
+```
 
-- RTSP 解码在线程中持续进行，只保留最新一帧，避免推理较慢时产生无限积压。
-- RTSP 或 Redis 断开后按固定间隔自动重连；Redis 故障不会停止视频推理。
-- ROI 仅使用 Redis Pub/Sub，不持久化。Detector 离线期间发布的消息无法补发；每次进程启动默认使用全画面，需重新发布 ROI。
-- OpenCV `imshow` 要求桌面会话；无显示服务器的容器或远程终端不能运行当前可视化版本。
+第一版没有应用层鉴权，必须部署在可信网络并通过防火墙限制访问。
+
+控制指定任务，请发送空请求体：
+
+```bash
+curl -X POST http://127.0.0.1:8090/v1/workers/detector-001/start
+curl -X POST http://127.0.0.1:8090/v1/workers/detector-001/reload
+curl -X POST http://127.0.0.1:8090/v1/workers/detector-001/restart
+curl -X POST http://127.0.0.1:8090/v1/workers/detector-001/stop
+curl http://127.0.0.1:8090/healthz
+```
+
+命令语义：
+
+- `start`：重新读取配置；任务未运行时按磁盘配置启动，已运行时幂等成功。
+- `reload`：先停止任务，再读取配置并使用新参数启动；配置无效时保持停止。
+- `restart`：不读取磁盘，使用最后一次成功加载到内存的配置重新启动。
+- `stop`：只停止 Worker，守护进程继续运行，并保留内存配置以供 `restart` 使用。
+
+命令同步等待模型加载和 Worker 主循环就绪。RTSP 或 Redis 暂时断开不会影响启动成功，
+对应组件会在后台持续重连。Worker 意外退出后不会自动重启。
+
+也可以绕过守护进程调试单个任务：
+
+```bash
+uv run detector --config config.json --task-id detector-001
+```
+
+## 检测结果
+
+每个完成推理的帧都会生成 `frame_detection`。没有目标时也发送空 `objects`：
+
+```json
+{
+  "schema_version": 1,
+  "type": "frame_detection",
+  "task_id": "detector-001",
+  "camera_id": "camera-001",
+  "source_id": "source-001",
+  "algorithm_id": "yolo_object_detection",
+  "algorithm_version": "0.1.0",
+  "run_id": "54a81572-94a1-4bd5-a39f-f4ff06ef587a",
+  "frame_id": 18272,
+  "frame_ts_ms": 1786501200123,
+  "published_at_ms": 1786501200180,
+  "source_width": 1920,
+  "source_height": 1080,
+  "roi_id": "main",
+  "objects": [
+    {
+      "class_id": 0,
+      "class_name": "person",
+      "confidence": 0.96,
+      "bbox": [0.21, 0.11, 0.48, 0.91],
+      "attributes": {}
+    }
+  ],
+  "metrics": {"inference_ms": 18.4, "fps": 24.7}
+}
+```
+
+Worker 同时执行：
+
+```text
+PUBLISH vision:telemetry:{task_id}
+SET vision:task:{task_id}:latest <json> EX 5
+```
+
+Redis 断线或发布速度落后于推理时，只保留最新待发送结果，不阻塞推理，也不补发过期帧。
+Redis 仅传输检测元数据，不传输原始视频帧、JPEG 或视频流。
 
 ## 测试
 
@@ -130,8 +160,4 @@ uv run publish-roi --json '{
 uv run pytest
 ```
 
-单元测试不连接真实摄像头或 Redis。真实联调前可先确认 Redis 端口：
-
-```bash
-redis-cli -p 63793 PING
-```
+单元测试使用假 Worker、假 RTSP 和假 Redis，不依赖真实摄像头或 GPU。

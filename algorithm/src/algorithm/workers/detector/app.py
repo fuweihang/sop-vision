@@ -1,4 +1,4 @@
-"""Detector 进程生命周期与组件编排（process lifecycle & orchestration）。"""
+"""无界面 Detector Worker 的生命周期与组件编排。"""
 
 from __future__ import annotations
 
@@ -6,32 +6,45 @@ import logging
 import signal
 import threading
 import time
+import uuid
+from collections.abc import Callable
 
-import cv2
-import numpy as np
-
-from algorithm.algorithms.object_detection.yolo import Detection, YoloDetector
-from algorithm.common.config import DetectorConfig, redact_url
-from algorithm.common.redis_pubsub import RedisRoiSubscriber
-from algorithm.common.roi import RoiState, RoiUpdate, bbox_center_is_inside_roi
+from algorithm.algorithms.object_detection.yolo import (
+    Detection,
+    DetectionBatch,
+    YoloDetector,
+)
+from algorithm.common.config import redact_url
+from algorithm.common.redis_telemetry import RedisTelemetryPublisher
+from algorithm.common.roi import RoiConfig, RoiState, bbox_center_is_inside_roi
 from algorithm.common.rtsp import LatestFrameReader
+from algorithm.contracts.detection import (
+    DetectionMetrics,
+    DetectionObject,
+    FrameDetection,
+)
+from algorithm.workers.base import StopEvent
 
-from .renderer import render_detector_frame
+from .config import DetectorConfig
 
 LOGGER = logging.getLogger(__name__)
 
 
-def run_detector(config: DetectorConfig) -> None:
-    """运行主循环，直到窗口关闭、按下退出键或收到信号（signal）为止。"""
+def run_detector(
+    config: DetectorConfig,
+    *,
+    stop_event: StopEvent | None = None,
+    ready_callback: Callable[[], None] | None = None,
+) -> None:
+    """持续拉流、推理并发布元数据，直到收到停止请求。"""
 
-    stop = threading.Event()
+    stop = stop_event or threading.Event()
     previous_signal_handlers = _install_signal_handlers(stop)
-    roi_state = RoiState()
-    subscriber = RedisRoiSubscriber(
+    roi_state = RoiState(config.roi)
+    publisher = RedisTelemetryPublisher(
         config.redis_url,
-        config.roi_channel,
-        config.task_id,
-        roi_state,
+        config.telemetry_channel,
+        config.latest_key,
         reconnect_delay_seconds=config.reconnect_delay_seconds,
     )
     reader = LatestFrameReader(
@@ -41,11 +54,11 @@ def run_detector(config: DetectorConfig) -> None:
 
     LOGGER.info("Starting detector task %s", config.task_id)
     LOGGER.info("RTSP source: %s", redact_url(config.rtsp_url))
-    LOGGER.info("ROI channel: %s", config.roi_channel)
+    LOGGER.info("Telemetry channel: %s", config.telemetry_channel)
     LOGGER.info("Loading YOLO model from %s", config.model_path)
     LOGGER.info("YOLO inference device: %s", config.device or "auto")
 
-    subscriber.start()
+    publisher.start()
     try:
         detector = YoloDetector(
             config.model_path,
@@ -54,67 +67,96 @@ def run_detector(config: DetectorConfig) -> None:
             device=config.device,
         )
         reader.start()
-        cv2.namedWindow(config.window_name, cv2.WINDOW_NORMAL)
+        if ready_callback is not None:
+            ready_callback()
 
         last_sequence = 0
-        raw_frame = np.zeros((360, 640, 3), dtype=np.uint8)
-        detections: tuple[Detection, ...] = ()
-        inference_ms = 0.0
         fps = 0.0
         previous_frame_at: float | None = None
+        run_id = str(uuid.uuid4())
 
         while not stop.is_set():
             packet = reader.get_latest(last_sequence, timeout=0.1)
-            if packet is not None:
-                last_sequence = packet.sequence
-                raw_frame = packet.frame
-                result = detector.predict(raw_frame)
-                roi = roi_state.snapshot()
-                detections = tuple(
-                    detection
-                    for detection in result.detections
-                    if _detection_is_inside_roi(
-                        detection, roi, raw_frame.shape[1], raw_frame.shape[0]
-                    )
-                )
-                inference_ms = result.inference_ms
-                now = time.monotonic()
-                if previous_frame_at is not None:
-                    instantaneous_fps = 1.0 / max(now - previous_frame_at, 1e-9)
-                    fps = instantaneous_fps if fps == 0.0 else 0.9 * fps + 0.1 * instantaneous_fps
-                previous_frame_at = now
+            if packet is None:
+                continue
 
-            roi = roi_state.snapshot()
-            canvas = render_detector_frame(
-                raw_frame,
-                detections,
-                roi,
+            last_sequence = packet.sequence
+            result = detector.predict(packet.frame)
+            now = time.monotonic()
+            if previous_frame_at is not None:
+                instantaneous_fps = 1.0 / max(now - previous_frame_at, 1e-9)
+                fps = (
+                    instantaneous_fps
+                    if fps == 0.0
+                    else 0.9 * fps + 0.1 * instantaneous_fps
+                )
+            previous_frame_at = now
+            height, width = packet.frame.shape[:2]
+            message = build_frame_detection(
+                config,
+                result,
+                roi_state.snapshot(),
+                run_id=run_id,
+                frame_id=packet.sequence,
+                frame_ts_ms=round(packet.captured_at * 1000),
+                frame_width=width,
+                frame_height=height,
                 fps=fps,
-                inference_ms=inference_ms,
-                stream_connected=reader.status().connected,
-                redis_connected=subscriber.status().connected,
-                task_id=config.task_id,
             )
-            cv2.imshow(config.window_name, canvas)
-            key = cv2.waitKey(1) & 0xFF
-            if key in (ord("q"), 27) or _window_was_closed(config.window_name):
-                stop.set()
-    except cv2.error as error:
-        raise RuntimeError(
-            "OpenCV could not create or update a GUI window; run detector in a desktop session"
-        ) from error
+            publisher.submit(message)
     finally:
         stop.set()
         reader.close()
-        subscriber.close()
-        cv2.destroyAllWindows()
+        publisher.close()
         _restore_signal_handlers(previous_signal_handlers)
         LOGGER.info("Detector stopped")
 
 
+def build_frame_detection(
+    config: DetectorConfig,
+    result: DetectionBatch,
+    roi: RoiConfig | None,
+    *,
+    run_id: str,
+    frame_id: int,
+    frame_ts_ms: int,
+    frame_width: int,
+    frame_height: int,
+    fps: float,
+) -> FrameDetection:
+    """过滤 ROI 并将一帧结果转换为稳定的 Redis 消息。"""
+
+    objects = tuple(
+        DetectionObject(
+            class_id=detection.class_id,
+            class_name=detection.class_name,
+            confidence=detection.confidence,
+            bbox=_normalized_bbox(detection, frame_width, frame_height),
+        )
+        for detection in result.detections
+        if _detection_is_inside_roi(detection, roi, frame_width, frame_height)
+    )
+    return FrameDetection(
+        task_id=config.task_id,
+        camera_id=config.camera_id,
+        source_id=config.source_id,
+        algorithm_id=config.algorithm_id,
+        algorithm_version=config.algorithm_version,
+        run_id=run_id,
+        frame_id=frame_id,
+        frame_ts_ms=frame_ts_ms,
+        published_at_ms=time.time_ns() // 1_000_000,
+        source_width=frame_width,
+        source_height=frame_height,
+        roi_id=roi.roi_id if roi is not None else None,
+        objects=objects,
+        metrics=DetectionMetrics(inference_ms=result.inference_ms, fps=fps),
+    )
+
+
 def _detection_is_inside_roi(
     detection: Detection,
-    roi: RoiUpdate | None,
+    roi: RoiConfig | None,
     frame_width: int,
     frame_height: int,
 ) -> bool:
@@ -126,31 +168,28 @@ def _detection_is_inside_roi(
 
     if roi is None:
         return True
-    x1, y1, x2, y2 = detection.bbox
-    normalized_bbox = (
-        x1 / frame_width,
-        y1 / frame_height,
-        x2 / frame_width,
-        y2 / frame_height,
-    )
+    normalized_bbox = _normalized_bbox(detection, frame_width, frame_height)
     return bbox_center_is_inside_roi(normalized_bbox, roi)
 
 
-def _window_was_closed(window_name: str) -> bool:
-    """判断 OpenCV 窗口是否已被用户关闭。
-
-    窗口缺失或被销毁时会抛出 ``cv2.error``，此时按“已关闭”处理，
-    以便主循环优雅退出。
-    """
-
-    try:
-        return cv2.getWindowProperty(window_name, cv2.WND_PROP_VISIBLE) < 1
-    except cv2.error:
-        return True
+def _normalized_bbox(
+    detection: Detection,
+    frame_width: int,
+    frame_height: int,
+) -> tuple[float, float, float, float]:
+    if frame_width <= 0 or frame_height <= 0:
+        raise ValueError("frame dimensions must be positive")
+    x1, y1, x2, y2 = detection.bbox
+    return (
+        min(max(x1 / frame_width, 0.0), 1.0),
+        min(max(y1 / frame_height, 0.0), 1.0),
+        min(max(x2 / frame_width, 0.0), 1.0),
+        min(max(y2 / frame_height, 0.0), 1.0),
+    )
 
 
 def _install_signal_handlers(
-    stop: threading.Event,
+    stop: StopEvent,
 ) -> dict[signal.Signals, signal.Handlers]:
     """安装 SIGINT/SIGTERM 信号处理器，触发时设置 ``stop`` 事件。
 

@@ -5,3 +5,4 @@ runs/
 
 # Local algorithm configuration
 .env
+config.json

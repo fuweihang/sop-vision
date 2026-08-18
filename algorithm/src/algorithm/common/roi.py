@@ -1,10 +1,9 @@
-"""ROI 消息模型、状态管理与几何辅助函数。"""
+"""本地配置驱动的 ROI 模型与几何辅助函数。"""
 
 from __future__ import annotations
 
 import math
 import threading
-from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
@@ -12,25 +11,16 @@ Point = tuple[float, float]
 Bbox = tuple[float, float, float, float]
 
 
-class RoiUpdate(BaseModel):
-    """从 Redis Pub/Sub 接收的带版本号（versioned）ROI 更新。"""
+class RoiConfig(BaseModel):
+    """一个检测任务的单个归一化 ROI 多边形。"""
 
     model_config = ConfigDict(extra="forbid", frozen=True)
 
-    schema_version: Literal[1] = 1
-    type: Literal["roi_update"] = "roi_update"
-    task_id: str = Field(min_length=1)
     roi_id: str = Field(default="main", min_length=1)
-    enabled: bool = True
     points: tuple[Point, ...]
 
     @model_validator(mode="after")
-    def validate_polygon(self) -> RoiUpdate:
-        if not self.enabled:
-            if self.points:
-                raise ValueError("a disabled ROI must have an empty points array")
-            return self
-
+    def validate_polygon(self) -> RoiConfig:
         if len(self.points) < 3:
             raise ValueError("an enabled ROI requires at least three points")
         if any(
@@ -46,44 +36,27 @@ class RoiUpdate(BaseModel):
         return self
 
 
-class RoiTaskMismatch(ValueError):
-    """当更新消息指向其他 detector 任务时抛出。"""
-
-
-def parse_roi_update(payload: str | bytes, expected_task_id: str) -> RoiUpdate:
-    """解析 ROI 更新消息，并校验其目标任务是否匹配。"""
-
-    update = RoiUpdate.model_validate_json(payload)
-    if update.task_id != expected_task_id:
-        raise RoiTaskMismatch(
-            f"ROI task_id {update.task_id!r} does not match {expected_task_id!r}"
-        )
-    return update
-
-
 class RoiState:
-    """线程安全（thread-safe）的最近一次有效 ROI 快照。"""
+    """线程安全的 ROI 快照；当前 Worker 仅在启动时设置一次。"""
 
-    def __init__(self) -> None:
+    def __init__(self, initial: RoiConfig | None = None) -> None:
         self._lock = threading.Lock()
-        self._active: RoiUpdate | None = None
+        self._active = initial
 
-    def apply_payload(self, payload: str | bytes, expected_task_id: str) -> RoiUpdate:
-        """解析并原子化应用一条 ROI 更新，返回解析后的更新对象。"""
+    def replace(self, roi: RoiConfig | None) -> None:
+        """原子替换当前 ROI。"""
 
-        update = parse_roi_update(payload, expected_task_id)
         with self._lock:
-            self._active = update if update.enabled else None
-        return update
+            self._active = roi
 
-    def snapshot(self) -> RoiUpdate | None:
+    def snapshot(self) -> RoiConfig | None:
         """返回当前激活的 ROI 快照；未设置时为 ``None``。"""
 
         with self._lock:
             return self._active
 
 
-def bbox_center_is_inside_roi(bbox: Bbox, roi: RoiUpdate | None) -> bool:
+def bbox_center_is_inside_roi(bbox: Bbox, roi: RoiConfig | None) -> bool:
     """当 bbox 中心位于激活多边形内部或边界上时返回 True。"""
 
     if roi is None:
@@ -110,18 +83,6 @@ def point_in_polygon(point: Point, polygon: tuple[Point, ...]) -> bool:
                 inside = not inside
         previous = current
     return inside
-
-
-def normalized_points_to_pixels(
-    points: tuple[Point, ...], width: int, height: int
-) -> tuple[tuple[int, int], ...]:
-    """将归一化的 [0, 1] 坐标点转换为像素坐标。"""
-
-    if width <= 0 or height <= 0:
-        raise ValueError("frame dimensions must be positive")
-    return tuple(
-        (round(x * (width - 1)), round(y * (height - 1))) for x, y in points
-    )
 
 
 def _signed_area(points: tuple[Point, ...]) -> float:

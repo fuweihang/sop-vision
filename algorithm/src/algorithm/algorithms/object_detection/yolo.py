@@ -37,9 +37,12 @@ class YoloDetector:
         device: str | None = None,
     ) -> None:
         runtime_cache = Path(tempfile.gettempdir()) / "sop-vision"
-        runtime_cache.mkdir(parents=True, exist_ok=True)
-        os.environ.setdefault("MPLCONFIGDIR", str(runtime_cache / "matplotlib"))
-        os.environ.setdefault("YOLO_CONFIG_DIR", str(runtime_cache / "ultralytics"))
+        matplotlib_cache = runtime_cache / "matplotlib"
+        ultralytics_cache = runtime_cache / "ultralytics"
+        matplotlib_cache.mkdir(parents=True, exist_ok=True)
+        ultralytics_cache.mkdir(parents=True, exist_ok=True)
+        os.environ.setdefault("MPLCONFIGDIR", str(matplotlib_cache))
+        os.environ.setdefault("YOLO_CONFIG_DIR", str(ultralytics_cache))
 
         # 将重量级导入放在此处，避免拖慢 CLI help 与仅用 ROI 的工具。
         from ultralytics import YOLO

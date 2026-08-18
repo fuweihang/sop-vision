@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "workers": {
+    "detector-001": {
+      "type": "detector",
+      "config": {
+        "camera_id": "camera-001",
+        "source_id": "source-001",
+        "rtsp_url": "rtsp://user:password@camera/stream",
+        "redis_url": "redis://127.0.0.1:63793/0",
+        "model_path": "resources/models/yolo26n.pt",
+        "image_size": 640,
+        "confidence": 0.5,
+        "device": "0",
+        "reconnect_delay_seconds": 2.0,
+        "algorithm_id": "yolo_object_detection",
+        "algorithm_version": "0.1.0",
+        "roi": {
+          "roi_id": "main",
+          "points": [
+            [0.2, 0.2],
+            [0.8, 0.2],
+            [0.8, 0.8],
+            [0.2, 0.8]
+          ]
+        }
+      }
+    }
+  }
+}

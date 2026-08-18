@@ -1,9 +1,5 @@
 {
-  "schema_version": 1,
-  "type": "roi_update",
-  "task_id": "detector-demo",
   "roi_id": "main",
-  "enabled": true,
   "points": [
     [0.2, 0.2],
     [0.8, 0.2],

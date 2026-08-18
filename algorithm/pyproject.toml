@@ -8,20 +8,23 @@ authors = [
 ]
 requires-python = ">=3.12"
 dependencies = [
+    "fastapi>=0.116.0",
     "numpy>=2.2.6",
     "opencv-python>=4.11.0.86",
     "pydantic>=2.11.7",
     "redis>=6.4.0,<8",
     "ultralytics>=8.4.118",
+    "uvicorn>=0.35.0",
 ]
 
 [project.scripts]
 algorithm = "algorithm:main"
+algorithm-daemon = "algorithm.daemon.__main__:main"
 detector = "algorithm.workers.detector.__main__:main"
-publish-roi = "algorithm.tools.publish_roi:main"
 
 [dependency-groups]
 dev = [
+    "httpx>=0.28.1",
     "pytest>=8.4.1",
 ]
 
