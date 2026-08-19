@@ -1,298 +1,203 @@
-version: 1.3.0
-status: normalized-from-observation
+version: 3.0.0
+status: project-decisions-only
+
+registry:
+  configuration: frontend/components.json
+  style: base-nova
+  primitive_library: "@base-ui/react"
+  icon_library: hugeicons
+  source_pattern: frontend/src/components/ui/{kebab-name}.tsx
+
 defaults:
-  typography:
-    font_family: "{semantic.typography.body.fontFamily}"
-    font_size: "{semantic.typography.body.fontSize}"
-    font_weight: "{semantic.typography.body.fontWeight}"
-    line_height: "{semantic.typography.body.lineHeight}"
-  control_height: "{semantic.size.controlMedium}"
-  control_radius: "{semantic.radius.control}"
-  icon_size: "{semantic.size.icon}"
-  transition:
-    duration: "{semantic.motion.controlDuration}"
-    easing: "{semantic.motion.standardEasing}"
+  geometry: registry_source
+  primitive_behavior: base_ui
+  theme: frontend/src/index.css
+  layout_tokens: ../tokens/layout.tokens.json
+  rules:
+    - Component keys in this file are the installed inventory.
+    - Runtime source owns anatomy, CSS classes, exact state styling, and data-slot.
+    - This file records only public API expectations and SOP Vision usage decisions.
+    - Page className may adjust composition but must not replace primitive state logic.
 
 components:
-  button:
-    anatomy: [container, leading_icon, label, trailing_icon, spinner]
-    sizes:
-      small:
-        height: "{semantic.size.controlSmall}"
-        padding_inline: 6px
-        icon: "{size.icon.small}"
-      medium:
-        height: "{semantic.size.controlMedium}"
-        padding_inline: 10px
-        icon: "{size.icon.medium}"
-      large:
-        height: "{semantic.size.controlLarge}"
-        padding_inline: 12px
-        icon: "{size.icon.medium}"
-    variants:
-      primary:
-        background: "{semantic.color.action.primaryBackground}"
-        foreground: "{semantic.color.action.primaryForeground}"
-        border: "{semantic.color.action.primaryBorder}"
-        hover_background: "{semantic.color.action.primaryBackgroundHover}"
-        hover_foreground: "{semantic.color.action.primaryForeground}"
-      secondary:
-        background: "{semantic.color.background.surface}"
-        foreground: "{semantic.color.text.primary}"
-        shadow: "{semantic.shadow.surface}"
-      ghost:
-        background: transparent
-        foreground: "{semantic.color.text.primary}"
-        hover_background: "{semantic.color.background.active}"
-      danger:
-        foreground: "{semantic.color.status.danger}"
-        background: "{semantic.color.background.surface}"
-        border: "{semantic.color.status.danger}"
-    states:
-      active:
-        shadow: "{semantic.shadow.controlFocus}"
-      focus_visible:
-        shadow: "{semantic.shadow.keyboardFocus}"
-      disabled:
-        foreground: "{semantic.color.text.muted}"
-        background: "{semantic.color.background.subtle}"
-        shadow: "{semantic.shadow.surface}"
-        cursor: not-allowed
-      loading:
-        preserve_width: true
-        announce_busy: true
-    accessibility:
-      icon_only_requires_accessible_name: true
-      minimum_hit_area: 32px
+  alert:
+    api:
+      variants: [default, destructive]
+    use_for: [page_feedback, recoverable_error]
     rules:
-      - Primary uses a transparent background, themed brand foreground, and a one-pixel semantic border; it must not use a solid brand fill.
-      - Primary hover may add only a subtle themed tint and must preserve the foreground color.
-      - Keep the shared control radius for command buttons; pill radius is reserved for badges and chip-like controls.
+      - Include recovery guidance when an action is possible.
 
-  text_input:
-    anatomy: [container, prefix, input, suffix, validation_message]
-    height: "{semantic.size.controlMedium}"
-    padding_inline: 12px
-    radius: "{semantic.radius.control}"
-    background: "{semantic.color.background.surface}"
-    foreground: "{semantic.color.text.primary}"
-    placeholder: "{semantic.color.text.muted}"
-    default_shadow: "{semantic.shadow.surface}"
-    states:
-      focus:
-        shadow: "{semantic.shadow.controlFocus}"
-      focus_visible:
-        shadow: "{semantic.shadow.keyboardFocus}"
-      disabled:
-        background: "{semantic.color.background.subtle}"
-        foreground: "{semantic.color.text.muted}"
-        shadow: "{semantic.shadow.surface}"
-        opacity: 1
-        cursor: not-allowed
-      invalid:
-        status: danger
-        describe_error_with: aria-describedby
-    accessibility:
-      visible_label_preferred: true
-      autocomplete_required_when_applicable: true
-
-  select:
-    anatomy: [container, value, chevron, menu]
-    height: "{semantic.size.controlMedium}"
-    padding_inline_start: 12px
-    padding_inline_end: 36px
-    radius: "{semantic.radius.control}"
-    background: "{semantic.color.background.surface}"
-    default_shadow: "{semantic.shadow.surface}"
-    states:
-      disabled:
-        background: "{semantic.color.background.subtle}"
-        foreground: "{semantic.color.text.muted}"
-        shadow: "{semantic.shadow.surface}"
-        opacity: 1
-        cursor: not-allowed
-    menu_reference: popover
-    accessibility:
-      keyboard_navigation: required
-      current_value_announced: true
-
-  card:
-    anatomy: [header, body, footer]
-    radius: "{semantic.radius.card}"
-    background: "{semantic.color.background.surface}"
-    shadow: "{semantic.shadow.surface}"
-    body_padding: 20px
-    footer:
-      min_height: 56px
-      padding: 12px 12px 12px 20px
-      background: "{semantic.color.background.subtle}"
-      border_block_start: "1px solid {semantic.color.border.default}"
+  alert_dialog:
+    use_for: [destructive_confirmation, irreversible_action]
     rules:
-      - Use the footer for help text and trailing actions.
-      - Do not add elevation unless the card becomes a floating surface.
-      - Card titles use semantic.typography.heading only on settings cards.
+      - Cancel uses outline styling.
+      - Confirm uses destructive styling.
+      - Do not replace with Dialog or window.confirm.
 
-  sidebar_navigation:
-    width: "{semantic.size.sidebar}"
-    collapsed_width: "{semantic.size.sidebarCollapsed}"
-    row_height: "{semantic.size.controlMedium}"
-    item_radius: "{semantic.radius.control}"
-    item_padding_inline: 10px
-    icon_size: "{semantic.size.icon}"
-    states:
-      hover_background: "{semantic.color.background.subtle}"
-      active_background: "{semantic.color.background.active}"
-      focus_visible_shadow: "{semantic.shadow.keyboardFocus}"
-    behavior:
-      desktop_state: [expanded, collapsed]
-      desktop_collapsible: icon
-      compact_state: [closed, open]
-      desktop_and_compact_state_independent: true
-      keyboard_shortcut: "Control/Command + B"
-      prototype_persistence: localStorage
-      state_attributes: [data-state, data-collapsible]
+  aspect_ratio:
+    use_for: [camera_preview, task_preview]
+    application_ratio: "16 / 9"
     rules:
-      - Group related destinations with a one-pixel separator.
-      - Keep labels concise and avoid more than two hierarchy levels.
-      - The active item requires more than an icon-color change.
-      - A closed drawer is inert and removed from the accessibility tree until opened.
-      - The desktop collapse control sits at the trailing edge of the sidebar header.
-      - The collapsed icon rail preserves navigation icons, tooltips, and the expand control; labels, counters, and the expanded brand lockup are hidden.
-      - Compact Drawer mode does not expose the desktop collapse control.
+      - Loading, empty, and error states preserve the ratio.
 
   badge:
-    height: 20px
-    padding_inline: 8px
-    radius: "{semantic.radius.badge}"
-    font_size: "{font.size.label}"
-    font_weight: "{font.weight.medium}"
-    letter_spacing: "{font.letterSpacing.badge}"
-    icon_size: "{size.icon.small}"
-    variants:
-      neutral:
-        foreground: "{semantic.color.text.secondary}"
-      info:
-        foreground: "{semantic.color.badge.foreground.info}"
-      success:
-        foreground: "{semantic.color.badge.foreground.success}"
-      warning:
-        foreground: "{semantic.color.badge.foreground.warning}"
-      danger:
-        foreground: "{semantic.color.badge.foreground.danger}"
+    api:
+      variants: [default, secondary, destructive, outline, ghost, link]
+    use_for: [resource_status, concise_label]
     rules:
-      - Use for concise status or plan labels, not full sentences.
-      - Preserve readable text contrast in every theme.
+      - Do not use for sentence-length content.
 
-  popover:
-    anatomy: [surface, optional_header, content, optional_footer]
-    min_width: 240px
-    observed_date_picker_width: 280px
-    radius: "{semantic.radius.popover}"
-    padding: 12px
-    background: "{semantic.color.background.surface}"
-    shadow: "{semantic.shadow.popover}"
-    motion:
-      duration: "{semantic.motion.popoverDuration}"
-      easing: "{semantic.motion.swiftEasing}"
-    behavior:
-      close_on_escape: true
-      close_on_outside_click: true
-      restore_focus_to_trigger: true
-      constrain_to_viewport: true
+  breadcrumb:
+    use_for: [header_route_context]
+    rules:
+      - Current page exposes aria-current.
+      - Navigation has an accessible label.
+
+  button:
+    api:
+      variants: [default, outline, secondary, ghost, destructive, link]
+      sizes: [xs, sm, default, lg, icon-xs, icon-sm, icon, icon-lg]
+    project_usage:
+      default: page_primary_action
+      destructive: irreversible_or_destructive_action
+      link: inline_navigation_action
+    rules:
+      - A page has at most one visually strongest primary action.
+      - Icon-only buttons require accessible names.
+      - Loading preserves the button geometry.
+
+  card:
+    api:
+      sizes: [default, sm]
+    use_for: [resource_summary, information_section]
+    rules:
+      - Header actions use CardAction.
+      - Do not add elevation unless the Card becomes a floating surface.
+
+  checkbox:
+    use_for: [independent_multi_selection, boolean_form_value]
+    rules:
+      - Use a visible label.
+      - Do not recreate checked state in page code.
 
   dialog:
-    anatomy: [overlay, surface, header, body, footer]
-    radius: "{semantic.radius.popover}"
-    background: "{semantic.color.background.surface}"
-    shadow: "{semantic.shadow.modal}"
-    behavior:
-      autofocus_on_open: false
-      trap_focus: false
-      close_on_escape: true
-      close_on_outside_click: true
-      restore_focus_programmatically: false
-      constrain_to_viewport: true
-    accessibility:
-      accessible_name_required: true
-      aria_modal_required: true
-      note: "MVP follows the project requirement to preserve the trigger's current focus and does not move focus automatically."
-    responsive:
-      max_width: "calc(100vw - 48px)"
-      compact_max_width: "calc(100vw - 24px)"
-      form_columns_below_640px: 1
-      body_overflow: auto
-      header_footer_remain_visible: true
-
-  empty_state:
-    anatomy: [icon, title, description, optional_action]
-    content_max_width: 420px
-    alignment: center
-    icon_size: 32px
-    title_font_weight: "{font.weight.medium}"
-    description_color: "{semantic.color.text.secondary}"
+    use_for: [create_form, edit_form]
     rules:
-      - Explain what is absent and the next useful action.
-      - Avoid illustrations when a simple system icon is sufficient.
-      - Do not show a primary action if the user cannot resolve the state.
+      - Title is required.
+      - Complex forms may extend Content width while preserving viewport margins.
+      - Focus and dismissal remain Base UI managed.
 
-  notice:
-    anatomy: [icon, content, optional_action]
-    min_height: 36px
-    padding: 6px 12px
-    gap: 12px
-    radius: "{semantic.radius.control}"
-    border: "1px solid {semantic.color.border.default}"
-    variants: [neutral, info, success, warning, danger]
+  empty:
+    use_for: [no_resources, no_filter_matches, unavailable_state]
+    rules:
+      - State what is absent and the next useful action.
+      - Do not show an action the user cannot perform.
+
+  field:
+    api:
+      orientations: [vertical, horizontal, responsive]
+    use_for: [form_structure, validation]
+    rules:
+      - Compose Label, Description, Error, and Control.
+      - Validation messages use FieldError.
+
+  input:
+    use_for: [text_value, number_value, search]
+    rules:
+      - Use a visible label unless the surrounding pattern provides an equivalent name.
+      - Use native type and autocomplete where applicable.
+
+  label:
+    use_for: [form_control_name]
+    rules:
+      - Placeholder never replaces Label.
+
+  radio_group:
+    use_for: [single_selection_with_visible_options]
+    rules:
+      - Arrow-key and checked behavior remain Base UI managed.
+
+  scroll_area:
+    use_for: [bounded_dialog_body, bounded_sidebar_region, local_table_region]
+    rules:
+      - Do not use ScrollArea to hide page-level Reflow failures.
+
+  select:
+    use_for: [single_selection_with_collapsed_options]
+    rules:
+      - Do not substitute the prototype native select.
+      - Keyboard navigation, typeahead, and portal remain Base UI managed.
+
+  separator:
+    api:
+      orientations: [horizontal, vertical]
+    use_for: [visual_group_boundary]
+    rules:
+      - Decorative is the default; expose semantics only when meaningful.
+
+  sheet:
+    api:
+      sides: [top, right, bottom, left]
+    use_for: [mobile_sidebar, edge_panel]
+    rules:
+      - Mobile navigation uses the Sidebar-integrated Sheet.
+
+  sidebar:
+    api:
+      sides: [left, right]
+      variants: [sidebar, floating, inset]
+      collapsible: [offcanvas, icon, none]
+    application:
+      side: left
+      variant: sidebar
+      collapsible: icon
+      mobile_breakpoint: "{layout.breakpoint.sidebarSheet}"
+      persistence: cookie
+    rules:
+      - SidebarProvider owns open state.
+      - Active routes use isActive/data-active.
+      - Collapsed labels use Tooltip.
+
+  skeleton:
+    use_for: [initial_content_loading]
+    rules:
+      - Match final content geometry.
+      - Avoid aggressive flashing.
+
+  sonner:
+    provider: one_toaster_at_application_root
+    use_for: [async_success, async_failure, background_operation]
+    rules:
+      - Persistent form errors still appear near their fields.
+
+  spinner:
+    use_for: [inline_loading, button_loading]
+    rules:
+      - Add visible or screen-reader copy when context is ambiguous.
 
   switch:
-    anatomy: [track, thumb, label, description]
-    hit_area_height: 30px
-    label_gap: 12px
-    states: [off, on, focus_visible, disabled]
-    accessibility:
-      native_checkbox_or_switch_role: required
-      label_click_toggles_control: true
-      state_announced: true
-
-  filter_bar:
-    anatomy: [date_range, author, environment, repository, branch, status]
-    control_height: "{semantic.size.controlMedium}"
-    gap: 8px
-    wrapping: allowed
+    api:
+      sizes: [default, sm]
+    use_for: [immediate_boolean_setting]
     rules:
-      - Keep the most frequently used filter first.
-      - Show selected-count badges for multi-select filters.
-      - Preserve filters in URL state when technically feasible.
+      - Do not implement a custom button with role=switch.
+      - State remains Base UI managed.
 
-  roi_editor:
-    status: mvp
-    anatomy: [requirement_summary, action_bar, canvas, roi_list, draft_polygon, helper_text]
-    canvas:
-      aspect_ratio: "16 / 9"
-      drawing_cursor: crosshair
-      draft_stroke: dashed
-      minimum_vertices: 3
-    data_contract:
-      definitions_source: algorithm_api
-      immutable_fields: [id, label, count]
-      multiple_rois: true
-    behavior:
-      select_roi_from_list: true
-      click_to_add_point: true
-      drag_existing_vertex: false
-      redraw_replaces_on_finish: true
-      cancel_preserves_saved_points: true
-      undo_affects_draft_only: true
-      lock_roi_switch_while_drawing: true
-    actions: [draw, redraw, cancel, undo_point, finish]
-    states: [unselected, selected, drawing, complete, disabled]
-    accessibility:
-      action_buttons_keyboard_accessible: true
-      roi_list_keyboard_accessible: true
-      point_placement_keyboard_accessible: false
-      limitation: "MVP only: polygon point placement requires a pointer; keyboard geometry editing is deferred."
-    responsive:
-      wide_layout: canvas_with_roi_list
-      below_640px: canvas_then_roi_list
-      canvas_max_width: 100%
-      page_level_horizontal_overflow: prohibited
+  table:
+    use_for: [task_list, structured_records]
+    responsive: layout.responsive
+    rules:
+      - Preserve semantic table markup when rendered as a table.
+      - Status uses Badge, not saturated row backgrounds.
+      - Compact alternatives preserve field names.
+
+  textarea:
+    use_for: [multiline_text]
+    rules:
+      - Use FieldDescription for length or format guidance.
+
+  tooltip:
+    provider: TooltipProvider
+    use_for: [icon_button_label, collapsed_sidebar_label]
+    rules:
+      - Do not place required interactive content inside Tooltip.

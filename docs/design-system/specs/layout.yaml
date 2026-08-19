@@ -1,134 +1,125 @@
-version: 1.2.0
-status: normalized-from-observation
-baseline:
-  viewport:
-    width: 1280px
-    height: 720px
-    device_pixel_ratio: 1
-  theme: light
+version: 3.0.0
+status: shadcn-aligned
+baseline_ref: catalog.json#/baseline
+tokens: ../tokens/layout.tokens.json
+
+implementation:
+  shell:
+    - SidebarProvider
+    - Sidebar
+    - SidebarInset
+    - SidebarTrigger
+  mobile_sidebar: Sheet
+  breakpoint_source: frontend/src/hooks/use-mobile.ts
+
+layers:
+  content: "{layout.layer.content}"
+  header: "{layout.layer.header}"
+  sidebar: "{layout.layer.sidebar}"
+  overlay: "{layout.layer.overlay}"
+  toast: "{layout.layer.toast}"
 
 shell:
+  provider:
+    required: true
+    default_open: true
+    persistence: cookie
   sidebar:
-    width: "{size.sidebar}"
-    collapsed_width: "{size.sidebarCollapsed}"
-    position: fixed
-    top: 0
-    bottom: 0
-    background: "{semantic.color.background.page}"
-    border_inline_end: "1px solid {semantic.color.border.default}"
-    navigation_row_height: "{size.control.medium}"
-    navigation_inline_padding: 8px
-    navigation_item_radius: "{semantic.radius.control}"
-    footer_height: 44px
-    overflow: auto
+    width: "{layout.shell.sidebarExpanded}"
+    collapsed_width: "{layout.shell.sidebarCollapsed}"
+    mobile_width: "{layout.shell.sidebarMobile}"
+    side: left
+    variant: sidebar
+    collapsible: icon
+    z_index: "{layout.layer.sidebar}"
+    item_height: "{layout.control.default}"
+    item_radius: "{layout.radius.menuItem}"
+    collapsed_tooltip: required
   header:
-    height: "{size.header}"
+    height: "{layout.shell.header}"
     position: sticky
     top: 0
-    z_index: 75
-    background: "{semantic.color.background.page}"
-    border_block_end: "1px solid {semantic.color.border.default}"
-    breadcrumb_alignment: center
+    z_index: "{layout.layer.header}"
+    layout: leading_center_trailing
+    leading: mobile_trigger_or_back_action
+    center: breadcrumb
+    trailing: theme_and_page_actions
   content:
-    offset_inline_start: "{size.sidebar}"
-    background: "{semantic.color.background.page}"
+    component: SidebarInset
     min_width: 0
     page_min_width: none
+    scrolling: document
 
-page_variants:
-  workspace:
-    description: Dashboard, list, deployment and observability pages.
-    inline_padding: "{semantic.space.page}"
-    block_padding_start: "{semantic.space.page}"
-    max_width: none
-    section_gap: "{semantic.space.section}"
-  settings:
-    description: Narrower card stack with a secondary settings navigation.
-    inline_padding: "{semantic.space.pageWide}"
-    block_padding_start: "{semantic.space.page}"
-    content_max_width: 914px
-    section_gap: "{semantic.space.section}"
-  centered_empty_state:
-    description: Empty or unavailable data state inside a bounded surface.
-    content_max_width: 420px
-    text_align: center
-    vertical_alignment: center
-    icon_to_title_gap: 24px
-    title_to_description_gap: 8px
+page:
+  inline_padding:
+    desktop: "{layout.space.page}"
+    compact: "{layout.space.pageCompact}"
+  block_padding:
+    desktop: "{layout.space.page}"
+    compact: "{layout.space.pageCompact}"
+  section_gap: "{layout.space.section}"
 
 grid:
-  overview:
-    columns: "minmax(320px, 0.76fr) minmax(440px, 1fr)"
-    gap: 24px
-    collapse_below: 960px
-  two_column_form:
+  camera_cards:
+    wide:
+      min_width: "{layout.breakpoint.wide}"
+      columns: "repeat(4, minmax(0, 1fr))"
+    medium:
+      min_width: "{layout.breakpoint.cameraSingle}"
+      max_width: "calc({layout.breakpoint.wide} - 1px)"
+      columns: "repeat(2, minmax(0, 1fr))"
+    compact:
+      max_width: "calc({layout.breakpoint.cameraSingle} - 1px)"
+      columns: "minmax(0, 1fr)"
+    gap: "{layout.space.component}"
+  detail_preview:
+    columns: "minmax(0, 1.65fr) minmax(18rem, 0.75fr)"
+    collapse_below: "{layout.breakpoint.detailStack}"
+    gap: "{layout.space.component}"
+  form:
     columns: "repeat(2, minmax(0, 1fr))"
-    gap: 16px
-    collapse_below: 768px
+    collapse_below: "{layout.breakpoint.formStack}"
+    gap: "{layout.space.component}"
+  roi:
+    columns: "minmax(0, 1fr) 14rem"
+    collapse_below: "{layout.breakpoint.formStack}"
 
 responsive:
-  wide:
-    min_width: 1200px
-    sidebar: expanded
-    sidebar_user_collapsible: true
-    page_padding: 24px
-    camera_grid_columns: 4
-  medium:
-    min_width: 768px
-    max_width: 1199px
-    sidebar: collapsible
-    sidebar_user_collapsible: true
-    settings_padding: 24px
-    camera_grid_columns: 2
-    overview_layout: single_column
-    list_rows: stacked_metadata
+  desktop:
+    min_width: "{layout.breakpoint.sidebarSheet}"
+    sidebar: expanded_or_icon
+    task_list: semantic_table
   compact:
-    max_width: 767px
-    sidebar: drawer
-    header_height: 56px
-    page_padding: 16px
-    cards: two_columns_then_single_below_520px
-    controls: may_wrap
-    forms: single_column_below_640px
-    roi_editor: canvas_then_roi_list_below_640px
-  notes:
-    - Only the 1280x720 layout is directly evidenced.
-    - Medium and compact behavior are project decisions and require visual validation.
-    - Horizontal scrolling is prohibited for primary page content.
-    - Do not distinguish browser zoom from a narrow window; respond to the available CSS viewport width.
-    - Do not set a fixed min-width on html, body, the app shell, or primary page content.
+    max_width: "calc({layout.breakpoint.sidebarSheet} - 1px)"
+    sidebar: Sheet
+    task_list: stacked_rows_or_local_scroll
+    forms: single_column
+    roi: canvas_then_list
+  rules:
+    - Respond to CSS viewport width; do not detect browser zoom with JavaScript.
+    - Page content must not create global horizontal scrolling.
+    - Wrap action groups without hiding functionality.
+    - Wrap long identifiers before widening the page.
 
 reflow:
-  required_target:
-    viewport_equivalent: 640px
-    reference: "1280px desktop viewport at 200% browser zoom"
+  required:
+    viewport: "{layout.breakpoint.reflowRequired}"
     requirements:
       - No global horizontal scrolling.
       - No clipped content, controls, status, or navigation.
-      - All primary actions remain reachable without changing zoom.
-  progressive_target:
-    viewport_equivalent: 320px
-    reference: "WCAG 2.2 SC 1.4.10 Reflow target"
+      - Primary actions remain reachable.
+  progressive:
+    viewport: "{layout.breakpoint.reflowProgressive}"
     requirements:
-      - Non-exempt content reflows into a single reading direction.
-      - Text and controls do not overlap or become unavailable.
-  patterns:
-    - Collapse the fixed sidebar into a drawer before it competes with page content.
-    - Stack overview columns, form columns, ROI panels, and metadata rows when space is insufficient.
-    - Wrap toolbars and action groups without hiding functionality.
-    - Prefer wrapping long identifiers and RTSP URLs over widening the page.
-  local_two_dimensional_overflow:
-    allowed_for: [video, roi_canvas, semantic_data_table, persistent_editor_toolbar]
+      - Non-exempt content follows one reading direction.
+      - Text and controls do not overlap.
+  local_overflow:
+    allowed_for: [video, roi_canvas, semantic_data_table]
     containment: component
     page_level_overflow: prohibited
-    rule: "Use local scrolling only when spatial relationships or minimum manipulation space would be lost by reflow."
 
 scrolling:
-  shell: viewport_locked
   sidebar_navigation: independently_scrollable
   page_content: document_scroll
   root_overflow_y: auto
   root_scrollbar_gutter: stable
-  sticky_filters:
-    allowed: true
-    offset_top: "{size.header}"

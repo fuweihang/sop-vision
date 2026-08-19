@@ -1,7 +1,7 @@
 {
-  "$schemaVersion": "1.0.0",
+  "$schemaVersion": "3.0.0",
   "name": "SOP Vision Design System",
-  "status": "observed-and-normalized",
+  "status": "shadcn-aligned",
   "baseline": {
     "viewport": {
       "width": 1280,
@@ -9,45 +9,71 @@
       "devicePixelRatio": 1
     },
     "theme": "light",
-    "capturedAt": "2026-08-13",
-    "source": "authenticated Vercel dashboard"
+    "updatedAt": "2026-08-19"
+  },
+  "implementation": {
+    "framework": "React + Vite",
+    "router": "TanStack Router",
+    "componentDistribution": "shadcn/ui",
+    "style": "base-nova",
+    "primitiveLibrary": "@base-ui/react",
+    "iconLibrary": "hugeicons",
+    "cssVariables": true,
+    "menuColor": "default",
+    "menuAccent": "subtle"
   },
   "entrypoints": {
     "human": "README.md",
     "agents": "agent-guidelines.md",
     "evidence": "evidence/manifest.json"
   },
+  "runtimeSources": {
+    "configuration": "../../frontend/components.json",
+    "theme": "../../frontend/src/index.css",
+    "components": "../../frontend/src/components/ui",
+    "mobileHook": "../../frontend/src/hooks/use-mobile.ts",
+    "router": "../../frontend/src/lib/router.ts",
+    "prototype": "../prototype/v1.0.html"
+  },
   "tokens": {
-    "primitives": "tokens/primitives.tokens.json",
-    "semantic": "tokens/semantic.tokens.json",
-    "themes": {
-      "light": "tokens/light.tokens.json",
-      "dark": "tokens/dark.tokens.json"
-    }
+    "runtimeThemeSnapshot": "tokens/runtime-theme.tokens.json",
+    "layout": "tokens/layout.tokens.json"
   },
   "specifications": {
     "foundations": "specs/foundations.md",
-    "layout": "specs/layout.yaml",
     "components": "specs/components.yaml",
+    "layout": "specs/layout.yaml",
     "pagePatterns": "specs/page-patterns.md",
     "interactionAccessibility": "specs/interaction-accessibility.md"
   },
+  "ownership": {
+    "componentGeometryAndPrimitiveBehavior": "frontend runtime source",
+    "visualPrinciples": "specs/foundations.md",
+    "shellBreakpointsAndGrid": "specs/layout.yaml",
+    "routesAndPageComposition": "specs/page-patterns.md",
+    "interactionAndAccessibility": "specs/interaction-accessibility.md",
+    "projectComponentUsage": "specs/components.yaml"
+  },
   "sourceOfTruthOrder": [
     "user requirements",
-    "semantic tokens plus selected theme",
-    "component and layout specifications",
-    "page patterns and foundations",
-    "observational evidence"
+    "frontend shadcn configuration, runtime theme, and generated UI source",
+    "prototype layout, information architecture, and business flows",
+    "design-system decisions",
+    "repository evidence"
   ],
-  "generatedArtifacts": {
-    "committed": false,
-    "examples": [
-      "CSS custom properties",
-      "framework theme mapping",
-      "typed token constants",
-      "component implementations",
-      "visual regression baselines"
+  "prototype": {
+    "path": "../prototype/v1.0.html",
+    "authoritativeFor": [
+      "layout intent",
+      "responsive intent",
+      "business flows"
+    ],
+    "notAuthoritativeFor": [
+      "React structure",
+      "primitive behavior",
+      "focus management",
+      "routing implementation",
+      "icons"
     ]
   }
 }
-

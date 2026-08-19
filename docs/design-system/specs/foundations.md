@@ -2,63 +2,61 @@
 
 ## 设计方向
 
-SOP Vision 的后台界面采用中性、紧凑、工程工具化的视觉语言。界面应优先传达状态、关系和操作层级，而不是品牌装饰。
+SOP Vision 使用 shadcn/ui `base-nova` 的中性、紧凑、工程工具化视觉语言。页面优先表达设备、任务、状态、关系和操作层级。
 
-核心原则：
+冲突顺序由 `catalog.json#sourceOfTruthOrder` 定义。
 
-1. **层级来自排版和表面关系。** 使用字号、字重、留白、浅色表面和细描边；阴影只用于需要脱离文档流的浮层。
-2. **保持高信息密度。** 默认正文与控件文字为 14px，常规控件高度为 36px，导航行高为 36px。
-3. **使用品牌蓝标识主操作。** 主按钮采用透明底、主题适配的品牌蓝前景与 1px 描边；Hover 仅增加轻量主题色底纹。键盘焦点、链接和信息状态继续使用各自的蓝色语义 Token。
-4. **统一几何语言。** 控件与卡片主要使用 6px 圆角，浮层使用 12px，标签使用胶囊圆角。
-5. **状态必须可辨认。** Hover、Focus、Disabled、Loading 和选中状态不能只依赖颜色变化。
-6. **证据与规范分离。** Vercel 实测值是设计输入；项目组件只引用 SOP Vision 的语义 token。
+## 核心原则
 
-## 色彩结构
+1. **组件基线来自 shadcn。** Primitive geometry、variant 和状态以运行时组件源码为准。
+2. **原型只定义布局意图。** Shell、页面结构、业务流程和响应式方向可沿用，手写 primitive 不可移植。
+3. **层级来自语义表面。** 使用 shadcn 的 Background、Card、Popover、Muted、Accent、Border 和 Ring。
+4. **保持紧凑密度。** 使用 Layout Token 和组件默认 size，不为匹配截图创造局部尺寸。
+5. **主次操作明确。** 页面只设置一个视觉最强的主操作，其他操作使用现有 variant。
+6. **状态不只依赖颜色。** 同时使用文字、图标、形状、透明度或位置反馈。
+7. **运行时优先。** Design System 记录项目决策，不建立平行组件库或主题。
 
-- 页面底色是 `semantic.color.background.page`。
-- 卡片、输入框和浮层使用 `semantic.color.background.surface`。
-- 当前导航、弱强调区域和卡片脚注使用 `semantic.color.background.active` 或 `subtle`。
-- 主文字、次级文字、弱化文字必须依次使用 `primary`、`secondary`、`muted`，不要在组件中自行挑选灰阶。
-- 主操作必须组合使用 `semantic.color.action.primaryBackground`、`primaryForeground`、`primaryBorder` 与 `primaryBackgroundHover`，不得在业务组件中直接引用 Logo 采样色或基础蓝色色阶。
-- 复选框、单选框等原生选中控件使用 `semantic.color.action.accent`，不复用按钮背景 Token。
-- 成功、警告、危险色用于状态反馈，不作为大面积装饰色。
+## 颜色
 
-## 排版结构
+- 页面、Card、Popover、Primary、Secondary、Muted、Accent、Destructive、Border、Input、Ring 和 Sidebar 使用运行时 shadcn CSS Variables。
+- 业务组件使用 Tailwind 语义类，不直接选择原始色阶。
+- 状态颜色必须配合文本、Icon、Badge 或结构标记。
+- 成功和警告等新增业务语义必须先进入运行时主题，再登记到主题快照。
 
-| 用途 | 字号 / 行高 | 字重 | 说明 |
-|---|---:|---:|---|
-| 标签、Badge | 11px / 20px | 500 | 可使用 0.2px 正字距 |
-| 辅助说明 | 12px / 20px | 400–500 | 避免承载关键操作信息 |
-| 正文、控件 | 14px / 20px | 400–500 | 默认密度 |
-| 导航 | 14px / 24px | 400–500 | 选中项可提升字重 |
-| 页面辅助标题 | 16px / 24px | 500–600 | 谨慎使用 |
-| 设置卡标题 | 20px / 26px | 600 | 字距 -0.4px |
+精确 Light/Dark 值见 `tokens/runtime-theme.tokens.json`；该文件不能覆盖 `frontend/src/index.css`。
 
-正文首选 GeistSans；无法分发该字体时回退至 Inter 和系统字体。ID、哈希、命令、代码与固定宽度数值使用 Geist Mono 或系统等宽字体。
+## 排版
 
-## 间距与密度
+- 正文、控件、辅助文本、标题分别使用既有语义层级，不为单个页面创建新字号。
+- 页面只保留一个主标题层级；Card 和 Dialog 标题低于页面标题。
+- 使用 Geist Variable 和系统 sans-serif 回退。
+- ID、参数、时间戳和流地址使用系统等宽字体。
+- Muted 文本不承载关键错误、权限、结果或告警。
 
-以 4px 为基础单位，优先使用 `4 / 8 / 12 / 16 / 20 / 24 / 32 / 40 / 48px`。禁止为了像素对齐引入无语义的 5px、13px、19px 等孤立间距。
+## 间距、尺寸与圆角
 
-- 控件内部水平间距：8–12px。
-- 卡片内容内边距：20px。
-- 页面默认边距：24px。
-- 设置页宽边距：48px。
-- 卡片或主要 section 间距：32px。
-- 文字与紧邻控件间距：12–20px，取决于信息关联度。
+- 使用 `tokens/layout.tokens.json` 中的 spacing、control、radius 和 shell token。
+- 页面布局可以选择组件已有 size，但不得重写 primitive 默认尺寸表。
+- Card、Dialog、Button、Input、Menu Item 等使用各自组件圆角，不强制统一圆角。
+- 长文本、中文、ID 和流地址优先换行，不扩大页面最小宽度。
 
 ## 表面与阴影
 
-普通层级使用 1px 半透明轮廓，不使用明显投影。只有 Menu、Popover、Tooltip、Dialog 和 Modal 可以使用多层阴影。
-
-- Card：白色/暗色 surface + `semantic.shadow.surface`。
-- Control focus：鼠标焦点可用中性 focus shadow。
-- Keyboard focus：必须使用高可见度双色焦点环。
-- Popover：12px 圆角和 `semantic.shadow.popover`。
+- 普通 Card 使用语义表面和细 Ring，不额外增加 elevation。
+- Floating Content 沿用组件自带 Shadow、Ring 和 Overlay。
+- Focus 样式沿用组件实现，业务容器不得裁切。
+- 原型 Shadow 只表达层级意图，不覆盖 shadcn 默认值。
 
 ## 图标
 
-- 默认图标为 16×16px。
-- 紧凑标签可用 12×12px，大型空状态或头像操作可用 20px 以上尺寸。
-- 图标采用线性、低装饰风格；描边粗细和端点样式在同一页面保持一致。
-- 只有图标的按钮必须有可访问名称和不小于 32×32px 的交互区域。
+- 图标库固定为 Hugeicons。
+- 使用组件和 Layout Token 定义的 icon size。
+- 同一上下文保持一致的描边风格。
+- Icon-only Button 必须有可访问名称。
+- Hugeicons 有等价图标时不得手写 SVG。
+
+## 边界
+
+- Layout、Card Grid、Table、Preview、ROI 和表单排列可以按业务组合。
+- Primitive 的内部状态、键盘行为和 ARIA 由 Base UI 管理。
+- 页面通过 composition、variant、size 和局部 class 扩展，不创建同名替代组件。

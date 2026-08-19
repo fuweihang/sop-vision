@@ -1,93 +1,92 @@
 # Interaction and Accessibility
 
-## 状态矩阵
+冲突顺序由 `catalog.json#sourceOfTruthOrder` 定义。Base UI 负责 primitive 的基础键盘行为、ARIA 状态和焦点管理。
 
-所有交互组件至少覆盖以下状态：
+## 状态
 
-| 状态 | 要求 |
-|---|---|
-| Default | 信息层级清晰，不能依赖 Hover 才显示关键操作 |
-| Hover | 150ms 内完成背景、文字或边框反馈，不引发布局位移 |
-| Active | 使用与普通 Focus 相同的中性强调阴影提供即时按压反馈，不使用缩放，避免相邻内容抖动 |
-| Focus | 鼠标聚焦可使用中性强调边框 |
-| Focus Visible | 使用 `semantic.shadow.keyboardFocus`，在浅色和暗色表面都清晰可见 |
-| Disabled | 降低对比度、阻止操作，并保留可理解的原因 |
-| Loading | 保持组件尺寸，声明忙碌状态，防止重复提交 |
-| Error | 同时提供颜色、图标或文本信息，不只使用红色 |
+| 状态          | 要求                                  |
+| ------------- | ------------------------------------- |
+| Default       | 关键操作不能依赖 Hover 才出现         |
+| Hover         | 使用组件既有反馈，不引发布局变化      |
+| Active        | 沿用组件反馈，不使用缩放              |
+| Focus Visible | 使用组件 Ring，且不得被裁切           |
+| Disabled      | 阻止操作；重要数据仍可读              |
+| Loading       | 保持组件尺寸、声明 Busy、防止重复提交 |
+| Error         | 使用 `aria-invalid` 并提供可修复文本  |
+| Selected/Open | 使用 primitive 的状态属性和语义表面   |
 
-## 键盘
+## Primitive 责任
 
-- 所有交互元素都必须通过 Tab 到达。
-- Tab 顺序必须与视觉阅读顺序一致。
-- Enter/Space 激活按钮和开关；Escape 关闭 Popover、Dialog 和临时菜单。
-- 桌面 Sidebar 和 Compact Drawer 支持 `Control/Command + B` 切换，且不得在切换后将焦点移动到隐藏内容。
-- 关闭浮层后，焦点返回触发元素。
-- Menu、Listbox、Calendar 和 Tabs 实现对应的方向键行为。
-- 不允许正数 `tabindex` 人工改变顺序。
+- 不重复实现 Focus Trap、方向键导航、Switch 或 Listbox 状态机。
+- 不覆盖 primitive 默认行为，除非有明确项目需求和对应测试。
+- 原型中的焦点循环、原生 Select 和手写 ARIA Switch 不进入 React 实现。
 
-## 可见焦点
+## 键盘与焦点
 
-- 不要全局移除 `outline`，除非提供等效或更明显的 focus-visible 样式。
-- 键盘焦点环不得被 `overflow: hidden` 裁切。
-- 焦点颜色不能是选中状态的唯一表达；当前项同时使用背景、字重或标记。
+- 所有交互元素通过 Tab 到达，顺序与阅读顺序一致。
+- Enter/Space、Escape 和方向键行为沿用对应 primitive。
+- Sidebar 支持组件定义的键盘快捷键。
+- 不允许正数 `tabindex`。
+- 路由完成后，将焦点放到主标题或主内容起点。
+- Active Menu 不能只改变图标颜色。
+- 可点击 Card 使用语义 Link/Button 并提供独立 Focus Visible。
 
-## 文本与颜色
+## 文本、颜色与目标区域
 
 - 正文和关键控件文字目标对比度至少 4.5:1。
-- 大字号和非关键信息至少 3:1。
-- 图标按钮、输入框轮廓和焦点指示相对相邻颜色至少 3:1。
-- `semantic.color.text.muted` 不承载错误、金额、权限或提交结果等关键内容。
-- 状态色必须配合文字、图标或形状使用。
-
-## 点击与触控区域
-
-- 桌面紧凑控件最小可见高度为 32px。
-- 仅图标按钮的实际点击区域不得小于 32×32px。
-- 移动或触摸界面目标应扩展至至少 44×44px，而不必放大图标本身。
-- 相邻破坏性与确认操作之间必须保留足够间隔。
+- 大字号和非关键视觉至少 3:1。
+- 焦点、轮廓和图标相对相邻颜色至少 3:1。
+- 状态色必须配合文本、图标或形状。
+- 点击区域遵循组件实现；Touch 场景可通过外层 Hit Area 扩展。
+- 相邻 Destructive 与 Confirm 操作保持清晰间隔。
 
 ## 表单
 
-- 优先使用可见 label；placeholder 不能替代 label。
-- 帮助文本与错误文本通过 `aria-describedby` 关联。
-- 错误提示说明如何修复，而不仅是“无效”。
-- 保存成功和失败需要可被辅助技术感知的状态通知。
-- Disabled 字段如果包含重要数据，仍应保持可读；必要时使用 readonly。
+- 使用 Field、Label、Description 和 Error 组合。
+- Placeholder 不能替代 Label。
+- 帮助文本和错误文本必须与控件关联。
+- 错误说明如何修复。
+- 重要 Disabled 数据应改用 Readonly 或独立文本展示。
+- 保存结果通过 Sonner 或 `aria-live` 区域反馈。
 
-## 浮层与 Dialog
+## Floating Surfaces
 
-- Popover 与 Dialog 必须有明确的触发关系和可访问名称。
-- 本项目的 MVP Modal 打开时不自动移动焦点、不强制 Focus Trap，并保持触发元素的当前焦点归属；这是项目需求覆盖通用可访问性建议的明确例外。
-- Modal 关闭时不额外调用 `focus()`；通过原触发元素打开时，浏览器自然保留其焦点。
-- 非模态 Popover 不应错误捕获整个页面焦点。
-- 浮层应限制在视口内，在 1280×720 下不能遮挡主要提交操作。
-- 日期、时间和时区必须使用语义标签，不能只靠视觉位置解释。
+- 创建和编辑使用 Dialog；不可逆确认使用 AlertDialog。
+- Focus、Escape、Outside Interaction 和 Focus Restore 由 Base UI 管理。
+- Dialog 必须有 Title；需要补充上下文时使用 Description。
+- 复杂表单可以扩展 Content，但必须保留视口边距和内部滚动。
+- Mobile Sidebar 使用 Sidebar 自带的 Sheet。
+- 折叠菜单项使用 Tooltip，应用根节点挂载 TooltipProvider。
+- 关闭的移动 Sidebar 不得继续参与 Tab 顺序。
 
-## ROI 编辑器 MVP 例外
+## ROI MVP
 
-- ROI 的 ID、Label 和数量由算法接口提供，用户只能选择并绘制对应区域。
-- 已保存多边形不支持顶点拖拽；修改必须通过“重绘”完成。
-- 重绘草稿在“完成”前不得覆盖已保存数据，“取消”必须保留原数据。
-- 操作按钮和 ROI 列表必须可通过键盘访问；MVP 的画布点位输入仅支持指针，暂不声明完整键盘可访问性。
+- ROI 定义来自算法接口；ID、Label 和数量不可编辑。
+- 已保存多边形通过“重绘”修改，不支持顶点拖拽。
+- 草稿完成前不得覆盖保存值；取消保留原数据。
+- Undo 只影响当前草稿。
+- Action 和 ROI 列表必须键盘可达。
+- 点位输入暂只支持指针，不宣称完整键盘几何编辑。
 
-## 缩放与 Reflow
+## Reflow 与 Motion
 
-- 页面不得通过 `html`、`body`、Shell 或主内容区域的固定 `min-width` 维持桌面排版。
-- 1280px 基准窗口在 200% 浏览器缩放下，必须在约 640 CSS px 可用宽度内保留全部信息和功能，且不得产生页面级横向滚动。
-- 浏览器缩放和窗口变窄统一按照可用 CSS 视口处理，不通过 JavaScript 判断缩放比例。
-- 侧栏、卡片网格、详情双栏、列表元数据、表单和 ROI 侧栏应按布局规范逐级重排。
-- 视频、ROI 画布和真正依赖二维关系的数据表可以在组件内部保留局部滚动；例外不得扩展到页面其他区域。
-- 320 CSS px 作为渐进式 Reflow 校验宽度；在此宽度下，非例外内容只允许沿阅读方向滚动。
+- Reflow 目标、断点和局部滚动例外由 `layout.yaml` 定义。
+- 不为根元素、Shell 或主内容设置固定最小宽度。
+- 动效只解释状态变化。
+- Reduced Motion 下移除非必要位移、缩放和动画。
+- Skeleton 匹配最终内容几何，避免强烈闪烁。
 
-## 动效
+## 验证
 
-- 控件反馈默认 150ms，Popover 200ms，Overlay 最长 300ms。
-- 动效只解释状态变化，不作为装饰性延迟。
-- 当用户启用 `prefers-reduced-motion: reduce` 时，移除位移、缩放和弹性效果，保留必要的即时透明度变化。
-- Loading skeleton 应有静态替代，不能产生强烈闪烁。
+自动检查：
 
-## 自动与人工验证
+- 语义结构、名称、Tab、`aria-invalid`。
+- Dialog/AlertDialog Focus 行为。
+- Light/Dark、Reduced Motion、Lint、测试和构建。
 
-自动检查：语义结构、可访问名称、Tab 可达性、明显对比度问题、禁用状态和 reduced motion。
+人工检查：
 
-人工检查：焦点是否被裁切、长文本/中文布局、1280px 基准窗口缩放至 200%、320 CSS px Reflow、键盘完成完整流程、浅色/暗色主题、1280×720 基准截图和窄屏降级。
+- Focus Ring、中文和长文本。
+- Catalog Baseline 与 Layout Reflow 目标。
+- 完整键盘流程。
+- Sidebar Tooltip 和 Mobile Sheet。

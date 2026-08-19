@@ -1,100 +1,139 @@
 # Page Patterns
 
-页面模式定义组件如何组合。Agent 应先选择最接近的模式，再填充业务内容，而不是从空白画布开始。
+本文件拥有路由和业务页面组合；Shell、Grid 和 Breakpoint 只在 `layout.yaml` 定义。
 
-## 1. Workspace Overview
-
-适用于项目总览、运营状态和资源入口。
+## Shared App Shell
 
 ```text
-┌──────── Sidebar ────────┬──────────── Header ──────────────┐
-│ Team / Search           │ Scope       Breadcrumb     Agent │
-│ Primary navigation      ├───────────────────────────────────┤
-│                         │ Search / View / Primary action    │
-│                         ├──────────────┬────────────────────┤
-│                         │ Usage/Alerts │ Projects/Resources │
-│ Account                 │ Recent items │                    │
-└─────────────────────────┴──────────────┴────────────────────┘
+TooltipProvider
+└─ SidebarProvider
+   ├─ Sidebar
+   │  ├─ SidebarHeader
+   │  ├─ SidebarContent / SidebarMenu
+   │  └─ SidebarFooter
+   └─ SidebarInset
+      ├─ Header
+      └─ TanStack Router Outlet
 ```
 
-规则：
+- Desktop 使用 Icon-collapsible Sidebar。
+- Compact 使用 Sidebar 自带 Sheet。
+- Active Route 使用 `isActive`/`data-active`。
+- Header 中间显示 Breadcrumb，详情页提供返回操作。
 
-- 全局搜索和主要创建操作位于内容顶部。
-- 信息摘要位于左列，主要实体位于更宽的右列。
-- 没有数据时保持卡片结构，使用 Empty State，不改变页面骨架。
-- 一页只设置一个视觉最强的主操作。
+## `/cameras`
 
-## 2. Data List With Filters
+模式：Camera Resource List。
 
-适用于部署、日志、告警和检测记录。
+Sections：
 
-结构顺序：
+1. 页面标题与说明。
+2. Search 和添加 Camera 主操作。
+3. Empty 或 `layout.grid.camera_cards`。
 
-1. Shell Header。
-2. Filter Bar。
-3. 结果摘要或批量操作区。
-4. Table/List/Grid。
-5. Pagination 或增量加载状态。
+Card 展示名称、状态、连接摘要和默认 Source，整体进入 Camera Detail。Empty 说明缺少的资源和下一步。
 
-规则：
+## `/cameras/$cameraId`
 
-- Filter Bar 使用 36px 高控件和 8px 间距，可换行但不能横向溢出。
-- 多选筛选器显示已选数量，例如 `6/7`。
-- 空结果必须区分“系统没有数据”和“筛选条件没有匹配”。
-- 表格列密度遵循 14px 正文，状态使用 Badge，不用整行高饱和底色。
-- 筛选条件宜同步到 URL，便于 Agent、用户和测试复现状态。
+模式：Camera Detail。
 
-## 3. Settings Card Stack
+Sections：
 
-适用于团队配置、系统参数和账号设置。
+1. Entity Header：名称、状态、Preview 和编辑。
+2. AspectRatio Preview。
+3. Connection Information。
+4. Camera Sources。
+5. Destructive Section。
+
+Source 选择使用 RadioGroup 或 Select；编辑使用 Dialog；删除使用 AlertDialog。机器 ID 和流地址使用等宽字体并可换行、复制。
+
+## `/tasks`
+
+模式：Detection Task Resource List。
+
+Sections：
+
+1. 页面标题与说明。
+2. Search 和创建 Task 主操作。
+3. Empty 或语义 Table。
+
+Table 展示任务名称、Camera Source、Algorithm、状态和详情操作。Compact 行为使用 `layout.responsive.compact.task_list`。
+
+## `/tasks/$taskId`
+
+模式：Detection Task Detail。
+
+Sections：
+
+1. Entity Header：状态、启停、重载、重启和编辑。
+2. AspectRatio Preview、Detection Overlay 和 ROI。
+3. ROI Display Switch 与 Legend。
+4. Task Information。
+5. Algorithm Parameters。
+6. Destructive Section。
+
+异步操作显示 Loading 并提供 Sonner 反馈；编辑使用 Dialog；删除使用 AlertDialog。
+
+## Camera Form Dialog
+
+- 使用 Field、Input 和 Button。
+- 支持 Create/Edit。
+- Source 行可以增删，Icon Button 必须有可访问名称。
+- 提交失败聚焦首个无效字段。
+- Footer 保持可见，Body 可以滚动。
+
+## Task Form Dialog
+
+- 使用 Field、Input、Textarea、Select、Button 和 Spinner。
+- Algorithm 参数按 schema 选择对应 Base UI 控件。
+- 表单布局引用 `layout.grid.form`。
+- ROI 区域引用 `layout.grid.roi`。
+
+ROI MVP：
+
+- 定义来自 Algorithm API。
+- 点选添加顶点，至少三个点完成。
+- 重绘只在完成后替换保存值。
+- 取消保留保存值，Undo 只影响草稿。
+- 不支持顶点拖拽和键盘几何输入。
+
+## Destructive Confirmation
+
+所有不可逆删除使用 AlertDialog：
 
 ```text
-Secondary navigation |  Card: title + description + field
-                     |  Footer: help text          Save
-                     |
-                     |  Card: title + description + controls
-                     |  Footer: documentation      Save
+Title
+对象和不可逆后果
+Cancel
+Destructive Confirm
 ```
 
-规则：
+不使用普通 Dialog 或 `window.confirm()`。
 
-- 内容区域使用约 914px 最大宽度，卡片间距 32px。
-- 每张卡片只表达一个设置主题。
-- 标题与说明放在 Card Body，帮助文本与提交按钮放在 Footer。
-- Save 默认不可用，只有值发生有效变化后启用。
-- 危险操作放在页面末尾，与常规设置保持明显空间分隔。
-- 禁用控件必须解释原因或提供升级/权限路径。
+## Shared States
 
-## 4. Empty State
+### Empty
 
-适用于尚未创建资源、无匹配结果、不可用或无权限状态。
+- 使用 Empty。
+- 标题说明缺少的具体资源。
+- Description 提供原因或下一步。
+- 只有用户能够解决时才显示 Action。
 
-内容模板：
+### Loading
 
-```text
-[icon]
-具体、简短的状态标题
-解释原因或下一步的单句说明
-[optional action]
-```
+- 首次加载使用 Skeleton。
+- 控件操作使用 Spinner，并保持几何尺寸。
+- Preview 状态保持 AspectRatio。
 
-禁止使用泛化文案，如“暂无数据”，而不说明数据类型或下一步。
+### Error
 
-## 5. Detail Page
+- 页面级错误使用 Alert。
+- 表单错误使用 FieldError。
+- 异步结果使用 Sonner 或可感知状态区域。
+- 提供恢复动作或下一步。
 
-适用于一次检测、一次部署、一个项目或一个工单。
+## 输出要求
 
-- Header 显示实体名称、状态和最重要操作。
-- 首屏展示摘要、当前状态和关键异常。
-- 次级信息使用 Tabs 或连续 sections，避免多层嵌套卡片。
-- 原始日志、ID、时间和机器数据使用等宽字体与可复制操作。
-- 破坏性操作只出现在相关设置区域，不放在主信息流中。
+Design 输出：路由、模式、Sections、组件、状态、Catalog Baseline 行为和 Layout Reflow。
 
-## AI Design 输出要求
-
-为新页面给出：所选模式、主要 section、复用组件、所需新 token、各状态、1280×720 首屏行为和窄屏降级方案。没有这些信息的视觉稿不应直接进入编码。
-
-## AI Coding 输出要求
-
-实现必须标明使用了哪些语义 token 和组件规格。新组件只有在现有组件无法表达需求时创建，并需要同步补充 `components.yaml` 和视觉回归用例。
-
+Coding 输出：说明使用的 shadcn 组件；新 primitive 先通过 CLI 添加并更新 `components.yaml`。

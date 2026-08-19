@@ -1,75 +1,26 @@
 {
-  "$schemaVersion": "1.0.0",
-  "capturedAt": "2026-08-13",
-  "source": {
-    "product": "Vercel Dashboard",
-    "baseUrl": "https://vercel.com",
-    "authenticated": true,
-    "containsCredentials": false,
-    "captureMethod": ["Playwright screenshot", "accessibility DOM snapshot", "computed styles"]
-  },
-  "baseline": {
-    "viewport": { "width": 1280, "height": 720 },
-    "devicePixelRatio": 1,
-    "theme": "light",
-    "timezone": "Asia/Shanghai"
-  },
+  "$schemaVersion": "3.0.0",
+  "$description": "Repository-local evidence only. Runtime sources are owned by catalog.json and are not duplicated here.",
   "artifacts": [
     {
-      "id": "dashboard-overview-screenshot",
-      "kind": "screenshot",
-      "path": "../../vercel-home-1280x720.png",
-      "routePattern": "/:team",
-      "classification": "observed",
-      "supports": ["shell", "sidebar", "header", "overview grid", "empty states", "control sizing"]
-    },
-    {
-      "id": "dashboard-overview-dom",
-      "kind": "accessibility-snapshot",
-      "path": "../../vercel-home-dom.md",
-      "routePattern": "/:team",
-      "classification": "observed",
-      "supports": ["semantic structure", "bounding boxes", "navigation hierarchy"]
-    },
-    {
-      "id": "dashboard-overview-styles",
-      "kind": "computed-style-and-css-variable-export",
-      "path": "../../vercel-home-styles.json",
-      "routePattern": "/:team",
-      "classification": "observed",
-      "supports": ["color", "typography", "spacing", "radius", "shadow", "motion", "theme variables"]
-    },
-    {
-      "id": "deployments-screenshot",
-      "kind": "screenshot",
-      "path": "../../vercel-deployments-1280x720.png",
-      "routePattern": "/:team/~/deployments",
-      "classification": "observed",
-      "supports": ["filter bar", "empty deployment state"]
-    },
-    {
-      "id": "deployments-popover-screenshot",
-      "kind": "screenshot",
-      "path": "../../vercel-deployments-popover-1280x720.png",
-      "routePattern": "/:team/~/deployments",
-      "classification": "observed",
-      "supports": ["popover", "calendar", "filter controls", "elevation", "disabled states"]
-    },
-    {
-      "id": "settings-screenshot",
-      "kind": "screenshot",
-      "path": "../../vercel-settings-1280x720.png",
-      "routePattern": "/:team/~/settings",
-      "classification": "observed",
-      "supports": ["settings navigation", "card stack", "form controls", "card footer", "page spacing"]
+      "id": "sop-prototype-v1",
+      "kind": "interactive-html-prototype",
+      "path": "../../prototype/v1.0.html",
+      "classification": "prototype",
+      "supports": [
+        "shell layout",
+        "Cameras flows",
+        "Detection Tasks flows",
+        "responsive intent",
+        "ROI business interaction"
+      ],
+      "doesNotSupport": [
+        "React structure",
+        "primitive behavior",
+        "focus management",
+        "routing implementation",
+        "icons"
+      ]
     }
-  ],
-  "limitations": [
-    "Only the 1280x720 desktop viewport was directly sampled.",
-    "The captured account had no production deployment data, so dense rows and tables remain underspecified.",
-    "Dark-theme values were read from CSS variables rather than visually captured.",
-    "Hover and all destructive-dialog states were not exhaustively sampled.",
-    "The normalized design system intentionally does not reproduce Vercel branding or proprietary content."
   ]
 }
-

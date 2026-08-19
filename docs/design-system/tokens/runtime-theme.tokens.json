@@ -1,0 +1,131 @@
+{
+  "$schemaVersion": "1.0.0",
+  "$description": "Audit snapshot of theme-dependent CSS variables from frontend/src/index.css. Runtime CSS remains authoritative.",
+  "source": "../../../frontend/src/index.css",
+  "variables": {
+    "--background": {
+      "light": "oklch(1 0 0)",
+      "dark": "oklch(0.145 0 0)"
+    },
+    "--foreground": {
+      "light": "oklch(0.145 0 0)",
+      "dark": "oklch(0.985 0 0)"
+    },
+    "--card": {
+      "light": "oklch(1 0 0)",
+      "dark": "oklch(0.205 0 0)"
+    },
+    "--card-foreground": {
+      "light": "oklch(0.145 0 0)",
+      "dark": "oklch(0.985 0 0)"
+    },
+    "--popover": {
+      "light": "oklch(1 0 0)",
+      "dark": "oklch(0.205 0 0)"
+    },
+    "--popover-foreground": {
+      "light": "oklch(0.145 0 0)",
+      "dark": "oklch(0.985 0 0)"
+    },
+    "--primary": {
+      "light": "oklch(0.5 0.134 242.749)",
+      "dark": "oklch(0.443 0.11 240.79)"
+    },
+    "--primary-foreground": {
+      "light": "oklch(0.977 0.013 236.62)",
+      "dark": "oklch(0.977 0.013 236.62)"
+    },
+    "--secondary": {
+      "light": "oklch(0.967 0.001 286.375)",
+      "dark": "oklch(0.274 0.006 286.033)"
+    },
+    "--secondary-foreground": {
+      "light": "oklch(0.21 0.006 285.885)",
+      "dark": "oklch(0.985 0 0)"
+    },
+    "--muted": {
+      "light": "oklch(0.97 0 0)",
+      "dark": "oklch(0.269 0 0)"
+    },
+    "--muted-foreground": {
+      "light": "oklch(0.556 0 0)",
+      "dark": "oklch(0.708 0 0)"
+    },
+    "--accent": {
+      "light": "oklch(0.97 0 0)",
+      "dark": "oklch(0.269 0 0)"
+    },
+    "--accent-foreground": {
+      "light": "oklch(0.205 0 0)",
+      "dark": "oklch(0.985 0 0)"
+    },
+    "--destructive": {
+      "light": "oklch(0.577 0.245 27.325)",
+      "dark": "oklch(0.704 0.191 22.216)"
+    },
+    "--border": {
+      "light": "oklch(0.922 0 0)",
+      "dark": "oklch(1 0 0 / 10%)"
+    },
+    "--input": {
+      "light": "oklch(0.922 0 0)",
+      "dark": "oklch(1 0 0 / 15%)"
+    },
+    "--ring": {
+      "light": "oklch(0.708 0 0)",
+      "dark": "oklch(0.556 0 0)"
+    },
+    "--chart-1": {
+      "light": "oklch(0.828 0.111 230.318)",
+      "dark": "oklch(0.828 0.111 230.318)"
+    },
+    "--chart-2": {
+      "light": "oklch(0.685 0.169 237.323)",
+      "dark": "oklch(0.685 0.169 237.323)"
+    },
+    "--chart-3": {
+      "light": "oklch(0.588 0.158 241.966)",
+      "dark": "oklch(0.588 0.158 241.966)"
+    },
+    "--chart-4": {
+      "light": "oklch(0.5 0.134 242.749)",
+      "dark": "oklch(0.5 0.134 242.749)"
+    },
+    "--chart-5": {
+      "light": "oklch(0.443 0.11 240.79)",
+      "dark": "oklch(0.443 0.11 240.79)"
+    },
+    "--sidebar": {
+      "light": "oklch(0.985 0 0)",
+      "dark": "oklch(0.205 0 0)"
+    },
+    "--sidebar-foreground": {
+      "light": "oklch(0.145 0 0)",
+      "dark": "oklch(0.985 0 0)"
+    },
+    "--sidebar-primary": {
+      "light": "oklch(0.588 0.158 241.966)",
+      "dark": "oklch(0.685 0.169 237.323)"
+    },
+    "--sidebar-primary-foreground": {
+      "light": "oklch(0.977 0.013 236.62)",
+      "dark": "oklch(0.293 0.066 243.157)"
+    },
+    "--sidebar-accent": {
+      "light": "oklch(0.97 0 0)",
+      "dark": "oklch(0.269 0 0)"
+    },
+    "--sidebar-accent-foreground": {
+      "light": "oklch(0.205 0 0)",
+      "dark": "oklch(0.985 0 0)"
+    },
+    "--sidebar-border": {
+      "light": "oklch(0.922 0 0)",
+      "dark": "oklch(1 0 0 / 10%)"
+    },
+    "--sidebar-ring": {
+      "light": "oklch(0.708 0 0)",
+      "dark": "oklch(0.556 0 0)"
+    }
+  }
+}

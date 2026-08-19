@@ -1,0 +1,73 @@
+{
+  "$schemaVersion": "1.0.0",
+  "$description": "Non-color layout tokens used by SOP Vision specifications.",
+  "layout": {
+    "space": {
+      "$type": "dimension",
+      "compact": { "$value": "8px" },
+      "component": { "$value": "16px" },
+      "pageCompact": { "$value": "16px" },
+      "page": { "$value": "24px" },
+      "section": { "$value": "24px" },
+      "large": { "$value": "32px" }
+    },
+    "radius": {
+      "$type": "dimension",
+      "small": { "$value": "6px" },
+      "menuItem": { "$value": "8px" },
+      "control": { "$value": "10px" },
+      "surface": { "$value": "14px" },
+      "pill": { "$value": "26px" }
+    },
+    "control": {
+      "$type": "dimension",
+      "xs": { "$value": "24px" },
+      "small": { "$value": "28px" },
+      "default": { "$value": "32px" },
+      "large": { "$value": "36px" }
+    },
+    "icon": {
+      "$type": "dimension",
+      "xs": { "$value": "12px" },
+      "small": { "$value": "14px" },
+      "default": { "$value": "16px" },
+      "large": { "$value": "20px" }
+    },
+    "shell": {
+      "$type": "dimension",
+      "sidebarExpanded": { "$value": "256px" },
+      "sidebarCollapsed": { "$value": "48px" },
+      "sidebarMobile": { "$value": "288px" },
+      "header": { "$value": "56px" }
+    },
+    "breakpoint": {
+      "$type": "dimension",
+      "wide": { "$value": "1200px" },
+      "detailStack": { "$value": "901px" },
+      "sidebarSheet": { "$value": "768px" },
+      "formStack": { "$value": "640px" },
+      "cameraSingle": { "$value": "520px" },
+      "reflowRequired": { "$value": "640px" },
+      "reflowProgressive": { "$value": "320px" }
+    },
+    "layer": {
+      "$type": "number",
+      "content": { "$value": 0 },
+      "header": { "$value": 30 },
+      "sidebar": { "$value": 40 },
+      "overlay": { "$value": 50 },
+      "toast": { "$value": 60 }
+    },
+    "motion": {
+      "control": { "$type": "duration", "$value": "150ms" },
+      "dialog": { "$type": "duration", "$value": "100ms" },
+      "sheet": { "$type": "duration", "$value": "200ms" }
+    },
+    "typography": {
+      "bodySize": { "$type": "dimension", "$value": "14px" },
+      "bodyLineHeight": { "$type": "dimension", "$value": "20px" },
+      "titleSize": { "$type": "dimension", "$value": "16px" },
+      "headingSize": { "$type": "dimension", "$value": "20px" }
+    }
+  }
+}

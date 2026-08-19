@@ -1,56 +1,64 @@
 # SOP Vision Design System
 
-本目录把 Vercel 后台的实测设计语言转译为 SOP Vision 可复用的设计规范。它服务于两类消费者：
+本目录记录 SOP Vision 前端的项目级设计决策。组件视觉和 primitive 行为以 shadcn/ui `base-nova` 实现为准，原型只负责布局、信息架构和业务流程。
 
-- AI Design：理解视觉原则、布局模式、组件构成和状态约束。
-- AI Coding：读取机器可解析的 token 和规格，生成一致的界面实现与测试。
+## 实现档案
 
-这里记录的是基于 `1280 × 720`、浅色主题、登录后后台页面的观察与项目化决策，不是 Vercel 官方 API，也不应复制 Vercel 商标、文案或产品身份。
+- React、Vite、Tailwind CSS。
+- TanStack Router。
+- shadcn/ui `base-nova`、Base UI、Hugeicons。
+- Light/Dark CSS Variables。
+- UI 源码：`frontend/src/components/ui/`。
+- 主题真源：`frontend/src/index.css`。
 
 ## 阅读顺序
 
-1. [`catalog.json`](./catalog.json)：机器可读入口和文件职责。
-2. [`specs/foundations.md`](./specs/foundations.md)：设计原则与视觉语言。
-3. [`tokens/`](./tokens/)：基础 token、语义 token 和主题映射。
-4. [`specs/layout.yaml`](./specs/layout.yaml)：布局尺寸与响应规则。
-5. [`specs/components.yaml`](./specs/components.yaml)：组件 anatomy、variants 和 states。
-6. [`specs/page-patterns.md`](./specs/page-patterns.md)：页面组合方式。
-7. [`specs/interaction-accessibility.md`](./specs/interaction-accessibility.md)：交互与可访问性要求。
-8. [`agent-guidelines.md`](./agent-guidelines.md)：Agent 的执行约束和验收清单。
+1. [`catalog.json`](./catalog.json)：唯一机器入口、真源顺序和文件职责。
+2. [`agent-guidelines.md`](./agent-guidelines.md)：Agent 执行规则。
+3. [`specs/foundations.md`](./specs/foundations.md)：视觉原则。
+4. [`specs/components.yaml`](./specs/components.yaml)：组件清单和项目级使用决策。
+5. [`specs/layout.yaml`](./specs/layout.yaml)：Shell、Grid、Breakpoint 和 Reflow。
+6. [`specs/page-patterns.md`](./specs/page-patterns.md)：路由与业务页面组合。
+7. [`specs/interaction-accessibility.md`](./specs/interaction-accessibility.md)：交互和可访问性。
+8. [`tokens/`](./tokens/)：运行时主题快照和布局 token。
+9. [`evidence/manifest.json`](./evidence/manifest.json)：仓库内可读取的设计证据。
 
 ## 真源优先级
 
-发生冲突时按以下优先级处理：
+面向人的简化顺序：
 
-1. 项目明确需求和用户指令。
-2. `semantic.tokens.json` 与所选主题文件。
-3. `components.yaml`、`layout.yaml` 和交互规范。
-4. 页面模式与 foundations 文档。
-5. `evidence/` 中的原始观察。
+1. 当前用户指令和项目明确需求。
+2. 前端 shadcn 配置、运行时主题和 UI 源码。
+3. `docs/prototype/v1.0.html` 的布局与业务流程。
+4. 本 Design System。
+5. 可读取的 Evidence。
 
-证据用于解释设计决策，不应直接变成业务组件里的硬编码值。
+机器流程必须读取 `catalog.json#sourceOfTruthOrder`，其他文档不再重复定义完整顺序。
 
-## Token 组合方式
+## 文件职责
 
-构建某个主题时，应合并以下三个文件，然后解析 `{path.to.token}` 引用：
+| 文件          | 只负责                                          |
+| ------------- | ----------------------------------------------- |
+| Foundations   | 稳定视觉原则，不保存精确组件尺寸                |
+| Components    | 项目用途、允许的 API 和例外，不复述 TSX anatomy |
+| Layout        | Shell、层级、断点、Grid、滚动和 Reflow          |
+| Page Patterns | 路由、页面 section 和业务状态                   |
+| Interaction   | 键盘、焦点、表单、Dialog 和可访问性             |
+| Tokens        | 主题审计快照与非颜色布局数值                    |
+| Evidence      | 仓库中真实存在且可读取的证据                    |
 
-```text
-primitives.tokens.json
-+ semantic.tokens.json
-+ light.tokens.json 或 dark.tokens.json
-```
+## 原型边界
 
-Token 使用 DTCG 风格的 `$type`、`$value` 和 `$description` 字段。实现层可以从合并结果生成 CSS Custom Properties、Tailwind theme、TypeScript 常量或其他框架映射，但生成物不应反向成为设计真源。
+`docs/prototype/v1.0.html` 是静态原型，不是 shadcn 实现。不得复制其中手写的 Button、Select、Dialog、Switch、Sidebar、SVG Icon 或 Hash Router；React 实现使用已安装组件、Hugeicons 和 TanStack Router。
+
+## Token 边界
+
+- `runtime-theme.tokens.json` 是 `frontend/src/index.css` 的审计快照，不能覆盖运行时主题。
+- `layout.tokens.json` 保存 spacing、radius、size、breakpoint、layer 和 motion。
+- 前端当前不直接消费这些 JSON；组件继续使用 shadcn/Tailwind 语义类。
 
 ## 当前范围
 
-已覆盖：
+覆盖 App Shell、Cameras、Detection Tasks、表单、Dialog/AlertDialog、数据列表、Preview、ROI MVP、Light/Dark、键盘操作和响应式 Reflow。
 
-- 浅色和暗色主题的核心语义映射。
-- 字体、颜色、间距、尺寸、圆角、阴影与动效。
-- 可折叠固定侧栏后台、缩放时的 Drawer Shell、设置页和筛选列表页。
-- Button、Input、Select、Card、Navigation、Badge、Popover、Empty State 等基础组件。
-- Dialog 与 ROI 多边形编辑器 MVP。
-- Hover、Focus、Disabled、Loading、键盘操作以及 200% 缩放 Reflow 要求。
-
-尚未覆盖：移动端实测、复杂数据表格、图表颜色、高级编辑器、拖放和品牌插画。ROI 编辑器当前仅覆盖点击绘制与整体重绘 MVP，不包含顶点拖拽和键盘点位输入。
+尚未覆盖真实移动设备验证、图表业务语义、高级 ROI 顶点编辑、拖放、品牌插画和大规模数据虚拟化。
