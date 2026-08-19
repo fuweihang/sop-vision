@@ -1,4 +1,3 @@
-import { QueryClientProvider } from "@tanstack/react-query";
 import { RouterProvider } from "@tanstack/react-router";
 import { TanStackDevtools } from "@tanstack/react-devtools";
 import { ReactQueryDevtoolsPanel } from "@tanstack/react-query-devtools";
@@ -9,6 +8,7 @@ import { createRoot } from "react-dom/client";
 import "./index.css";
 import { queryClient } from "@/lib/query-client";
 import { router } from "@/lib/router";
+import { AppProviders } from "@/providers/app-providers";
 
 const rootElement = document.getElementById("root");
 
@@ -18,7 +18,7 @@ if (!rootElement) {
 
 createRoot(rootElement).render(
   <StrictMode>
-    <QueryClientProvider client={queryClient}>
+    <AppProviders>
       <RouterProvider router={router} />
       <TanStackDevtools
         config={{ position: "bottom-right" }}
@@ -33,6 +33,6 @@ createRoot(rootElement).render(
           },
         ]}
       />
-    </QueryClientProvider>
+    </AppProviders>
   </StrictMode>,
 );
