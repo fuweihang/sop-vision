@@ -153,7 +153,6 @@ vision:telemetry:task_intrusion_001
   "camera_id": "cam_001",
   "source_id": "source_101",
   "algorithm_id": "helmet_detection",
-  "algorithm_version": "1.2.0",
   "frame_id": 18272,
   "frame_ts_ms": 1786501200123,
   "published_at_ms": 1786501200180,
@@ -975,4 +974,3 @@ Detector
 - [FastAPI WebSocket](https://fastapi.tiangolo.com/advanced/websockets/)
 - [Redis Pub/Sub](https://redis.io/docs/latest/develop/interact/pubsub/)
 - [Redis Streams](https://redis.io/docs/latest/develop/data-types/streams/)
-
