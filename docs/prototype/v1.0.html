@@ -3,28 +3,41 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>SOP Vision · Prototype v1.0</title>
+  <title>AI 行为识别与预警系统 · Prototype v1.6</title>
   <style>
     :root {
       color-scheme: light dark;
       --sop-color-background-page: light-dark(#fafafa, #000);
       --sop-color-background-surface: light-dark(#fff, #0a0a0a);
       --sop-color-background-subtle: light-dark(#fafafa, #1a1a1a);
-      --sop-color-background-active: light-dark(#ebebeb, #292929);
+      --sop-color-background-active: light-dark(#ebebeb, #1f1f1f);
       --sop-color-text-primary: light-dark(#171717, #ededed);
       --sop-color-text-secondary: light-dark(#4d4d4d, #a1a1a1);
       --sop-color-text-muted: #8f8f8f;
-      --sop-color-text-inverse: #fff;
-      --sop-color-text-link: light-dark(#0068d6, #8abfff);
-      --sop-color-border-default: light-dark(#ebebeb, #292929);
+      --sop-color-text-inverse: light-dark(#fff, #000);
+      --sop-color-text-link: light-dark(#0068d6, #0072f5);
+      --sop-color-border-default: light-dark(#ebebeb, #ffffff24);
       --sop-color-border-strong: light-dark(#c9c9c9, #454545);
-      --sop-color-action-primary: #0068d6;
-      --sop-color-action-primary-hover: #005ed6;
-      --sop-color-action-primary-text: #fff;
+      --sop-color-action-primary-background: transparent;
+      --sop-color-action-primary-background-hover: light-dark(#f0f7ff, #0072f51f);
+      --sop-color-action-primary-foreground: light-dark(#0068d6, #8abfff);
+      --sop-color-action-primary-border: light-dark(#0068d6, #0072f5);
+      --sop-color-action-accent: light-dark(#0068d6, #0072f5);
       --sop-color-action-focus: #0072f5;
       --sop-color-status-success: #46a758;
-      --sop-color-status-warning: light-dark(#a35200, #ffb224);
+      --sop-color-status-warning: #ffb224;
       --sop-color-status-danger: #e5484d;
+      --sop-color-badge-info: light-dark(#0068d6, #8abfff);
+      --sop-color-badge-success: light-dark(#297a3a, #65c777);
+      --sop-color-badge-warning: light-dark(#a35200, #ffb224);
+      --sop-color-badge-danger: light-dark(#cd2b31, #ff8b8e);
+      --sop-video-placeholder-background:
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Ccircle cx='24' cy='24' r='22' fill='%23000000' fill-opacity='.22' stroke='%23ffffff' stroke-opacity='.16'/%3E%3Cg fill='none' stroke='%23ffffff' stroke-opacity='.58' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='14' y='17' width='14' height='14' rx='2'/%3E%3Cpath d='m28 21 6-3v12l-6-3'/%3E%3C/g%3E%3C/svg%3E") center / 44px 44px no-repeat,
+        repeating-linear-gradient(0deg, transparent 0 3px, #ffffff06 4px),
+        radial-gradient(circle at center, #20262b 0, #13171a 36%, #0b0d0f 76%);
+      --sop-video-placeholder-background-plain:
+        repeating-linear-gradient(0deg, transparent 0 3px, #ffffff06 4px),
+        radial-gradient(circle at center, #20262b 0, #13171a 36%, #0b0d0f 76%);
       --sop-space-inline-compact: 8px;
       --sop-space-inline: 12px;
       --sop-space-component: 16px;
@@ -38,11 +51,12 @@
       --sop-size-control-small: 32px;
       --sop-size-control-medium: 36px;
       --sop-size-sidebar: 256px;
+      --sop-size-sidebar-collapsed: 48px;
       --sop-size-header: 56px;
-      --sop-shadow-surface: 0 0 0 1px light-dark(#00000014, #ffffff21);
+      --sop-shadow-surface: 0 0 0 1px light-dark(#00000014, #ffffff24);
       --sop-shadow-control-focus: 0 0 0 1px #00000057, 0 0 0 4px #00000029;
-      --sop-shadow-keyboard-focus: 0 0 0 2px var(--sop-color-background-page), 0 0 0 4px #0072f5;
-      --sop-shadow-modal: 0 0 0 1px light-dark(#00000014, #ffffff21), 0 24px 32px -8px #00000026;
+      --sop-shadow-keyboard-focus: 0 0 0 2px #fff, 0 0 0 4px #0072f5;
+      --sop-shadow-modal: 0 0 0 1px #00000014, 0 1px 1px #00000005, 0 8px 16px -4px #0000000a, 0 24px 32px -8px #0000000f;
       --sop-motion-control: 150ms cubic-bezier(.4, 0, .2, 1);
     }
     :root[data-theme="light"] { color-scheme: light; }
@@ -51,12 +65,13 @@
       --sop-color-action-focus: #005ed6;
       --sop-shadow-control-focus: 0 0 0 1px #ffffff82, 0 0 0 4px #ffffff3d;
       --sop-shadow-keyboard-focus: 0 0 0 2px #0a0a0a, 0 0 0 4px #005ed6;
+      --sop-shadow-modal: 0 0 0 1px #ffffff25, 0 8px 16px -4px #00000052, 0 24px 32px -8px #00000029;
     }
 
     * { box-sizing: border-box; }
     h1, h2, h3, p, dl, dd { margin: 0; }
-    html { scrollbar-gutter: stable; }
-    html, body { min-width: 1120px; min-height: 100%; margin: 0; }
+    html { overflow-y: auto; scrollbar-gutter: stable; }
+    html, body { min-width: 0; min-height: 100%; margin: 0; }
     body {
       background: var(--sop-color-background-page);
       color: var(--sop-color-text-primary);
@@ -67,7 +82,7 @@
     [hidden] { display: none !important; }
     .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
 
-    .app-shell { min-height: 100vh; padding-left: var(--sop-size-sidebar); }
+    .app-shell { min-height: 100vh; padding-left: var(--sop-size-sidebar); transition: padding-left var(--sop-motion-control); }
     .sidebar {
       position: fixed;
       inset: 0 auto 0 0;
@@ -77,19 +92,22 @@
       overflow-y: auto;
       background: var(--sop-color-background-page);
       border-right: 1px solid var(--sop-color-border-default);
+      transition: width var(--sop-motion-control), padding var(--sop-motion-control), transform var(--sop-motion-control);
     }
+    .sidebar-scrim { display: none; }
+    .sidebar-header { display: grid; grid-template-columns: minmax(0, 1fr) 32px; align-items: center; gap: 4px; margin-bottom: var(--sop-space-component); }
     .brand {
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 8px;
       height: 48px;
-      padding: 0 8px;
-      margin-bottom: var(--sop-space-component);
+      padding: 0 4px;
+      margin-bottom: 0;
       font-weight: 600;
       letter-spacing: -.2px;
     }
-    .brand-logo { display: block; flex: 0 0 auto; width: 28px; height: 28px; border-radius: var(--sop-radius-control); object-fit: contain; }
-    .brand-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .brand-logo { display: block; flex: 0 0 auto; width: 44px; height: 20px; border-radius: 3px; object-fit: contain; }
+    .brand-name { min-width: 0; overflow: hidden; font-size: 13px; text-overflow: ellipsis; white-space: nowrap; }
     .brand-button {
       width: 100%;
       border: 0;
@@ -100,6 +118,7 @@
       cursor: pointer;
     }
     .brand-button:hover { background: transparent; color: inherit; }
+    .sidebar-collapse { align-self: center; }
     .nav-label {
       padding: 0 10px;
       margin: 0 0 var(--sop-space-inline-compact);
@@ -130,21 +149,31 @@
     .nav-button svg, .button svg, .icon-button svg, .search svg, .empty-state svg, .notice svg { width: 16px; height: 16px; stroke-width: 1.8; }
     .nav-meta { color: var(--sop-color-text-muted); font-size: 12px; font-weight: 400; }
 
+    body.sidebar-collapsed .app-shell { padding-left: var(--sop-size-sidebar-collapsed); }
+    body.sidebar-collapsed .sidebar { width: var(--sop-size-sidebar-collapsed); padding-inline: 8px; }
+    body.sidebar-collapsed .sidebar-header { grid-template-columns: 32px; }
+    body.sidebar-collapsed .brand,
+    body.sidebar-collapsed .nav-label,
+    body.sidebar-collapsed .nav-button > span { display: none; }
+    body.sidebar-collapsed .nav-button { grid-template-columns: 16px; justify-content: center; width: 32px; height: 32px; padding: 0; }
+
     .main { min-width: 0; }
     .header {
       position: sticky;
       top: 0;
-      z-index: 20;
+      z-index: 75;
       display: grid;
-      place-items: center;
+      grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+      align-items: center;
       height: var(--sop-size-header);
-      background: color-mix(in srgb, var(--sop-color-background-page) 92%, transparent);
+      padding: 0 var(--sop-space-page);
+      background: var(--sop-color-background-page);
       border-bottom: 1px solid var(--sop-color-border-default);
-      backdrop-filter: blur(8px);
     }
-    .header-back { position: absolute; left: var(--sop-space-page); }
-    .header-theme { position: absolute; right: var(--sop-space-page); }
-    .breadcrumb { display: flex; align-items: center; gap: var(--sop-space-inline-compact); font-weight: 500; }
+    .header-leading { display: flex; min-width: 0; align-items: center; gap: var(--sop-space-inline-compact); justify-self: start; }
+    .header-theme { justify-self: end; }
+    .icon-button.sidebar-toggle { display: none; }
+    .breadcrumb { display: flex; min-width: 0; align-items: center; justify-content: center; gap: var(--sop-space-inline-compact); font-weight: 500; }
     .breadcrumb-button {
       padding: 0;
       border: 0;
@@ -156,9 +185,9 @@
     .breadcrumb-button:hover { color: inherit; text-decoration: none; }
     .breadcrumb-button[aria-current="page"] { cursor: default; }
     .breadcrumb-button[aria-current="page"]:hover { color: inherit; text-decoration: none; }
-    .breadcrumb-muted { color: var(--sop-color-text-muted); font-weight: 400; }
+    .breadcrumb-muted { min-width: 0; overflow: hidden; color: var(--sop-color-text-muted); font-weight: 400; text-overflow: ellipsis; white-space: nowrap; }
     .page { padding: var(--sop-space-page); }
-    .page-section { display: grid; gap: var(--sop-space-page); }
+    .page-section { display: grid; gap: var(--sop-space-section); }
 
     .toolbar { display: flex; align-items: center; gap: var(--sop-space-inline-compact); }
     .search {
@@ -187,10 +216,19 @@
       transition: box-shadow var(--sop-motion-control);
     }
     .field-control { padding-left: 12px; }
+    select.field-control { padding-right: 36px; }
     textarea.field-control { height: var(--sop-size-control-medium); min-height: var(--sop-size-control-medium); padding-top: 8px; padding-bottom: 8px; resize: vertical; line-height: 20px; }
     .field-control:focus, .search input:focus { box-shadow: var(--sop-shadow-control-focus); }
     .field-control:focus-visible, .search input:focus-visible { box-shadow: var(--sop-shadow-keyboard-focus); }
     .field-control[aria-invalid="true"] { box-shadow: 0 0 0 1px var(--sop-color-status-danger); }
+    .field-control:disabled, .search input:disabled {
+      background: var(--sop-color-background-subtle);
+      color: var(--sop-color-text-muted);
+      box-shadow: var(--sop-shadow-surface);
+      cursor: not-allowed;
+      opacity: 1;
+      -webkit-text-fill-color: var(--sop-color-text-muted);
+    }
     input::placeholder, textarea::placeholder { color: var(--sop-color-text-muted); }
 
     .button, .icon-button {
@@ -210,14 +248,22 @@
       transition: background var(--sop-motion-control), color var(--sop-motion-control), box-shadow var(--sop-motion-control);
     }
     .button:hover, .icon-button:hover { background: var(--sop-color-background-subtle); }
-    .button.primary { background: var(--sop-color-action-primary); color: var(--sop-color-action-primary-text); box-shadow: none; }
-    .button.primary:hover { background: var(--sop-color-action-primary-hover); }
+    .button.primary {
+      background: var(--sop-color-action-primary-background);
+      color: var(--sop-color-action-primary-foreground);
+      box-shadow: 0 0 0 1px var(--sop-color-action-primary-border);
+    }
+    .button.primary:hover {
+      background: var(--sop-color-action-primary-background-hover);
+      color: var(--sop-color-action-primary-foreground);
+    }
     .button.ghost { background: transparent; box-shadow: none; }
     .button.ghost:hover { background: var(--sop-color-background-active); }
     .button.plain { background: transparent; box-shadow: none; }
     .button.plain:hover { background: transparent; color: inherit; }
     .button.danger { color: var(--sop-color-status-danger); box-shadow: 0 0 0 1px var(--sop-color-status-danger); }
-    .button:disabled { background: var(--sop-color-background-subtle); color: var(--sop-color-text-muted); cursor: not-allowed; }
+    .button:active, .icon-button:active { box-shadow: var(--sop-shadow-control-focus); }
+    .button:disabled { background: var(--sop-color-background-subtle); color: var(--sop-color-text-muted); box-shadow: var(--sop-shadow-surface); cursor: not-allowed; }
     .icon-button { width: var(--sop-size-control-small); min-height: var(--sop-size-control-small); padding: 0; }
     :is(button, input, select, textarea):focus-visible { outline: 0; box-shadow: var(--sop-shadow-keyboard-focus); }
 
@@ -245,14 +291,9 @@
       position: relative;
       aspect-ratio: 16 / 8.5;
       overflow: hidden;
-      background:
-        linear-gradient(180deg, transparent 55%, #00000085),
-        radial-gradient(circle at 70% 30%, #80929a 0 7%, transparent 7.5%),
-        linear-gradient(150deg, #5c6c72 0 30%, #263239 30% 54%, #80929a 54% 68%, #34464d 68%);
+      background: var(--sop-video-placeholder-background);
     }
-    .camera-preview.packing { background: linear-gradient(180deg, transparent 55%, #00000085), linear-gradient(140deg, #827b6d 0 25%, #443f37 25% 55%, #a19a89 55% 70%, #514c43 70%); }
-    .camera-preview.gate { background: linear-gradient(180deg, transparent 55%, #00000085), linear-gradient(155deg, #6e8177 0 32%, #273e37 32% 52%, #9aa69f 52% 67%, #3b4e46 67%); }
-    .camera-preview.storage { background: linear-gradient(180deg, transparent 55%, #00000085), linear-gradient(145deg, #786d76 0 28%, #3d343d 28% 58%, #938592 58% 72%, #494048 72%); }
+    .camera-preview.packing, .camera-preview.gate, .camera-preview.storage { background: var(--sop-video-placeholder-background); }
     .preview-label { position: absolute; left: 12px; bottom: 10px; color: #fff; font-size: 12px; }
     .preview-live { position: absolute; top: 10px; right: 10px; display: flex; align-items: center; gap: 6px; height: 20px; padding: 0 8px; border-radius: var(--sop-radius-badge); background: #00000099; color: #fff; font-size: 11px; }
     .camera-preview.is-degraded { filter: saturate(.72); }
@@ -268,9 +309,10 @@
     .camera-address { margin-top: 4px; color: var(--sop-color-text-secondary); font-family: "Geist Mono", "SFMono-Regular", monospace; font-size: 12px; }
     .camera-meta { display: flex; justify-content: space-between; margin-top: var(--sop-space-component); color: var(--sop-color-text-muted); font-size: 12px; }
     .badge { display: inline-flex; align-items: center; gap: 6px; height: 20px; padding: 0 8px; border-radius: var(--sop-radius-badge); background: var(--sop-color-background-subtle); color: var(--sop-color-text-secondary); font-size: 11px; font-weight: 500; letter-spacing: .2px; white-space: nowrap; }
-    .badge.success { color: light-dark(#297a3a, #65c777); }
-    .badge.warning { color: var(--sop-color-status-warning); }
-    .badge.danger { color: var(--sop-color-status-danger); }
+    .badge.info { color: var(--sop-color-badge-info); }
+    .badge.success { color: var(--sop-color-badge-success); }
+    .badge.warning { color: var(--sop-color-badge-warning); }
+    .badge.danger { color: var(--sop-color-badge-danger); }
     .badge.neutral { color: var(--sop-color-text-secondary); }
     .badge.muted { color: var(--sop-color-text-muted); }
 
@@ -293,12 +335,12 @@
       overflow: hidden;
       border-radius: var(--sop-radius-card);
       box-shadow: var(--sop-shadow-surface);
-      background: linear-gradient(150deg, #526168 0 30%, #222d32 30% 54%, #75858c 54% 68%, #2d3d43 68%);
+      background: var(--sop-video-placeholder-background);
       color: #fff;
     }
     .live-preview::after { content: ""; position: absolute; inset: auto 0 0; height: 45%; background: linear-gradient(transparent, #00000085); }
     .live-preview.is-paused::before { content: "预览已停止"; position: relative; z-index: 2; font-weight: 600; }
-    .live-preview.is-paused { background: #171717; }
+    .live-preview.is-paused { background: var(--sop-video-placeholder-background-plain); }
     .live-preview-label { position: absolute; z-index: 2; left: 16px; bottom: 16px; }
     .live-preview.is-paused .live-preview-label { display: none; }
     .connection-surface { min-width: 0; }
@@ -319,7 +361,7 @@
     .source-header { min-height: 40px; background: var(--sop-color-background-subtle); color: var(--sop-color-text-muted); font-size: 12px; font-weight: 500; }
     .source-url { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .radio-cell { text-align: center; }
-    input[type="radio"] { width: 16px; height: 16px; margin: 0; accent-color: var(--sop-color-action-primary); }
+    input[type="radio"] { width: 16px; height: 16px; margin: 0; accent-color: var(--sop-color-action-accent); }
 
     .empty-state { display: grid; justify-items: center; max-width: 420px; margin: 96px auto; text-align: center; }
     .empty-state-icon { display: grid; place-items: center; width: 40px; height: 40px; margin-bottom: 24px; border-radius: var(--sop-radius-control); background: var(--sop-color-background-active); }
@@ -330,7 +372,7 @@
     .notice p { margin: 0; color: var(--sop-color-text-secondary); }
 
     .tasks-page { display: block; }
-    .task-list-view { display: grid; width: 100%; gap: var(--sop-space-page); }
+    .task-list-view { display: grid; width: 100%; gap: var(--sop-space-section); }
     .task-detail-view { display: grid; width: 100%; gap: var(--sop-space-section); }
     .task-list { display: grid; }
     .task-list-header, .task-list-item { display: grid; grid-template-columns: minmax(180px, 1fr) minmax(220px, 1.3fr) minmax(180px, 1fr) 100px 24px; align-items: center; gap: 16px; min-height: 56px; padding: 0 20px; }
@@ -356,7 +398,7 @@
     .task-parameter-lines { white-space: pre-line; }
     .task-preview-column { display: grid; min-width: 0; gap: var(--sop-space-component); }
     .roi-toggle { display: inline-flex; align-items: center; gap: 8px; min-height: 32px; cursor: pointer; }
-    .roi-toggle input { width: 16px; height: 16px; margin: 0; accent-color: var(--sop-color-action-primary); }
+    .roi-toggle input { width: 16px; height: 16px; margin: 0; accent-color: var(--sop-color-action-accent); }
     .roi-legend { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; min-height: 32px; padding: 8px 12px; border-radius: var(--sop-radius-control); background: var(--sop-color-background-subtle); }
     .roi-legend .roi-toggle { min-height: 20px; font-size: 12px; font-weight: 500; }
     .roi-legend-divider { width: 1px; height: 16px; background: var(--sop-color-border-default); }
@@ -370,7 +412,7 @@
       aspect-ratio: 16 / 9;
       overflow: hidden;
       border-radius: var(--sop-radius-card);
-      background: linear-gradient(150deg, #5a676c 0 28%, #1f2a2f 28% 55%, #738086 55% 68%, #2a393e 68%);
+      background: var(--sop-video-placeholder-background);
       box-shadow: var(--sop-shadow-surface);
       color: #fff;
     }
@@ -397,7 +439,7 @@
       aspect-ratio: 16 / 9;
       overflow: hidden;
       border-radius: var(--sop-radius-card);
-      background: linear-gradient(150deg, #5a676c 0 28%, #1f2a2f 28% 55%, #738086 55% 68%, #2a393e 68%);
+      background: var(--sop-video-placeholder-background);
       box-shadow: var(--sop-shadow-surface);
       cursor: crosshair;
       user-select: none;
@@ -415,7 +457,7 @@
     .roi-list { display: grid; max-height: 270px; overflow-y: auto; padding: 8px; }
     .roi-list-item { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 8px; min-height: 52px; padding: 6px 8px; border: 0; border-radius: var(--sop-radius-control); background: transparent; color: inherit; text-align: left; }
     .roi-list-item.is-selected { background: var(--sop-color-background-active); }
-    .roi-list-item input { width: 16px; height: 16px; margin: 0; accent-color: var(--sop-color-action-primary); }
+    .roi-list-item input { width: 16px; height: 16px; margin: 0; accent-color: var(--sop-color-action-accent); }
     .roi-list-select { min-width: 0; padding: 0; border: 0; background: transparent; color: inherit; text-align: left; cursor: pointer; }
     .roi-list-name { display: block; overflow: hidden; font-weight: 500; text-overflow: ellipsis; white-space: nowrap; }
     .roi-list-meta { display: block; color: var(--sop-color-text-muted); font-size: 11px; }
@@ -427,10 +469,12 @@
     .algorithm-parameters-head { margin-bottom: 12px; }
     .dynamic-parameter-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
     .parameter-boolean { display: flex; align-items: center; gap: 10px; min-height: 38px; padding-top: 24px; font-weight: 400; cursor: pointer; }
-    .parameter-boolean input { width: 16px; height: 16px; margin: 0; accent-color: var(--sop-color-action-primary); }
+    .parameter-boolean input { width: 16px; height: 16px; margin: 0; accent-color: var(--sop-color-action-accent); }
     .button.is-loading svg { animation: task-spin .8s linear infinite; }
     .danger-zone .surface-body { display: flex; align-items: center; justify-content: space-between; gap: var(--sop-space-page); }
     .danger-zone-copy { min-width: 0; }
+    .delete-dialog-message { margin: 0; }
+    .delete-dialog-note { margin: 8px 0 0; color: var(--sop-color-text-secondary); }
     @keyframes task-spin { to { transform: rotate(360deg); } }
 
     .dialog-backdrop {
@@ -484,36 +528,179 @@
       transition: opacity var(--sop-motion-control), transform var(--sop-motion-control);
     }
     .toast.is-visible { opacity: 1; transform: translateY(0); }
+
+    @media (max-width: 1199px) {
+      .camera-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .overview-grid { grid-template-columns: minmax(0, 1fr); }
+      .detail-heading { flex-wrap: wrap; }
+      .detail-actions { flex-wrap: wrap; }
+
+      .source-header { display: none; }
+      .source-row:not(.source-header) {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        gap: 8px;
+        padding: 12px;
+      }
+      .source-row:not(.source-header) > * {
+        display: grid;
+        grid-template-columns: 88px minmax(0, 1fr);
+        align-items: center;
+        padding: 0;
+        text-align: left;
+        white-space: normal;
+      }
+      .source-row:not(.source-header) > [data-label]::before {
+        content: attr(data-label);
+        color: var(--sop-color-text-muted);
+        font-family: GeistSans, Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        font-size: 12px;
+      }
+      .source-url { overflow: visible; overflow-wrap: anywhere; text-overflow: clip; }
+
+      .task-list-header { display: none; }
+      .task-list-item {
+        grid-template-columns: minmax(0, 1fr) 24px;
+        gap: 10px 16px;
+        min-height: 0;
+        padding: 16px 20px;
+      }
+      .task-list-item > span { overflow: visible; text-overflow: clip; white-space: normal; }
+      .task-item-copy { grid-column: 1; grid-row: 1; }
+      .task-row-arrow { grid-column: 2; grid-row: 1; }
+      .task-list-item > [data-label] {
+        display: grid;
+        grid-column: 1 / -1;
+        grid-template-columns: 88px minmax(0, 1fr);
+        align-items: center;
+      }
+      .task-list-item > [data-label]::before {
+        content: attr(data-label);
+        color: var(--sop-color-text-muted);
+        font-size: 12px;
+      }
+      .task-list-item > [data-label] > .badge { justify-self: start; }
+      .task-item-description { overflow: visible; text-overflow: clip; white-space: normal; }
+    }
+
+    @media (max-width: 767px) {
+      .app-shell { padding-left: 0; }
+      .sidebar {
+        z-index: 90;
+        transform: translateX(-100%);
+        box-shadow: var(--sop-shadow-modal);
+      }
+      body.sidebar-open { overflow: hidden; }
+      body.sidebar-open .sidebar { transform: translateX(0); }
+      .sidebar-scrim {
+        position: fixed;
+        inset: var(--sop-size-header) 0 0;
+        z-index: 70;
+        display: none;
+        width: 100%;
+        padding: 0;
+        border: 0;
+        background: #00000072;
+        cursor: pointer;
+      }
+      body.sidebar-open .sidebar-scrim { display: block; }
+      .icon-button.sidebar-toggle { display: inline-flex; }
+      .icon-button.sidebar-collapse { display: none; }
+      .header { padding: 0 var(--sop-space-component); }
+      .page { padding: var(--sop-space-component); }
+      .page-section, .detail-view, .task-list-view, .task-detail-view { gap: var(--sop-space-page); }
+    }
+
+    @media (max-width: 640px) {
+      .header-back-label { display: none; }
+      .header-back { width: var(--sop-size-control-small); min-height: var(--sop-size-control-small); padding: 0; }
+      .breadcrumb-button, .breadcrumb-muted { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .detail-actions { width: 100%; }
+      .task-actions { justify-content: flex-start; }
+      .section-heading, .source-head, .roi-editor-header { flex-wrap: wrap; align-items: flex-start; }
+      .form-grid, .dynamic-parameter-grid { grid-template-columns: minmax(0, 1fr); }
+      .field.full, .algorithm-parameters { grid-column: 1; }
+      .roi-editor-layout { grid-template-columns: minmax(0, 1fr); }
+      .roi-editor-actions { width: 100%; justify-content: flex-start; }
+      .danger-zone .surface-body { flex-wrap: wrap; }
+      .dialog-backdrop { padding: 12px; }
+      .dialog, .dialog.task-config-dialog {
+        width: min(100%, calc(100vw - 24px));
+        max-height: calc(100vh - 24px);
+      }
+      .dialog-header, .dialog-footer { padding: 14px 16px; }
+      .dialog-body { padding: 16px; }
+      .source-edit-row { grid-template-columns: 40px minmax(0, 1fr) 32px; }
+      .source-edit-row [data-source-suffix] { grid-column: 2; }
+      .source-edit-row .icon-button { grid-column: 3; grid-row: 1 / span 2; }
+    }
+
+    @media (max-width: 520px) {
+      .camera-grid { grid-template-columns: minmax(0, 1fr); }
+      .toolbar { flex-wrap: wrap; }
+      .toolbar .search { flex-basis: 100%; }
+      .toolbar > .button { width: 100%; }
+      .detail-actions > .button { flex: 1 1 auto; }
+      .task-actions > .button { flex: 1 1 calc(50% - 8px); }
+      .info-row, .task-info-surface .info-row { grid-template-columns: minmax(0, 1fr); gap: 4px; }
+      .source-row:not(.source-header) > *, .task-list-item > [data-label] { grid-template-columns: 76px minmax(0, 1fr); }
+      .camera-meta { flex-wrap: wrap; gap: 4px 12px; }
+      .roi-legend-divider { display: none; }
+      .roi-legend-items { flex-basis: 100%; }
+      .dialog-footer { flex-wrap: wrap; }
+      .toast { right: 12px; bottom: 12px; left: 12px; }
+    }
+
+    @media (max-width: 360px) {
+      .header { padding: 0 12px; }
+      .page { padding: 12px; }
+      .breadcrumb { gap: 4px; font-size: 12px; }
+      .task-list-item { padding: 14px 16px; }
+      .task-actions > .button { flex-basis: 100%; }
+      .source-row:not(.source-header) > *, .task-list-item > [data-label] { grid-template-columns: minmax(0, 1fr); gap: 2px; }
+    }
+
     @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; transition-duration: 0s !important; animation-duration: 0s !important; } }
   </style>
 </head>
 <body>
   <div class="app-shell">
-    <aside class="sidebar" aria-label="主导航">
-      <button class="brand brand-button" type="button" aria-label="返回 Cameras 首页" data-brand-home><img class="brand-logo" src="../assets/logo/logo1.png" alt=""><span class="brand-name">SOP Vision</span></button>
+    <aside class="sidebar" id="primary-sidebar" aria-label="主导航" data-state="expanded" data-collapsible="">
+      <div class="sidebar-header">
+        <button class="brand brand-button" type="button" aria-label="返回 Cameras 首页" data-brand-home><img class="brand-logo" src="../assets/logo/1.png" alt=""><span class="brand-name">AI 行为识别与预警系统</span></button>
+        <button class="icon-button sidebar-collapse" type="button" aria-label="折叠侧边栏" aria-controls="primary-sidebar" aria-expanded="true" aria-keyshortcuts="Control+B Meta+B" title="折叠侧边栏" data-sidebar-collapse>
+          <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18"/></svg>
+        </button>
+      </div>
       <p class="nav-label">Workspace</p>
       <nav class="nav">
-        <button class="nav-button" type="button" data-nav="cameras" aria-current="page">
+        <button class="nav-button" type="button" data-nav="cameras" aria-label="Cameras" aria-current="page" title="Cameras">
           <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M14.5 6.5 18 4v16l-3.5-2.5"/><rect x="3" y="6" width="12" height="12" rx="2"/></svg>
           <span>Cameras</span><span class="nav-meta" data-camera-count>4</span>
         </button>
-        <button class="nav-button" type="button" data-nav="tasks">
+        <button class="nav-button" type="button" data-nav="tasks" aria-label="Detection Tasks" title="Detection Tasks">
           <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4M8 11h6M11 8v6"/></svg>
           <span>Detection Tasks</span><span class="nav-meta" data-task-count>3</span>
         </button>
       </nav>
     </aside>
+    <button class="sidebar-scrim" type="button" aria-label="关闭主导航" data-sidebar-scrim></button>
 
     <main class="main">
       <header class="header">
-        <button class="button plain header-back" type="button" data-back-cameras hidden>
-          <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="m15 18-6-6 6-6"/></svg>
-          返回 Cameras
-        </button>
-        <button class="button plain header-back" type="button" data-back-tasks hidden>
-          <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="m15 18-6-6 6-6"/></svg>
-          返回 Detection Tasks
-        </button>
+        <div class="header-leading">
+          <button class="icon-button sidebar-toggle" type="button" aria-label="打开主导航" aria-controls="primary-sidebar" aria-expanded="false" aria-keyshortcuts="Control+B Meta+B" data-sidebar-toggle>
+            <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+          </button>
+          <button class="button plain header-back" type="button" data-back-cameras hidden>
+            <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="m15 18-6-6 6-6"/></svg>
+            <span class="header-back-label">返回 Cameras</span>
+          </button>
+          <button class="button plain header-back" type="button" data-back-tasks hidden>
+            <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="m15 18-6-6 6-6"/></svg>
+            <span class="header-back-label">返回 Detection Tasks</span>
+          </button>
+        </div>
         <div class="breadcrumb" aria-label="面包屑">
           <button class="breadcrumb-button" type="button" data-breadcrumb-root aria-current="page">Cameras</button>
           <span class="breadcrumb-muted" data-breadcrumb-separator hidden>/</span>
@@ -594,6 +781,12 @@
                 <div class="source-row source-header" role="row"><span role="columnheader" class="radio-cell">预览</span><span role="columnheader">源名称</span><span role="columnheader">完整 RTSP 地址</span><span role="columnheader">状态</span></div>
                 <div data-source-list></div>
               </div>
+            </div>
+          </section>
+          <section class="surface danger-zone" aria-labelledby="delete-camera-section-title">
+            <div class="surface-body">
+              <div class="danger-zone-copy"><h2 class="section-title" id="delete-camera-section-title">删除摄像头</h2><p class="section-description">删除摄像头配置；此操作无法撤销。</p></div>
+              <button class="button danger" type="button" data-delete-camera><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 7h16M9 7V4h6v3M8 10v7M12 10v7M16 10v7M6 7l1 14h10l1-14"/></svg>删除摄像头</button>
             </div>
           </section>
         </div>
@@ -710,6 +903,14 @@
     </section>
   </div>
 
+  <div class="dialog-backdrop" data-delete-camera-backdrop hidden>
+    <section class="dialog" role="alertdialog" aria-modal="true" aria-labelledby="delete-camera-title" aria-describedby="delete-camera-description delete-camera-message delete-camera-dependency" data-delete-camera-dialog style="width:min(440px,calc(100vw - 48px))">
+      <header class="dialog-header"><div><h2 class="dialog-title" id="delete-camera-title">删除摄像头</h2><p class="dialog-description" id="delete-camera-description">删除后无法从本原型中恢复。</p></div><button class="icon-button" type="button" aria-label="关闭" data-close-delete-camera><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="m6 6 12 12M18 6 6 18"/></svg></button></header>
+      <div class="dialog-body"><p class="delete-dialog-message" id="delete-camera-message">确定删除“<strong data-delete-camera-name></strong>”吗？</p><p class="delete-dialog-note" id="delete-camera-dependency" data-delete-camera-dependency hidden></p></div>
+      <footer class="dialog-footer"><button class="button" type="button" data-close-delete-camera>取消</button><button class="button danger" type="button" data-confirm-delete-camera>删除摄像头</button></footer>
+    </section>
+  </div>
+
   <div class="dialog-backdrop" data-task-dialog-backdrop hidden>
     <section class="dialog task-config-dialog" role="dialog" aria-modal="true" aria-labelledby="task-dialog-title" aria-describedby="task-dialog-description" data-task-dialog>
       <header class="dialog-header">
@@ -787,7 +988,7 @@
 
       const algorithms = [
         {
-          id: 'region-person-detection', name: '区域人员检测', version: 'v2.1.0',
+          id: 'region-person-detection', name: '区域人员检测',
           parameters: [
             { key: 'confidence', label: '置信度阈值', type: 'number', default: 0.55, min: 0, max: 1, step: 0.05 },
             { key: 'minStaySeconds', label: '最短停留时间', type: 'number', default: 2, min: 0, max: 60, step: 1, unit: '秒' },
@@ -799,7 +1000,7 @@
           ]
         },
         {
-          id: 'ppe-compliance', name: '安全着装检测', version: 'v1.3.0',
+          id: 'ppe-compliance', name: '安全着装检测',
           parameters: [
             { key: 'confidence', label: '置信度阈值', type: 'number', default: 0.6, min: 0, max: 1, step: 0.05 },
             { key: 'violationFrames', label: '连续违规帧数', type: 'number', default: 8, min: 1, max: 120, step: 1, unit: '帧' },
@@ -812,7 +1013,7 @@
           ]
         },
         {
-          id: 'passage-counter', name: '通行计数', version: 'v1.0.2',
+          id: 'passage-counter', name: '通行计数',
           parameters: [
             { key: 'confidence', label: '置信度阈值', type: 'number', default: 0.5, min: 0, max: 1, step: 0.05 },
             { key: 'direction', label: '计数方向', type: 'select', default: 'both', options: [{ value: 'in', label: '仅进入' }, { value: 'out', label: '仅离开' }, { value: 'both', label: '双向' }] },
@@ -861,6 +1062,7 @@
       let selectedRoiId = null;
       let drawingPoints = null;
       let toastTimer;
+      let desktopSidebarExpanded = true;
       const ROI_COLORS = ['#5aa7ff', '#bd7af5', '#ffb224', '#65d896', '#ff6b8a', '#4dd4d0'];
 
       const grid = $('[data-camera-grid]');
@@ -868,6 +1070,8 @@
       const detailView = $('[data-camera-detail-view]');
       const dialogBackdrop = $('[data-dialog-backdrop]');
       const dialog = $('.dialog', dialogBackdrop);
+      const deleteCameraBackdrop = $('[data-delete-camera-backdrop]');
+      const deleteCameraDialog = $('[data-delete-camera-dialog]');
       const taskDialogBackdrop = $('[data-task-dialog-backdrop]');
       const taskDialog = $('[data-task-dialog]');
       const deleteTaskBackdrop = $('[data-delete-task-backdrop]');
@@ -877,6 +1081,9 @@
       const searchInput = $('[data-camera-search]');
       const taskSearchInput = $('[data-task-search]');
       const themeTrigger = $('[data-theme-trigger]');
+      const sidebarToggle = $('[data-sidebar-toggle]');
+      const sidebarCollapse = $('[data-sidebar-collapse]');
+      const sidebar = $('.sidebar');
 
       const escapeHtml = value => String(value).replace(/[&<>'"]/g, char => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', "'":'&#39;', '"':'&quot;' })[char]);
       const sourceUrl = (camera, source) => `rtsp://${camera.user}:${camera.password}@${camera.ip}:${camera.port}/${source.suffix.replace(/^\/+/, '')}`;
@@ -935,6 +1142,32 @@
           : '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.42 1.42M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.42-1.42M17.66 6.34l1.41-1.41"/>';
         if (persist) {
           try { localStorage.setItem('sop-vision-theme', selectedTheme); } catch (_) {}
+        }
+      }
+
+      function setSidebarOpen(open) {
+        const isCompact = window.matchMedia('(max-width: 767px)').matches;
+        const shouldOpen = Boolean(open) && isCompact;
+        document.body.classList.toggle('sidebar-open', shouldOpen);
+        sidebarToggle.setAttribute('aria-expanded', String(shouldOpen));
+        sidebarToggle.setAttribute('aria-label', shouldOpen ? '关闭主导航' : '打开主导航');
+        sidebar.toggleAttribute('inert', isCompact && !shouldOpen);
+        if (isCompact && !shouldOpen) sidebar.setAttribute('aria-hidden', 'true');
+        else sidebar.removeAttribute('aria-hidden');
+      }
+
+      function setSidebarCollapsed(collapsed, persist = true) {
+        desktopSidebarExpanded = !Boolean(collapsed);
+        const shouldCollapse = !desktopSidebarExpanded && !window.matchMedia('(max-width: 767px)').matches;
+        document.body.classList.toggle('sidebar-collapsed', shouldCollapse);
+        sidebar.dataset.state = shouldCollapse ? 'collapsed' : 'expanded';
+        sidebar.dataset.collapsible = shouldCollapse ? 'icon' : '';
+        sidebarCollapse.setAttribute('aria-expanded', String(!shouldCollapse));
+        const actionLabel = shouldCollapse ? '展开侧边栏' : '折叠侧边栏';
+        sidebarCollapse.setAttribute('aria-label', actionLabel);
+        sidebarCollapse.setAttribute('title', actionLabel);
+        if (persist) {
+          try { localStorage.setItem('sop-vision-sidebar-expanded', String(desktopSidebarExpanded)); } catch (_) {}
         }
       }
 
@@ -1016,10 +1249,10 @@
         $('[data-toggle-preview] span').textContent = previewPaused ? '开始预览' : '停止预览';
         $('[data-toggle-preview] svg').innerHTML = previewPaused ? '<path d="m8 5 11 7-11 7V5Z"/>' : '<path d="M9 6v12M15 6v12"/>';
         $('[data-source-list]').innerHTML = camera.sources.map((source, index) => `<div class="source-row" role="row">
-          <span class="radio-cell" role="cell"><input type="radio" name="detail-preview-source" value="${index}" ${camera.preview === index ? 'checked' : ''} aria-label="将 ${escapeHtml(source.name)} 设为预览源"></span>
-          <span role="cell">${escapeHtml(source.name)}</span>
-          <span role="cell" class="source-url mono" title="${escapeHtml(sourceUrl(camera, source))}">${escapeHtml(sourceUrl(camera, source))}</span>
-          <span role="cell">${statusBadge(source.health || 'online')}</span>
+          <span class="radio-cell" role="cell" data-label="预览"><input type="radio" name="detail-preview-source" value="${index}" ${camera.preview === index ? 'checked' : ''} aria-label="将 ${escapeHtml(source.name)} 设为预览源"></span>
+          <span role="cell" data-label="源名称">${escapeHtml(source.name)}</span>
+          <span role="cell" class="source-url mono" data-label="RTSP 地址" title="${escapeHtml(sourceUrl(camera, source))}">${escapeHtml(sourceUrl(camera, source))}</span>
+          <span role="cell" data-label="状态">${statusBadge(source.health || 'online')}</span>
         </div>`).join('');
         $$('input[name="detail-preview-source"]').forEach(input => input.addEventListener('change', () => {
           camera.preview = Number(input.value);
@@ -1054,9 +1287,9 @@
           const sourceLabel = camera && source ? `${camera.name} / ${source.name}` : '摄像头源不可用';
           return `<button class="task-list-item" type="button" data-task-row-id="${escapeHtml(task.id)}" aria-label="查看检测任务 ${escapeHtml(task.name)}">
             <span class="task-item-copy"><span class="task-item-name">${escapeHtml(task.name)}</span><span class="task-item-description">${escapeHtml(task.description || '未填写描述')}</span></span>
-            <span>${escapeHtml(sourceLabel)}</span>
-            <span>${escapeHtml(algorithm.name)} · ${escapeHtml(algorithm.version)}</span>
-            <span>${taskStatusBadge(task)}</span>
+            <span data-label="摄像头源">${escapeHtml(sourceLabel)}</span>
+            <span data-label="算法">${escapeHtml(algorithm.name)}</span>
+            <span data-label="状态">${taskStatusBadge(task)}</span>
             <svg class="task-row-arrow" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="m9 18 6-6-6-6"/></svg>
           </button>`;
         }).join('');
@@ -1140,7 +1373,7 @@
         description.hidden = !task.description;
         $('[data-task-id]').textContent = task.id;
         $('[data-task-source]').textContent = sourceLabel;
-        $('[data-task-algorithm]').textContent = `${algorithm.id} · ${algorithm.version}`;
+        $('[data-task-algorithm]').textContent = `${algorithm.id}`;
         $('[data-task-parameters]').textContent = parameterSummary(task, algorithm);
         $('[data-task-camera]').textContent = camera?.name || '摄像头不可用';
         $('[data-detection-label]').textContent = task.label;
@@ -1182,7 +1415,7 @@
       }
 
       function populateAlgorithmOptions() {
-        $('[data-task-form-algorithm]').innerHTML = algorithms.map(algorithm => `<option value="${escapeHtml(algorithm.id)}">${escapeHtml(algorithm.name)} · ${escapeHtml(algorithm.version)}</option>`).join('');
+        $('[data-task-form-algorithm]').innerHTML = algorithms.map(algorithm => `<option value="${escapeHtml(algorithm.id)}">${escapeHtml(algorithm.name)}</option>`).join('');
       }
 
       function clearTaskFormError() {
@@ -1403,6 +1636,38 @@
         else showTaskList();
       }
 
+      function openDeleteCameraDialog() {
+        const camera = getCurrentCamera();
+        if (!camera) return;
+        const dependentTaskCount = tasks.filter(task => task.sourceRef.startsWith(`${camera.id}::`)).length;
+        $('[data-delete-camera-name]').textContent = camera.name;
+        const dependency = $('[data-delete-camera-dependency]');
+        dependency.hidden = dependentTaskCount === 0;
+        dependency.textContent = dependentTaskCount
+          ? `该摄像头被 ${dependentTaskCount} 个检测任务使用。删除后任务配置将保留，但摄像头源会显示为不可用。`
+          : '';
+        deleteCameraBackdrop.hidden = false;
+        document.body.style.overflow = 'hidden';
+      }
+
+      function closeDeleteCameraDialog() {
+        deleteCameraBackdrop.hidden = true;
+        document.body.style.overflow = '';
+      }
+
+      function deleteCurrentCamera() {
+        const index = cameras.findIndex(item => item.id === currentCameraId);
+        if (index < 0) return;
+        const camera = cameras[index];
+        const dependentTaskCount = tasks.filter(task => task.sourceRef.startsWith(`${camera.id}::`)).length;
+        const [removed] = cameras.splice(index, 1);
+        closeDeleteCameraDialog();
+        renderCards();
+        renderTaskList();
+        showCameraList();
+        notify(`摄像头“${removed.name}”已删除${dependentTaskCount ? `；${dependentTaskCount} 个任务配置已保留` : ''}`);
+      }
+
       function openDeleteTaskDialog() {
         const task = tasks.find(item => item.id === currentTaskId);
         if (!task) return;
@@ -1572,8 +1837,15 @@
         toastTimer = setTimeout(() => toast.classList.remove('is-visible'), 2400);
       }
 
-      $('[data-brand-home]').addEventListener('click', () => showPage('cameras'));
-      $$('[data-nav]').forEach(button => button.addEventListener('click', () => showPage(button.dataset.nav)));
+      $('[data-brand-home]').addEventListener('click', () => { showPage('cameras'); setSidebarOpen(false); });
+      $$('[data-nav]').forEach(button => button.addEventListener('click', () => { showPage(button.dataset.nav); setSidebarOpen(false); }));
+      sidebarToggle.addEventListener('click', () => setSidebarOpen(!document.body.classList.contains('sidebar-open')));
+      sidebarCollapse.addEventListener('click', () => setSidebarCollapsed(desktopSidebarExpanded));
+      $('[data-sidebar-scrim]').addEventListener('click', () => setSidebarOpen(false));
+      window.addEventListener('resize', () => {
+        setSidebarCollapsed(!desktopSidebarExpanded, false);
+        setSidebarOpen(document.body.classList.contains('sidebar-open'));
+      });
       themeTrigger.addEventListener('click', () => applyTheme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark'));
       $('[data-breadcrumb-root]').addEventListener('click', () => {
         if ($('[data-breadcrumb-root]').textContent === 'Cameras' && currentCameraId) showCameraList();
@@ -1590,6 +1862,9 @@
       $('[data-back-tasks]').addEventListener('click', showTaskList);
       $('[data-edit-camera]').addEventListener('click', () => openDialog(getCurrentCamera()));
       $('[data-toggle-preview]').addEventListener('click', () => { previewPaused = !previewPaused; renderDetail(); notify(previewPaused ? '预览已停止' : '预览已开始'); });
+      $('[data-delete-camera]').addEventListener('click', openDeleteCameraDialog);
+      $$('[data-close-delete-camera]').forEach(button => button.addEventListener('click', closeDeleteCameraDialog));
+      $('[data-confirm-delete-camera]').addEventListener('click', deleteCurrentCamera);
       $$('[data-add-task]').forEach(button => button.addEventListener('click', () => openTaskDialog(null)));
       $('[data-edit-task]').addEventListener('click', () => openTaskDialog(tasks.find(task => task.id === currentTaskId)));
       $$('[data-close-task-dialog]').forEach(button => button.addEventListener('click', closeTaskDialog));
@@ -1691,23 +1966,34 @@
       searchInput.addEventListener('input', renderCards);
       taskSearchInput.addEventListener('input', renderTaskList);
       dialogBackdrop.addEventListener('mousedown', event => { if (event.target === dialogBackdrop) closeDialog(); });
+      deleteCameraBackdrop.addEventListener('mousedown', event => { if (event.target === deleteCameraBackdrop) closeDeleteCameraDialog(); });
       taskDialogBackdrop.addEventListener('mousedown', event => { if (event.target === taskDialogBackdrop) closeTaskDialog(); });
       deleteTaskBackdrop.addEventListener('mousedown', event => { if (event.target === deleteTaskBackdrop) closeDeleteTaskDialog(); });
       document.addEventListener('keydown', event => {
-        if (event.key === 'Escape' && !taskDialogBackdrop.hidden && drawingPoints) {
+        if (event.key.toLowerCase() === 'b' && (event.metaKey || event.ctrlKey)) {
+          event.preventDefault();
+          if (window.matchMedia('(max-width: 767px)').matches) setSidebarOpen(!document.body.classList.contains('sidebar-open'));
+          else setSidebarCollapsed(desktopSidebarExpanded);
+        }
+        else if (event.key === 'Escape' && !taskDialogBackdrop.hidden && drawingPoints) {
           drawingPoints = null;
           clearTaskFormError();
           renderRoiEditor();
         }
+        else if (event.key === 'Escape' && !deleteCameraBackdrop.hidden) closeDeleteCameraDialog();
         else if (event.key === 'Escape' && !deleteTaskBackdrop.hidden) closeDeleteTaskDialog();
         else if (event.key === 'Escape' && !taskDialogBackdrop.hidden) closeTaskDialog();
         else if (event.key === 'Escape' && !dialogBackdrop.hidden) closeDialog();
+        else if (event.key === 'Escape' && document.body.classList.contains('sidebar-open')) setSidebarOpen(false);
       });
       $$('[data-form-ip], [data-form-port], [data-form-user], [data-form-password]').forEach(input => input.addEventListener('input', updateGeneratedUrl));
 
       let initialTheme = 'light';
       try { initialTheme = localStorage.getItem('sop-vision-theme') || 'light'; } catch (_) {}
+      try { desktopSidebarExpanded = localStorage.getItem('sop-vision-sidebar-expanded') !== 'false'; } catch (_) {}
       applyTheme(initialTheme, false);
+      setSidebarOpen(false);
+      setSidebarCollapsed(!desktopSidebarExpanded, false);
       renderCards();
       renderTaskList();
       if (location.hash.startsWith('#task-detail-')) {
