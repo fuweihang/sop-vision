@@ -11,7 +11,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { buildShellRouteHref, resolveBackItem } from "@/lib/route-meta";
+import { resolveBackItem } from "@/lib/route-meta";
 
 function RouteBackLink() {
   const matches = useMatches();
@@ -21,14 +21,20 @@ function RouteBackLink() {
     return null;
   }
 
-  const backHref = buildShellRouteHref(backItem);
+  const backTo: string = backItem.to;
+  const backLink =
+    backItem.params === undefined ? (
+      <Link to={backTo} preload="intent" />
+    ) : (
+      <Link to={backTo} params={backItem.params} preload="intent" />
+    );
 
   return (
     <Tooltip>
       <TooltipTrigger
         render={
           <Button
-            render={<Link to={backHref} preload="intent" />}
+            render={backLink}
             variant="ghost"
             size="icon"
             aria-label={backItem.label}

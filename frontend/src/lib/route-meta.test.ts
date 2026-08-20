@@ -5,7 +5,6 @@ import {
 import { expect, test } from "vitest";
 
 import {
-  buildShellRouteHref,
   getLoaderDataLabelOrParam,
   resolveBackItem,
   resolveBreadcrumbItems,
@@ -108,15 +107,6 @@ test("从当前匹配项解析目标参数", () => {
     to: "/items/$itemId",
     params: { itemId: "item-42" },
   });
-});
-
-test("将动态目标参数编码为具体站内地址", () => {
-  expect(
-    buildShellRouteHref({
-      to: "/items/$itemId",
-      params: { itemId: "line camera/42" },
-    }),
-  ).toBe("/items/line%20camera%2F42");
 });
 
 test("从最深层匹配项解析返回元数据", () => {

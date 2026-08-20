@@ -105,6 +105,51 @@ function createDeepHeaderRouter() {
   });
 }
 
+function createParameterizedHeaderRouter() {
+  const rootRoute = createRootRoute({ component: TestShell });
+  const itemsRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/items",
+    staticData: { breadcrumb: "Items" },
+    component: Outlet,
+  });
+  const itemRoute = createRoute({
+    getParentRoute: () => itemsRoute,
+    path: "$id/$id2",
+    staticData: {
+      breadcrumb: {
+        label: "Item",
+        target: {
+          to: "/items/$id/$id2",
+          params: { id: "line camera", id2: "@station" },
+        },
+      },
+    },
+    component: Outlet,
+  });
+  const detailsRoute = createRoute({
+    getParentRoute: () => itemRoute,
+    path: "details",
+    staticData: {
+      breadcrumb: "Details",
+      back: {
+        to: "/items/$id/$id2",
+        params: { id: "line camera", id2: "@station" },
+        label: "Back to item",
+      },
+    },
+  });
+
+  return createRouter({
+    routeTree: rootRoute.addChildren([
+      itemsRoute.addChildren([itemRoute.addChildren([detailsRoute])]),
+    ]),
+    history: createMemoryHistory({
+      initialEntries: ["/items/current/item/details"],
+    }),
+  });
+}
+
 function setViewport(width: number) {
   Object.defineProperty(window, "innerWidth", {
     configurable: true,
@@ -191,6 +236,23 @@ test("仅在 back 元数据存在时显示指向明确父路由的返回链接",
   expect(
     await screen.findByRole("link", { name: "返回摄像头列表" }),
   ).toHaveAttribute("href", "/cameras");
+});
+
+test("动态目标由 Router 替换相似参数名并编码参数值", async () => {
+  render(<RouterProvider router={createParameterizedHeaderRouter()} />);
+
+  const breadcrumb = await screen.findByRole("navigation", {
+    name: "breadcrumb",
+  });
+  const expectedHref = "/items/line%20camera/%40station";
+
+  expect(
+    within(breadcrumb).getByRole("link", { name: "Item" }),
+  ).toHaveAttribute("href", expectedHref);
+  expect(screen.getByRole("link", { name: "Back to item" })).toHaveAttribute(
+    "href",
+    expectedHref,
+  );
 });
 
 test("移动端 SidebarTrigger 保留在 Header leading 区", async () => {

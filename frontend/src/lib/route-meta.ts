@@ -87,15 +87,6 @@ export function resolveShellRouteTarget(
   return params === undefined ? { to: target.to } : { to: target.to, params };
 }
 
-/** 将已解析的动态目标转换为 Link 可直接使用的具体站内地址。 */
-export function buildShellRouteHref(target: ResolvedShellRouteTarget): string {
-  return Object.entries(target.params ?? {}).reduce(
-    (href, [name, value]) =>
-      href.replaceAll(`$${name}`, encodeURIComponent(value)),
-    String(target.to),
-  );
-}
-
 /** 按 useMatches() 的父到子顺序解析有 breadcrumb 元数据的 match。 */
 export function resolveBreadcrumbItems(
   matches: readonly ShellRouteMatch[],

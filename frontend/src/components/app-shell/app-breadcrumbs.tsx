@@ -11,7 +11,6 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import {
-  buildShellRouteHref,
   resolveBreadcrumbItems,
   type ShellBreadcrumbItem,
 } from "@/lib/route-meta";
@@ -33,6 +32,16 @@ function compressBreadcrumbItems(
     : [firstItem, "ellipsis", currentItem];
 }
 
+function renderBreadcrumbLink(item: ShellBreadcrumbItem) {
+  const targetTo: string = item.target?.to ?? item.pathname;
+
+  return item.target?.params === undefined ? (
+    <Link to={targetTo} />
+  ) : (
+    <Link to={targetTo} params={item.target.params} />
+  );
+}
+
 export function AppBreadcrumbs() {
   const matches = useMatches();
   const items = resolveBreadcrumbItems(matches);
@@ -43,12 +52,6 @@ export function AppBreadcrumbs() {
       <BreadcrumbList className="min-w-0 flex-nowrap overflow-hidden whitespace-nowrap">
         {displayItems.map((item, index) => {
           const isCurrent = index === displayItems.length - 1;
-          const targetHref =
-            item === "ellipsis"
-              ? ""
-              : item.target === undefined
-                ? item.pathname
-                : buildShellRouteHref(item.target);
 
           return (
             <Fragment
@@ -71,7 +74,7 @@ export function AppBreadcrumbs() {
                   ) : (
                     <BreadcrumbLink
                       className="block truncate"
-                      render={<Link to={targetHref} />}
+                      render={renderBreadcrumbLink(item)}
                       title={item.label}
                     >
                       {item.label}
