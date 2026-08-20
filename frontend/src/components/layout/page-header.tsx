@@ -27,7 +27,11 @@ export function PageHeader({
       {...props}
     >
       <div className="flex min-w-0 flex-1 flex-col gap-1">
-        <h1 className="text-2xl font-semibold tracking-tight text-balance break-words">
+        <h1
+          data-route-focus
+          tabIndex={-1}
+          className="text-2xl font-semibold tracking-tight text-balance break-words"
+        >
           {title}
         </h1>
         <p className="text-muted-foreground text-sm text-pretty">

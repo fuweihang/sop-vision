@@ -7,13 +7,11 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  useSidebar,
 } from "@/components/ui/sidebar";
 import { mainNavigation } from "@/config/navigation";
 
 export function AppMainNavigation() {
   const matchRoute = useMatchRoute();
-  const { setOpenMobile } = useSidebar();
 
   return (
     <SidebarGroup>
@@ -32,7 +30,6 @@ export function AppMainNavigation() {
                       <Link
                         to={item.to}
                         aria-current={isActive ? "page" : undefined}
-                        onClick={() => setOpenMobile(false)}
                       />
                     }
                     isActive={isActive}

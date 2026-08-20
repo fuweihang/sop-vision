@@ -6,22 +6,41 @@ import {
   Outlet,
   RouterProvider,
 } from "@tanstack/react-router";
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { expect, test, vi } from "vitest";
 
 import { AppSidebar } from "@/components/app-shell/app-sidebar";
+import { SidebarRouteSync } from "@/components/app-shell/sidebar-route-sync";
 import {
   SidebarInset,
   SidebarProvider,
   SidebarTrigger,
+  useSidebar,
 } from "@/components/ui/sidebar";
 import { TooltipProvider } from "@/components/ui/tooltip";
+
+const mediaQueryListeners = new Set<() => void>();
+
+function SidebarStateProbe() {
+  const { isMobile, open, openMobile } = useSidebar();
+
+  return (
+    <output
+      aria-label="Sidebar 状态"
+      data-mobile={isMobile}
+      data-open={open}
+      data-open-mobile={openMobile}
+    />
+  );
+}
 
 function TestShell() {
   return (
     <TooltipProvider>
       <SidebarProvider>
+        <SidebarRouteSync />
+        <SidebarStateProbe />
         <AppSidebar />
         <SidebarInset>
           <SidebarTrigger aria-label="打开主导航" />
@@ -64,6 +83,7 @@ function createTestRouter(initialPath: string) {
 }
 
 function setViewport(width: number) {
+  mediaQueryListeners.clear();
   Object.defineProperty(window, "innerWidth", {
     configurable: true,
     value: width,
@@ -71,16 +91,31 @@ function setViewport(width: number) {
   Object.defineProperty(window, "matchMedia", {
     configurable: true,
     value: vi.fn((query: string) => ({
-      matches: query === "(max-width: 767px)" && width < 768,
+      get matches() {
+        return query === "(max-width: 767px)" && window.innerWidth < 768;
+      },
       media: query,
       onchange: null,
-      addEventListener: vi.fn(),
-      removeEventListener: vi.fn(),
+      addEventListener: vi.fn((_type: string, listener: () => void) => {
+        mediaQueryListeners.add(listener);
+      }),
+      removeEventListener: vi.fn((_type: string, listener: () => void) => {
+        mediaQueryListeners.delete(listener);
+      }),
       addListener: vi.fn(),
       removeListener: vi.fn(),
       dispatchEvent: vi.fn(),
     })),
   });
+}
+
+function resizeViewport(width: number) {
+  Object.defineProperty(window, "innerWidth", {
+    configurable: true,
+    value: width,
+  });
+
+  mediaQueryListeners.forEach((listener) => listener());
 }
 
 function renderAt(initialPath: string, width = 1024) {
@@ -124,6 +159,59 @@ test("选择菜单链接后关闭移动端 Sheet", async () => {
     expect(
       screen.queryByRole("link", { name: "摄像头" }),
     ).not.toBeInTheDocument();
+  });
+});
+
+test("浏览器后退时关闭移动端 Sheet", async () => {
+  const user = userEvent.setup();
+  const router = renderAt("/tasks", 500);
+
+  await act(async () => {
+    await router.navigate({ to: "/cameras" });
+  });
+  await user.click(await screen.findByRole("button", { name: "打开主导航" }));
+
+  expect(
+    await screen.findByRole("link", { name: "检测任务" }),
+  ).toBeInTheDocument();
+
+  act(() => {
+    router.history.back();
+  });
+
+  await waitFor(() => {
+    expect(router.state.location.pathname).toBe("/tasks");
+    expect(
+      screen.queryByRole("link", { name: "检测任务" }),
+    ).not.toBeInTheDocument();
+  });
+});
+
+test("从 767px 切换到 768px 时关闭 openMobile 且不修改桌面 open", async () => {
+  const user = userEvent.setup();
+
+  renderAt("/tasks", 767);
+
+  const state = await screen.findByRole("status", { name: "Sidebar 状态" });
+  await user.click(screen.getByRole("button", { name: "打开主导航" }));
+
+  expect(state).toHaveAttribute("data-mobile", "true");
+  expect(state).toHaveAttribute("data-open", "true");
+  expect(state).toHaveAttribute("data-open-mobile", "true");
+
+  act(() => resizeViewport(768));
+
+  await waitFor(() => {
+    expect(state).toHaveAttribute("data-mobile", "false");
+    expect(state).toHaveAttribute("data-open-mobile", "false");
+  });
+  expect(state).toHaveAttribute("data-open", "true");
+
+  act(() => resizeViewport(767));
+
+  await waitFor(() => {
+    expect(state).toHaveAttribute("data-mobile", "true");
+    expect(state).toHaveAttribute("data-open-mobile", "false");
   });
 });
 

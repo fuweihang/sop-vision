@@ -3,7 +3,7 @@ import {
   createRouter,
   RouterProvider,
 } from "@tanstack/react-router";
-import { render, screen, within } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, expect, test, vi } from "vitest";
 
@@ -56,13 +56,78 @@ test.each([
 ])("可直接进入 %s 并只渲染一个页面主标题", async (path, title) => {
   renderRoute(path);
 
-  expect(
-    await screen.findByRole("heading", { level: 1, name: title }),
-  ).toBeInTheDocument();
+  const pageHeading = await screen.findByRole("heading", {
+    level: 1,
+    name: title,
+  });
+  const mainContent = document.getElementById("main-content");
+
+  expect(pageHeading).toBeInTheDocument();
+  expect(pageHeading).toHaveAttribute("data-route-focus");
+  expect(pageHeading).toHaveAttribute("tabindex", "-1");
+  expect(mainContent).toHaveAttribute("id", "main-content");
+  expect(mainContent).toHaveAttribute("tabindex", "-1");
   expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
   expect(
     screen.getByRole("heading", { level: 2, name: "路由骨架" }),
   ).toBeInTheDocument();
+});
+
+test("pathname 改变后将焦点移到新页面标题", async () => {
+  const user = userEvent.setup();
+
+  renderRoute("/cameras");
+
+  const mainNavigation = await screen.findByRole("navigation", {
+    name: "主菜单",
+  });
+  await user.click(
+    within(mainNavigation).getByRole("link", { name: "检测任务" }),
+  );
+
+  const pageHeading = await screen.findByRole("heading", {
+    level: 1,
+    name: "检测任务",
+  });
+  await waitFor(() => expect(pageHeading).toHaveFocus());
+});
+
+test("仅 search params 改变时保留当前焦点", async () => {
+  const router = renderRoute("/cameras");
+  const themeToggle = await screen.findByRole("button", {
+    name: "切换为深色主题",
+  });
+
+  themeToggle.focus();
+
+  await act(async () => {
+    await router.navigate({
+      to: "/cameras",
+      search: { filter: "connected" },
+    });
+  });
+
+  expect(router.state.location.search).toEqual({ filter: "connected" });
+  expect(themeToggle).toHaveFocus();
+});
+
+test("Skip Link 首个获得键盘焦点并将焦点交给主内容", async () => {
+  const user = userEvent.setup();
+
+  renderRoute("/cameras");
+  await screen.findByRole("heading", { level: 1, name: "摄像头" });
+
+  const skipLink = screen.getByRole("link", { name: "跳到主要内容" });
+  const mainContent = document.getElementById("main-content");
+
+  expect(skipLink).toHaveAttribute("href", "#main-content");
+  expect(skipLink).toHaveClass("sr-only", "focus-visible:not-sr-only");
+
+  await user.tab();
+  expect(skipLink).toHaveFocus();
+
+  await user.keyboard("{Enter}");
+  expect(mainContent).toHaveFocus();
 });
 
 test.each([
