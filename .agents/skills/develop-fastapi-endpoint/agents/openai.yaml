@@ -1,0 +1,4 @@
+interface:
+  display_name: "FastAPI 接口开发"
+  short_description: "构建分层清晰、事务安全且经过测试的 FastAPI 接口"
+  default_prompt: "使用 $develop-fastapi-endpoint 设计并实现一个生产级 FastAPI 接口。"

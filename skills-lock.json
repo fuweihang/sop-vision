@@ -7,6 +7,12 @@
       "skillPath": "packages/router-core/skills/router-core/data-loading/SKILL.md",
       "computedHash": "8e38170db8d7ef196cc3f4fe54face009690f92aff81cc7244e6834e138f41dc"
     },
+    "develop-fastapi-endpoint": {
+      "source": "fuweihang/skills",
+      "sourceType": "github",
+      "skillPath": "skills/develop-fastapi-endpoint/SKILL.md",
+      "computedHash": "f74a0f630cc840376134ccec4ad027336ff9c7e43e2997a12a7777f6c5c551cb"
+    },
     "react-router": {
       "source": "TanStack/router",
       "sourceType": "github",
