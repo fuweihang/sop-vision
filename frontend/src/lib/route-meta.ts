@@ -73,6 +73,10 @@ export interface ShellBreadcrumbItem {
   target?: ResolvedShellRouteTarget;
 }
 
+export interface ShellBackItem extends ResolvedShellRouteTarget {
+  label: string;
+}
+
 export function resolveShellRouteTarget(
   target: ShellRouteTarget,
   match: ShellRouteMatchContext,
@@ -81,6 +85,15 @@ export function resolveShellRouteTarget(
     typeof target.params === "function" ? target.params(match) : target.params;
 
   return params === undefined ? { to: target.to } : { to: target.to, params };
+}
+
+/** 将已解析的动态目标转换为 Link 可直接使用的具体站内地址。 */
+export function buildShellRouteHref(target: ResolvedShellRouteTarget): string {
+  return Object.entries(target.params ?? {}).reduce(
+    (href, [name, value]) =>
+      href.replaceAll(`$${name}`, encodeURIComponent(value)),
+    String(target.to),
+  );
 }
 
 /** 按 useMatches() 的父到子顺序解析有 breadcrumb 元数据的 match。 */
@@ -115,6 +128,25 @@ export function resolveBreadcrumbItems(
           },
         ];
   });
+}
+
+/** 从最深层匹配开始查找返回元数据，保证子路由可以覆盖父路由定义。 */
+export function resolveBackItem(
+  matches: readonly ShellRouteMatch[],
+): ShellBackItem | undefined {
+  for (let index = matches.length - 1; index >= 0; index -= 1) {
+    const match = matches[index];
+    const back = match?.staticData.back;
+
+    if (match !== undefined && back !== undefined) {
+      return {
+        label: back.label,
+        ...resolveShellRouteTarget(back, match),
+      };
+    }
+  }
+
+  return undefined;
 }
 
 /**

@@ -5,7 +5,9 @@ import {
 import { expect, test } from "vitest";
 
 import {
+  buildShellRouteHref,
   getLoaderDataLabelOrParam,
+  resolveBackItem,
   resolveBreadcrumbItems,
   type ShellRouteMatch,
 } from "@/lib/route-meta";
@@ -106,6 +108,44 @@ test("从当前匹配项解析目标参数", () => {
     to: "/items/$itemId",
     params: { itemId: "item-42" },
   });
+});
+
+test("将动态目标参数编码为具体站内地址", () => {
+  expect(
+    buildShellRouteHref({
+      to: "/items/$itemId",
+      params: { itemId: "line camera/42" },
+    }),
+  ).toBe("/items/line%20camera%2F42");
+});
+
+test("从最深层匹配项解析返回元数据", () => {
+  expect(
+    resolveBackItem([
+      createMatch({
+        staticData: {
+          back: { to: "/items", label: "Back to items" },
+        },
+      }),
+      createMatch({
+        staticData: {
+          back: {
+            to: "/items/$itemId",
+            params: { itemId: "item-42" },
+            label: "Back to item",
+          },
+        },
+      }),
+    ]),
+  ).toEqual({
+    to: "/items/$itemId",
+    params: { itemId: "item-42" },
+    label: "Back to item",
+  });
+});
+
+test("没有返回元数据时不产生返回项", () => {
+  expect(resolveBackItem([createMatch()])).toBeUndefined();
 });
 
 test("createFileRoute 接受扩展后的静态数据协议", () => {
