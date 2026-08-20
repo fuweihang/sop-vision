@@ -1,6 +1,6 @@
 [mcp_servers.playwright]
 command = "npx"
-args = ["@playwright/mcp@latest", "--extension"]
+args = ["@playwright/mcp@latest"]
 
 [mcp_servers.playwright.tools.browser_navigate]
 approval_mode = "approve"
