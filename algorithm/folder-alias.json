@@ -71,6 +71,38 @@
     "description": "📦 检测结果契约",
     "tooltip": "frame_detection 消息及目标、指标模型"
   },
+  "src/algorithm/demos": {
+    "description": "🖥️ 本地演示",
+    "tooltip": "不受守护进程管理的联调和展示程序"
+  },
+  "src/algorithm/demos/viewer": {
+    "description": "🎞️ Qt 检测 Viewer",
+    "tooltip": "独立连接 RTSP 与 Redis，非同步叠加最新检测结果"
+  },
+  "src/algorithm/demos/viewer/__main__.py": {
+    "description": "🚪 Viewer 命令入口",
+    "tooltip": "algorithm-viewer 参数解析与可选依赖提示"
+  },
+  "src/algorithm/demos/viewer/window.py": {
+    "description": "🖼️ Viewer 主窗口",
+    "tooltip": "视频显示、连接控制、状态展示和检测框绘制"
+  },
+  "src/algorithm/demos/viewer/redis_subscriber.py": {
+    "description": "📥 Redis 检测订阅",
+    "tooltip": "先订阅再读取快照，并校验、去重和过滤过期结果"
+  },
+  "src/algorithm/demos/viewer/video_feed.py": {
+    "description": "📹 Viewer 视频源",
+    "tooltip": "后台读取 RTSP 并只向界面提供最新 RGB 帧"
+  },
+  "src/algorithm/demos/viewer/geometry.py": {
+    "description": "📐 Viewer 绘图映射",
+    "tooltip": "计算视频等比显示区域并映射归一化检测框"
+  },
+  "src/algorithm/demos/viewer/state.py": {
+    "description": "⏱️ Viewer 结果状态",
+    "tooltip": "管理最新检测结果、Worker run 切换和两秒过期清理"
+  },
   "src/algorithm/daemon": {
     "description": "🛡️ 守护进程",
     "tooltip": "通过 REST 命令管理 AIWorker 子进程"
@@ -158,6 +190,10 @@
   "tests/unit/daemon/test_manager.py": {
     "description": "🎛️ 生命周期管理测试",
     "tooltip": "验证 start、reload、restart、stop 与异常进程处理"
+  },
+  "tests/unit/demos/viewer": {
+    "description": "🎞️ Viewer 单元测试",
+    "tooltip": "验证 Redis 订阅、结果过期、视频转换、绘图几何和 Qt 启停"
   },
   "tests/unit/test_config.py": {
     "description": "⚙️ 公共配置测试",

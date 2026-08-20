@@ -13,12 +13,16 @@ Worker 不创建 OpenCV 窗口。
 平台 FastAPI ──HTTP──> Algorithm Daemon ──spawn/Event/Pipe──> AIWorker
                                                           │
 平台 FastAPI <────────────────── Redis <────检测结果───────┘
+                                      │
+RTSP ───────────────────────> Qt Viewer <────最新检测结果──┘
 ```
 
 - 守护进程只提供控制面，不转发检测结果。
 - Worker 直接发布实时结果和最近一帧快照。
 - ROI 是本地配置的一部分，修改后通过 `reload` 完整重启 Worker 生效。
 - 守护进程启动后不会自动启动任何 Worker，也不会持久化运行状态。
+- Qt Viewer 是独立的本地演示工具，不受守护进程管理；它把 Redis 最新结果叠加到
+  当前 RTSP 画面，不保证检测结果和显示帧严格同步。
 
 ## 目录结构
 
@@ -41,6 +45,8 @@ algorithm/
 │   │   └── rtsp.py                     # 自动重连的 RTSP 最新帧读取器
 │   ├── contracts/
 │   │   └── detection.py                # Redis frame_detection 消息契约
+│   ├── demos/
+│   │   └── viewer/                     # 单任务 RTSP + Redis Qt 演示 Viewer
 │   ├── daemon/                         # AIWorker 守护进程
 │   │   ├── __main__.py                 # algorithm-daemon CLI 入口
 │   │   ├── api.py                      # RESTful 控制面
@@ -76,6 +82,7 @@ algorithm/
 | `algorithms/` | 封装 YOLO 等可复用算法能力 | 只负责模型加载、推理和输出转换，不管理进程、RTSP 或 Redis |
 | `common/` | 提供多个 Worker 共用的基础设施 | 放置配置辅助、视频读取、ROI 几何和消息发布等通用组件 |
 | `contracts/` | 定义跨组件传输的数据契约 | 使用严格、可版本化的 Pydantic 模型，不放具体业务流程 |
+| `demos/` | 保存本地演示程序 | 不作为生产 Worker，不受守护进程管理，也不参与控制面 |
 | `daemon/` | 实现算法服务控制面 | 负责本地配置加载、REST 命令和 Worker 子进程生命周期，不参与推理和结果转发 |
 | `workers/` | 编排一种具体 AI 任务 | 组合视频源、算法、ROI 和输出组件；每个 Worker 可作为独立进程运行 |
 | `tools/` | 保存人工运维或诊断命令 | 只放非服务常驻进程使用的辅助 CLI，不承载 Worker 主流程 |
@@ -93,6 +100,12 @@ algorithm/
 ```bash
 uv sync --dev
 cp config.example.json config.json
+```
+
+需要运行 Qt Viewer 时安装可选依赖：
+
+```bash
+uv sync --dev --extra viewer
 ```
 
 `config.json` 包含视频源凭据，已被 `.gitignore` 排除。生产环境建议将文件权限设置为
@@ -177,6 +190,36 @@ curl http://127.0.0.1:8090/healthz
 uv run detector --config config.json --task-id detector-001
 ```
 
+## Qt Viewer 演示
+
+Viewer 独立连接 RTSP，并直接订阅 Worker 写入 Redis 的检测结果。推荐按以下顺序启动：
+
+1. 启动 Redis 和 MediaMTX。
+2. 启动 `algorithm-daemon`。
+3. 调用 Worker 的 `start` 接口。
+4. 启动 Viewer：
+
+```bash
+uv run --extra viewer algorithm-viewer \
+  --task-id detector-001 \
+  --rtsp-url rtsp://localhost:8554/cam102 \
+  --redis-url redis://127.0.0.1:63793/0
+```
+
+这些参数只用于预填充窗口输入框，不会写入 `config.json` 或其他本地文件。也可以直接
+启动命令后在窗口中修改 Task ID、RTSP URL 和 Redis URL，再点击“连接”。
+
+Viewer 使用两条彼此独立的实时链路：
+
+```text
+MediaMTX ──RTSP──────────────> Viewer 当前画面
+AIWorker ──Redis Pub/Sub─────> Viewer 最新检测结果
+```
+
+当前版本不做 RTP/RTCP/PTS 时间同步，也不缓存历史视频帧。Viewer 始终把最近 2 秒内
+收到的最新结果叠加到当前画面；收到空 `objects`、Redis 断线或结果超过 2 秒时立即
+清除旧框。因此它适合联调消息和绘制效果，不适合作为逐帧准确性验收工具。
+
 ## 检测结果
 
 每个完成推理的帧都会生成 `frame_detection`。没有目标时也发送空 `objects`：
@@ -220,6 +263,10 @@ SET vision:task:{task_id}:latest <json> EX 5
 Redis 断线或发布速度落后于推理时，只保留最新待发送结果，不阻塞推理，也不补发过期帧。
 Redis 仅传输检测元数据，不传输原始视频帧、JPEG 或视频流。
 
+`frame_ts_ms` 是 Worker 的 OpenCV RTSP 解码器返回该帧后的本机 Unix 毫秒时间；它
+不是摄像机采集时间或 RTSP/RTP PTS。`published_at_ms` 是推理完成并构建 Redis 消息
+时的本机 Unix 毫秒时间。`frame_id` 只在同一个 `run_id` 内有意义。
+
 ## 测试
 
 ```bash
@@ -227,3 +274,4 @@ uv run pytest
 ```
 
 单元测试使用假 Worker、假 RTSP 和假 Redis，不依赖真实摄像头或 GPU。
+安装 `viewer` extra 后会额外运行 Qt offscreen 冒烟测试；未安装时该测试自动跳过。

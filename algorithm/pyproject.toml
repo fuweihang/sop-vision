@@ -17,9 +17,15 @@ dependencies = [
     "uvicorn>=0.35.0",
 ]
 
+[project.optional-dependencies]
+viewer = [
+    "pyside6>=6.8,<7",
+]
+
 [project.scripts]
 algorithm = "algorithm:main"
 algorithm-daemon = "algorithm.daemon.__main__:main"
+algorithm-viewer = "algorithm.demos.viewer.__main__:main"
 detector = "algorithm.workers.detector.__main__:main"
 
 [dependency-groups]
