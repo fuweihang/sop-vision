@@ -65,17 +65,13 @@ export function AppBreadcrumbs() {
               ) : (
                 <BreadcrumbItem className="min-w-0">
                   {isCurrent ? (
-                    <BreadcrumbPage
-                      className="block truncate"
-                      title={item.label}
-                    >
+                    <BreadcrumbPage className="block truncate">
                       {item.label}
                     </BreadcrumbPage>
                   ) : (
                     <BreadcrumbLink
                       className="block truncate"
                       render={renderBreadcrumbLink(item)}
-                      title={item.label}
                     >
                       {item.label}
                     </BreadcrumbLink>

@@ -222,6 +222,19 @@ test("父 Breadcrumb 可点击且当前项不可点击", async () => {
   );
 });
 
+test("Breadcrumb 不设置 title 以禁用浏览器原生悬停提示", async () => {
+  renderHeaderAt("/cameras/camera-42");
+
+  const breadcrumb = await screen.findByRole("navigation", {
+    name: "breadcrumb",
+  });
+  const parentItem = within(breadcrumb).getByRole("link", { name: "摄像头" });
+  const currentItem = within(breadcrumb).getByText(LONG_CAMERA_LABEL);
+
+  expect(parentItem).not.toHaveAttribute("title");
+  expect(currentItem).not.toHaveAttribute("title");
+});
+
 test("仅在 back 元数据存在时显示指向明确父路由的返回链接", async () => {
   const { unmount } = render(
     <RouterProvider router={createHeaderRouter("/cameras")} />,
