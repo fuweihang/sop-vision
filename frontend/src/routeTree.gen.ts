@@ -11,8 +11,12 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppRouteRouteImport } from './routes/_app/route'
-import { Route as AppCamerasRouteImport } from './routes/_app/cameras'
-import { Route as AppTasksRouteImport } from './routes/_app/tasks'
+import { Route as AppCamerasRouteRouteImport } from './routes/_app/cameras/route'
+import { Route as AppTasksRouteRouteImport } from './routes/_app/tasks/route'
+import { Route as AppCamerasIndexRouteImport } from './routes/_app/cameras/index'
+import { Route as AppCamerasCameraIdRouteImport } from './routes/_app/cameras/$cameraId'
+import { Route as AppTasksIndexRouteImport } from './routes/_app/tasks/index'
+import { Route as AppTasksTaskIdRouteImport } from './routes/_app/tasks/$taskId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -23,40 +27,86 @@ const AppRouteRoute = AppRouteRouteImport.update({
   id: '/_app',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AppCamerasRoute = AppCamerasRouteImport.update({
+const AppCamerasRouteRoute = AppCamerasRouteRouteImport.update({
   id: '/cameras',
   path: '/cameras',
   getParentRoute: () => AppRouteRoute,
 } as any)
-const AppTasksRoute = AppTasksRouteImport.update({
+const AppTasksRouteRoute = AppTasksRouteRouteImport.update({
   id: '/tasks',
   path: '/tasks',
   getParentRoute: () => AppRouteRoute,
 } as any)
+const AppCamerasIndexRoute = AppCamerasIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AppCamerasRouteRoute,
+} as any)
+const AppCamerasCameraIdRoute = AppCamerasCameraIdRouteImport.update({
+  id: '/$cameraId',
+  path: '/$cameraId',
+  getParentRoute: () => AppCamerasRouteRoute,
+} as any)
+const AppTasksIndexRoute = AppTasksIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AppTasksRouteRoute,
+} as any)
+const AppTasksTaskIdRoute = AppTasksTaskIdRouteImport.update({
+  id: '/$taskId',
+  path: '/$taskId',
+  getParentRoute: () => AppTasksRouteRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/cameras': typeof AppCamerasRoute
-  '/tasks': typeof AppTasksRoute
+  '/cameras': typeof AppCamerasRouteRouteWithChildren
+  '/tasks': typeof AppTasksRouteRouteWithChildren
+  '/cameras/$cameraId': typeof AppCamerasCameraIdRoute
+  '/tasks/$taskId': typeof AppTasksTaskIdRoute
+  '/cameras/': typeof AppCamerasIndexRoute
+  '/tasks/': typeof AppTasksIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/cameras': typeof AppCamerasRoute
-  '/tasks': typeof AppTasksRoute
+  '/cameras/$cameraId': typeof AppCamerasCameraIdRoute
+  '/tasks/$taskId': typeof AppTasksTaskIdRoute
+  '/cameras': typeof AppCamerasIndexRoute
+  '/tasks': typeof AppTasksIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_app': typeof AppRouteRouteWithChildren
-  '/_app/cameras': typeof AppCamerasRoute
-  '/_app/tasks': typeof AppTasksRoute
+  '/_app/cameras': typeof AppCamerasRouteRouteWithChildren
+  '/_app/tasks': typeof AppTasksRouteRouteWithChildren
+  '/_app/cameras/$cameraId': typeof AppCamerasCameraIdRoute
+  '/_app/tasks/$taskId': typeof AppTasksTaskIdRoute
+  '/_app/cameras/': typeof AppCamerasIndexRoute
+  '/_app/tasks/': typeof AppTasksIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/cameras' | '/tasks'
+  fullPaths:
+    | '/'
+    | '/cameras'
+    | '/tasks'
+    | '/cameras/$cameraId'
+    | '/tasks/$taskId'
+    | '/cameras/'
+    | '/tasks/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/cameras' | '/tasks'
-  id: '__root__' | '/' | '/_app' | '/_app/cameras' | '/_app/tasks'
+  to: '/' | '/cameras/$cameraId' | '/tasks/$taskId' | '/cameras' | '/tasks'
+  id:
+    | '__root__'
+    | '/'
+    | '/_app'
+    | '/_app/cameras'
+    | '/_app/tasks'
+    | '/_app/cameras/$cameraId'
+    | '/_app/tasks/$taskId'
+    | '/_app/cameras/'
+    | '/_app/tasks/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -84,27 +134,83 @@ declare module '@tanstack/react-router' {
       id: '/_app/cameras'
       path: '/cameras'
       fullPath: '/cameras'
-      preLoaderRoute: typeof AppCamerasRouteImport
+      preLoaderRoute: typeof AppCamerasRouteRouteImport
       parentRoute: typeof AppRouteRoute
     }
     '/_app/tasks': {
       id: '/_app/tasks'
       path: '/tasks'
       fullPath: '/tasks'
-      preLoaderRoute: typeof AppTasksRouteImport
+      preLoaderRoute: typeof AppTasksRouteRouteImport
       parentRoute: typeof AppRouteRoute
+    }
+    '/_app/cameras/': {
+      id: '/_app/cameras/'
+      path: '/'
+      fullPath: '/cameras/'
+      preLoaderRoute: typeof AppCamerasIndexRouteImport
+      parentRoute: typeof AppCamerasRouteRoute
+    }
+    '/_app/cameras/$cameraId': {
+      id: '/_app/cameras/$cameraId'
+      path: '/$cameraId'
+      fullPath: '/cameras/$cameraId'
+      preLoaderRoute: typeof AppCamerasCameraIdRouteImport
+      parentRoute: typeof AppCamerasRouteRoute
+    }
+    '/_app/tasks/': {
+      id: '/_app/tasks/'
+      path: '/'
+      fullPath: '/tasks/'
+      preLoaderRoute: typeof AppTasksIndexRouteImport
+      parentRoute: typeof AppTasksRouteRoute
+    }
+    '/_app/tasks/$taskId': {
+      id: '/_app/tasks/$taskId'
+      path: '/$taskId'
+      fullPath: '/tasks/$taskId'
+      preLoaderRoute: typeof AppTasksTaskIdRouteImport
+      parentRoute: typeof AppTasksRouteRoute
     }
   }
 }
 
+interface AppCamerasRouteRouteChildren {
+  AppCamerasCameraIdRoute: typeof AppCamerasCameraIdRoute
+  AppCamerasIndexRoute: typeof AppCamerasIndexRoute
+}
+
+const AppCamerasRouteRouteChildren: AppCamerasRouteRouteChildren = {
+  AppCamerasCameraIdRoute: AppCamerasCameraIdRoute,
+  AppCamerasIndexRoute: AppCamerasIndexRoute,
+}
+
+const AppCamerasRouteRouteWithChildren = AppCamerasRouteRoute._addFileChildren(
+  AppCamerasRouteRouteChildren,
+)
+
+interface AppTasksRouteRouteChildren {
+  AppTasksTaskIdRoute: typeof AppTasksTaskIdRoute
+  AppTasksIndexRoute: typeof AppTasksIndexRoute
+}
+
+const AppTasksRouteRouteChildren: AppTasksRouteRouteChildren = {
+  AppTasksTaskIdRoute: AppTasksTaskIdRoute,
+  AppTasksIndexRoute: AppTasksIndexRoute,
+}
+
+const AppTasksRouteRouteWithChildren = AppTasksRouteRoute._addFileChildren(
+  AppTasksRouteRouteChildren,
+)
+
 interface AppRouteRouteChildren {
-  AppCamerasRoute: typeof AppCamerasRoute
-  AppTasksRoute: typeof AppTasksRoute
+  AppCamerasRouteRoute: typeof AppCamerasRouteRouteWithChildren
+  AppTasksRouteRoute: typeof AppTasksRouteRouteWithChildren
 }
 
 const AppRouteRouteChildren: AppRouteRouteChildren = {
-  AppCamerasRoute: AppCamerasRoute,
-  AppTasksRoute: AppTasksRoute,
+  AppCamerasRouteRoute: AppCamerasRouteRouteWithChildren,
+  AppTasksRouteRoute: AppTasksRouteRouteWithChildren,
 }
 
 const AppRouteRouteWithChildren = AppRouteRoute._addFileChildren(

@@ -15,8 +15,8 @@ import { ThemeToggle } from "@/components/app-shell/theme-toggle";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/providers/theme-provider";
-import { Route as CamerasRoute } from "@/routes/_app/cameras";
-import { Route as TasksRoute } from "@/routes/_app/tasks";
+import { Route as CamerasRoute } from "@/routes/_app/cameras/route";
+import { Route as TasksRoute } from "@/routes/_app/tasks/route";
 
 const LONG_CAMERA_LABEL = "名称非常长且必须保持单行显示的生产线摄像头测试标签";
 
