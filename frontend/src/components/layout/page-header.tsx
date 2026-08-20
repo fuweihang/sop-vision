@@ -30,7 +30,7 @@ export function PageHeader({
         <h1
           data-route-focus
           tabIndex={-1}
-          className="text-2xl font-semibold tracking-tight text-balance break-words"
+          className="text-2xl font-semibold tracking-tight text-balance wrap-break-word"
         >
           {title}
         </h1>

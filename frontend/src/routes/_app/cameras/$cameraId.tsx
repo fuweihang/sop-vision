@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 
 import { PageContainer } from "@/components/layout/page-container";
 import { PageHeader } from "@/components/layout/page-header";
+import { RouteNotFound } from "@/components/route-state/route-not-found";
 import { getLoaderDataLabelOrParam } from "@/lib/route-meta";
 
 export const Route = createFileRoute("/_app/cameras/$cameraId")({
@@ -17,6 +18,7 @@ export const Route = createFileRoute("/_app/cameras/$cameraId")({
     },
   },
   component: CameraDetailPage,
+  notFoundComponent: CameraNotFound,
 });
 
 function CameraDetailPage() {
@@ -38,5 +40,17 @@ function CameraDetailPage() {
         </p>
       </section>
     </PageContainer>
+  );
+}
+
+function CameraNotFound() {
+  return (
+    <RouteNotFound
+      kind="camera"
+      title="未找到摄像头"
+      description="该摄像头不存在或已被删除。"
+      returnTo="/cameras"
+      returnLabel="返回摄像头列表"
+    />
   );
 }

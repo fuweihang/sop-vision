@@ -1,6 +1,7 @@
 import {
   createMemoryHistory,
   createRouter,
+  notFound,
   RouterProvider,
 } from "@tanstack/react-router";
 import { act, render, screen, waitFor, within } from "@testing-library/react";
@@ -12,12 +13,23 @@ import { queryClient } from "@/lib/query-client";
 import { routeTree } from "@/routeTree.gen";
 import { ThemeProvider } from "@/providers/theme-provider";
 
-function renderRoute(initialPath: string) {
-  const router = createRouter({
+function createTestRouter(initialPath: string) {
+  return createRouter({
     routeTree,
     context: { apiClient, queryClient },
     history: createMemoryHistory({ initialEntries: [initialPath] }),
   });
+}
+
+type TestRouter = ReturnType<typeof createTestRouter>;
+
+function renderRoute(
+  initialPath: string,
+  configure?: (router: TestRouter) => void,
+) {
+  const router = createTestRouter(initialPath);
+
+  configure?.(router);
 
   render(
     <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
@@ -171,4 +183,175 @@ test.each([
   expect(
     within(mainNavigation).getByRole("link", { name: activeLabel }),
   ).toHaveAttribute("aria-current", "page");
+});
+
+test("Cameras Pending 保留 Shell 并提供可访问状态", async () => {
+  let finishLoading = () => {};
+  const loading = new Promise<void>((resolve) => {
+    finishLoading = resolve;
+  });
+  let restoreRoutes = () => {};
+
+  try {
+    renderRoute("/cameras/camera-42", (router) => {
+      const camerasRoute = router.routesById["/_app/cameras"];
+      const cameraRoute = router.routesById["/_app/cameras/$cameraId"];
+      const originalLoader = cameraRoute.options.loader;
+      const originalPendingMs = camerasRoute.options.pendingMs;
+      const originalPendingMinMs = camerasRoute.options.pendingMinMs;
+
+      cameraRoute.options.loader = () => loading;
+      camerasRoute.options.pendingMs = 0;
+      camerasRoute.options.pendingMinMs = 0;
+      restoreRoutes = () => {
+        if (originalLoader === undefined) {
+          delete cameraRoute.options.loader;
+        } else {
+          cameraRoute.options.loader = originalLoader;
+        }
+        if (originalPendingMs === undefined) {
+          delete camerasRoute.options.pendingMs;
+        } else {
+          camerasRoute.options.pendingMs = originalPendingMs;
+        }
+        if (originalPendingMinMs === undefined) {
+          delete camerasRoute.options.pendingMinMs;
+        } else {
+          camerasRoute.options.pendingMinMs = originalPendingMinMs;
+        }
+      };
+    });
+
+    expect(
+      await screen.findByRole("status", { name: "正在加载摄像头内容" }),
+    ).toHaveAttribute("aria-busy", "true");
+    expect(
+      screen.getByRole("navigation", { name: "主菜单" }),
+    ).toBeInTheDocument();
+    expect(document.querySelectorAll('[data-slot="app-header"]')).toHaveLength(
+      1,
+    );
+
+    act(() => finishLoading());
+    expect(
+      await screen.findByRole("heading", { level: 1, name: "camera-42" }),
+    ).toBeInTheDocument();
+  } finally {
+    finishLoading();
+    restoreRoutes();
+  }
+});
+
+test("Cameras 子路由失败时保留 Shell，并可通过 reset/invalidate 重试", async () => {
+  const user = userEvent.setup();
+  const consoleWarn = vi.spyOn(console, "warn").mockImplementation(() => {});
+  let shouldFail = true;
+  let restoreRoute = () => {};
+
+  try {
+    const router = renderRoute("/cameras/camera-42", (testRouter) => {
+      const cameraRoute = testRouter.routesById["/_app/cameras/$cameraId"];
+      const originalLoader = cameraRoute.options.loader;
+
+      cameraRoute.options.loader = () => {
+        if (shouldFail) {
+          throw new Error("secret-token=must-not-be-rendered");
+        }
+      };
+      restoreRoute = () => {
+        if (originalLoader === undefined) {
+          delete cameraRoute.options.loader;
+        } else {
+          cameraRoute.options.loader = originalLoader;
+        }
+      };
+    });
+    const invalidate = vi.spyOn(router, "invalidate");
+
+    expect(
+      await screen.findByRole("heading", {
+        level: 1,
+        name: "无法加载摄像头内容",
+      }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("navigation", { name: "主菜单" }),
+    ).toBeInTheDocument();
+    expect(document.querySelectorAll('[data-slot="app-header"]')).toHaveLength(
+      1,
+    );
+    expect(screen.queryByText(/secret-token/)).not.toBeInTheDocument();
+    expect(
+      screen
+        .getAllByRole("link", { name: "返回摄像头列表" })
+        .some((link) => link.getAttribute("href") === "/cameras"),
+    ).toBe(true);
+
+    shouldFail = false;
+    await user.click(screen.getByRole("button", { name: "重试" }));
+
+    expect(invalidate).toHaveBeenCalledTimes(1);
+    expect(
+      await screen.findByRole("heading", { level: 1, name: "camera-42" }),
+    ).toBeInTheDocument();
+  } finally {
+    restoreRoute();
+    consoleWarn.mockRestore();
+  }
+});
+
+test("Tasks 实体不存在时保留 Shell 并返回 Tasks", async () => {
+  const consoleWarn = vi.spyOn(console, "warn").mockImplementation(() => {});
+  let restoreRoute = () => {};
+
+  try {
+    renderRoute("/tasks/missing-task", (router) => {
+      const taskRoute = router.routesById["/_app/tasks/$taskId"];
+      const originalLoader = taskRoute.options.loader;
+
+      taskRoute.options.loader = () => {
+        notFound({ throw: true });
+      };
+      restoreRoute = () => {
+        if (originalLoader === undefined) {
+          delete taskRoute.options.loader;
+        } else {
+          taskRoute.options.loader = originalLoader;
+        }
+      };
+    });
+
+    expect(
+      await screen.findByRole("heading", {
+        level: 1,
+        name: "未找到检测任务",
+      }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("navigation", { name: "主菜单" }),
+    ).toBeInTheDocument();
+    expect(document.querySelectorAll('[data-slot="app-header"]')).toHaveLength(
+      1,
+    );
+    expect(
+      screen
+        .getAllByRole("link", { name: "返回检测任务列表" })
+        .some((link) => link.getAttribute("href") === "/tasks"),
+    ).toBe(true);
+  } finally {
+    restoreRoute();
+    consoleWarn.mockRestore();
+  }
+});
+
+test("未知 URL 显示全局 Not Found 而不是空白页面", async () => {
+  renderRoute("/route-that-does-not-exist");
+
+  expect(
+    await screen.findByRole("heading", { level: 1, name: "页面不存在" }),
+  ).toBeInTheDocument();
+  expect(screen.getByRole("link", { name: "返回首页" })).toHaveAttribute(
+    "href",
+    "/",
+  );
 });

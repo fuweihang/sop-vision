@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 
 import { PageContainer } from "@/components/layout/page-container";
 import { PageHeader } from "@/components/layout/page-header";
+import { RouteNotFound } from "@/components/route-state/route-not-found";
 import { getLoaderDataLabelOrParam } from "@/lib/route-meta";
 
 export const Route = createFileRoute("/_app/tasks/$taskId")({
@@ -17,6 +18,7 @@ export const Route = createFileRoute("/_app/tasks/$taskId")({
     },
   },
   component: TaskDetailPage,
+  notFoundComponent: TaskNotFound,
 });
 
 function TaskDetailPage() {
@@ -38,5 +40,17 @@ function TaskDetailPage() {
         </p>
       </section>
     </PageContainer>
+  );
+}
+
+function TaskNotFound() {
+  return (
+    <RouteNotFound
+      kind="task"
+      title="未找到检测任务"
+      description="该检测任务不存在或已被删除。"
+      returnTo="/tasks"
+      returnLabel="返回检测任务列表"
+    />
   );
 }
