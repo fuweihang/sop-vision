@@ -17,7 +17,7 @@ export function AppMainNavigation() {
     <SidebarGroup>
       <SidebarGroupContent>
         <nav aria-label="主菜单">
-          <SidebarMenu>
+          <SidebarMenu className="gap-1">
             {mainNavigation.map((item) => {
               const isActive = Boolean(
                 matchRoute({ to: item.to, fuzzy: true }),
