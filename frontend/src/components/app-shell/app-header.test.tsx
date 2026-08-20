@@ -233,9 +233,14 @@ test("仅在 back 元数据存在时显示指向明确父路由的返回链接",
   unmount();
   renderHeaderAt("/cameras/camera-42");
 
-  expect(
-    await screen.findByRole("link", { name: "返回摄像头列表" }),
-  ).toHaveAttribute("href", "/cameras");
+  const backLink = await screen.findByRole("link", {
+    name: "返回摄像头列表",
+  });
+
+  expect(backLink).toHaveAttribute("href", "/cameras");
+  expect(backLink).not.toHaveAttribute("role", "button");
+  expect(backLink).not.toHaveAttribute("type", "button");
+  expect(backLink).not.toHaveAttribute("data-slot", "tooltip-trigger");
 });
 
 test("动态目标由 Router 替换相似参数名并编码参数值", async () => {

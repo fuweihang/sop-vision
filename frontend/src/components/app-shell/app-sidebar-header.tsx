@@ -17,7 +17,7 @@ export function AppSidebarHeader() {
       <Link
         to="/cameras"
         aria-label={BRAND_LABEL}
-        className="flex h-10 min-w-0 flex-1 items-center gap-2 overflow-hidden rounded-md px-1.5 outline-hidden hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 focus-visible:ring-sidebar-ring group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:flex-none group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0"
+        className="flex h-10 min-w-0 flex-1 items-center gap-2 overflow-hidden rounded-md px-1.5 outline-hidden hover:text-sidebar-accent-foreground focus-visible:ring-2 focus-visible:ring-sidebar-ring group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:flex-none group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0"
       >
         <img
           src="/brand/sop-vision-logo.png"

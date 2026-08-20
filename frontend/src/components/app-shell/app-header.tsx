@@ -4,13 +4,8 @@ import { Link, useMatches } from "@tanstack/react-router";
 
 import { AppBreadcrumbs } from "@/components/app-shell/app-breadcrumbs";
 import { ThemeToggle } from "@/components/app-shell/theme-toggle";
-import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import { SidebarTrigger } from "@/components/ui/sidebar";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import { resolveBackItem } from "@/lib/route-meta";
 
 function RouteBackLink() {
@@ -22,33 +17,27 @@ function RouteBackLink() {
   }
 
   const backTo: string = backItem.to;
-  const backLink =
-    backItem.params === undefined ? (
-      <Link to={backTo} preload="intent" />
-    ) : (
-      <Link to={backTo} params={backItem.params} preload="intent" />
-    );
+  const backLinkProps = {
+    "aria-label": backItem.label,
+    className: buttonVariants({ variant: "ghost", size: "icon" }),
+    preload: "intent" as const,
+  };
+  const backLinkIcon = (
+    <HugeiconsIcon
+      data-icon="inline-start"
+      icon={ArrowLeft01Icon}
+      strokeWidth={2}
+    />
+  );
 
-  return (
-    <Tooltip>
-      <TooltipTrigger
-        render={
-          <Button
-            render={backLink}
-            variant="ghost"
-            size="icon"
-            aria-label={backItem.label}
-          />
-        }
-      >
-        <HugeiconsIcon
-          data-icon="inline-start"
-          icon={ArrowLeft01Icon}
-          strokeWidth={2}
-        />
-      </TooltipTrigger>
-      <TooltipContent>{backItem.label}</TooltipContent>
-    </Tooltip>
+  return backItem.params === undefined ? (
+    <Link to={backTo} {...backLinkProps}>
+      {backLinkIcon}
+    </Link>
+  ) : (
+    <Link to={backTo} params={backItem.params} {...backLinkProps}>
+      {backLinkIcon}
+    </Link>
   );
 }
 
