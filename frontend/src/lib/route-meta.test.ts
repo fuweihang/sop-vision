@@ -22,7 +22,7 @@ function createMatch(
   };
 }
 
-test("resolves static breadcrumbs and omits matches without metadata", () => {
+test("解析静态面包屑并省略没有元数据的匹配项", () => {
   const items = resolveBreadcrumbItems([
     createMatch({ routeId: "__root__", pathname: "/" }),
     createMatch({
@@ -53,7 +53,7 @@ test("resolves static breadcrumbs and omits matches without metadata", () => {
   ]);
 });
 
-test("resolves a dynamic label from loader data", () => {
+test("从 loader 数据解析动态标签", () => {
   const items = resolveBreadcrumbItems([
     createMatch({
       loaderData: { name: "Inspection SOP" },
@@ -79,7 +79,7 @@ test("resolves a dynamic label from loader data", () => {
   expect(items[0]?.label).toBe("Inspection SOP");
 });
 
-test("falls back to a route param when loader data is missing", () => {
+test("loader 数据缺失时回退使用路由参数", () => {
   const match = createMatch();
 
   expect(getLoaderDataLabelOrParam(match, () => undefined, "itemId")).toBe(
@@ -87,7 +87,7 @@ test("falls back to a route param when loader data is missing", () => {
   );
 });
 
-test("resolves target params from the current match", () => {
+test("从当前匹配项解析目标参数", () => {
   const items = resolveBreadcrumbItems([
     createMatch({
       staticData: {
@@ -108,7 +108,7 @@ test("resolves target params from the current match", () => {
   });
 });
 
-test("createFileRoute accepts the augmented static data protocol", () => {
+test("createFileRoute 接受扩展后的静态数据协议", () => {
   const route = createFileRoute("/")({
     staticData: {
       breadcrumb: {
@@ -125,7 +125,7 @@ test("createFileRoute accepts the augmented static data protocol", () => {
   expect(route.options.staticData?.back?.label).toBe("Back to home");
 });
 
-test("accepts the match union returned by useMatches", () => {
+test("接受 useMatches 返回的匹配项联合类型", () => {
   const matches: MakeRouteMatchUnion[] = [];
 
   expect(resolveBreadcrumbItems(matches)).toEqual([]);

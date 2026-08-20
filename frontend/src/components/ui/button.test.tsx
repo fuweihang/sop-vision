@@ -4,7 +4,7 @@ import { expect, test, vi } from "vitest";
 
 import { Button } from "@/components/ui/button";
 
-test("renders and handles a click", async () => {
+test("渲染按钮并处理点击操作", async () => {
   const user = userEvent.setup();
   const handleClick = vi.fn();
 
