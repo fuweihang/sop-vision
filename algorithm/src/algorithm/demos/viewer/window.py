@@ -27,7 +27,7 @@ from .geometry import fit_content_rect, map_normalized_bbox
 from .redis_subscriber import RedisDetectionSubscriber, RedisSubscriberStatus
 from .state import DetectionOverlayState
 from .video_feed import RtspVideoFeed, RgbFrame
-
+from PySide6.QtGui import QFont
 
 class ViewerSignals(QObject):
     detection = Signal(int, object)
@@ -322,6 +322,7 @@ def _unix_ms() -> int:
 
 def run_viewer(*, task_id: str, rtsp_url: str, redis_url: str) -> int:
     app = QApplication.instance() or QApplication(sys.argv)
+    app.setFont(QFont("Source Han Sans CN", 10)) # 设置微软雅黑
     window = ViewerWindow(task_id=task_id, rtsp_url=rtsp_url, redis_url=redis_url)
     window.show()
     return app.exec()
