@@ -3,6 +3,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { PageContainer } from "@/components/layout/page-container";
 import { PageHeader } from "@/components/layout/page-header";
 import { RouteNotFound } from "@/components/route-state/route-not-found";
+import { RoutePending } from "@/components/route-state/route-pending";
 import { getLoaderDataLabelOrParam } from "@/lib/route-meta";
 
 export const Route = createFileRoute("/_app/cameras/$cameraId")({
@@ -18,8 +19,13 @@ export const Route = createFileRoute("/_app/cameras/$cameraId")({
     },
   },
   component: CameraDetailPage,
+  pendingComponent: CameraDetailPending,
   notFoundComponent: CameraNotFound,
 });
+
+function CameraDetailPending() {
+  return <RoutePending label="正在加载摄像头详情" variant="detail" />;
+}
 
 function CameraDetailPage() {
   const { cameraId } = Route.useParams();

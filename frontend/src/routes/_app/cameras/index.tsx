@@ -2,10 +2,16 @@ import { createFileRoute } from "@tanstack/react-router";
 
 import { PageContainer } from "@/components/layout/page-container";
 import { PageHeader } from "@/components/layout/page-header";
+import { RoutePending } from "@/components/route-state/route-pending";
 
 export const Route = createFileRoute("/_app/cameras/")({
   component: CamerasPage,
+  pendingComponent: CamerasListPending,
 });
+
+function CamerasListPending() {
+  return <RoutePending label="正在加载摄像头列表" variant="camera-list" />;
+}
 
 function CamerasPage() {
   return (

@@ -1,33 +1,19 @@
-import { createFileRoute, Outlet, useLocation } from "@tanstack/react-router";
+import { createFileRoute, Outlet } from "@tanstack/react-router";
 
 import { RouteError } from "@/components/route-state/route-error";
 import { RouteNotFound } from "@/components/route-state/route-not-found";
-import { RoutePending } from "@/components/route-state/route-pending";
 
 export const Route = createFileRoute("/_app/tasks")({
   staticData: {
     breadcrumb: "检测任务",
   },
   component: TasksLayout,
-  pendingComponent: TasksRoutePending,
   errorComponent: TasksRouteError,
   notFoundComponent: TasksRouteNotFound,
 });
 
 function TasksLayout() {
   return <Outlet />;
-}
-
-function TasksRoutePending() {
-  const pathname = useLocation({ select: (location) => location.pathname });
-  const isDetail = pathname.split("/").filter(Boolean).length > 1;
-
-  return (
-    <RoutePending
-      label="正在加载检测任务内容"
-      variant={isDetail ? "detail" : "task-list"}
-    />
-  );
 }
 
 function TasksRouteError() {

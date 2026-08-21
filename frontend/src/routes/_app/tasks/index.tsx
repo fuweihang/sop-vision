@@ -2,10 +2,16 @@ import { createFileRoute } from "@tanstack/react-router";
 
 import { PageContainer } from "@/components/layout/page-container";
 import { PageHeader } from "@/components/layout/page-header";
+import { RoutePending } from "@/components/route-state/route-pending";
 
 export const Route = createFileRoute("/_app/tasks/")({
   component: TasksPage,
+  pendingComponent: TasksListPending,
 });
+
+function TasksListPending() {
+  return <RoutePending label="正在加载检测任务列表" variant="task-list" />;
+}
 
 function TasksPage() {
   return (

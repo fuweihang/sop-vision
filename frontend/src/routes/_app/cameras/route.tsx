@@ -1,33 +1,19 @@
-import { createFileRoute, Outlet, useLocation } from "@tanstack/react-router";
+import { createFileRoute, Outlet } from "@tanstack/react-router";
 
 import { RouteError } from "@/components/route-state/route-error";
 import { RouteNotFound } from "@/components/route-state/route-not-found";
-import { RoutePending } from "@/components/route-state/route-pending";
 
 export const Route = createFileRoute("/_app/cameras")({
   staticData: {
     breadcrumb: "摄像头",
   },
   component: CamerasLayout,
-  pendingComponent: CamerasRoutePending,
   errorComponent: CamerasRouteError,
   notFoundComponent: CamerasRouteNotFound,
 });
 
 function CamerasLayout() {
   return <Outlet />;
-}
-
-function CamerasRoutePending() {
-  const pathname = useLocation({ select: (location) => location.pathname });
-  const isDetail = pathname.split("/").filter(Boolean).length > 1;
-
-  return (
-    <RoutePending
-      label="正在加载摄像头内容"
-      variant={isDetail ? "detail" : "camera-list"}
-    />
-  );
 }
 
 function CamerasRouteError() {

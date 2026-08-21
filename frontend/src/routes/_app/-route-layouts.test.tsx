@@ -185,45 +185,69 @@ test.each([
   ).toHaveAttribute("aria-current", "page");
 });
 
-test("Cameras Pending 保留 Shell 并提供可访问状态", async () => {
+test.each([
+  {
+    path: "/cameras",
+    routeId: "/_app/cameras/",
+    pendingLabel: "正在加载摄像头列表",
+    heading: "摄像头",
+  },
+  {
+    path: "/cameras/camera-42",
+    routeId: "/_app/cameras/$cameraId",
+    pendingLabel: "正在加载摄像头详情",
+    heading: "camera-42",
+  },
+  {
+    path: "/tasks",
+    routeId: "/_app/tasks/",
+    pendingLabel: "正在加载检测任务列表",
+    heading: "检测任务",
+  },
+  {
+    path: "/tasks/task-42",
+    routeId: "/_app/tasks/$taskId",
+    pendingLabel: "正在加载检测任务详情",
+    heading: "task-42",
+  },
+] as const)("$path Pending 保留 Shell 并提供可访问状态", async (testCase) => {
   let finishLoading = () => {};
   const loading = new Promise<void>((resolve) => {
     finishLoading = resolve;
   });
-  let restoreRoutes = () => {};
+  let restoreRoute = () => {};
 
   try {
-    renderRoute("/cameras/camera-42", (router) => {
-      const camerasRoute = router.routesById["/_app/cameras"];
-      const cameraRoute = router.routesById["/_app/cameras/$cameraId"];
-      const originalLoader = cameraRoute.options.loader;
-      const originalPendingMs = camerasRoute.options.pendingMs;
-      const originalPendingMinMs = camerasRoute.options.pendingMinMs;
+    renderRoute(testCase.path, (router) => {
+      const targetRoute = router.routesById[testCase.routeId];
+      const originalLoader = targetRoute.options.loader;
+      const originalPendingMs = targetRoute.options.pendingMs;
+      const originalPendingMinMs = targetRoute.options.pendingMinMs;
 
-      cameraRoute.options.loader = () => loading;
-      camerasRoute.options.pendingMs = 0;
-      camerasRoute.options.pendingMinMs = 0;
-      restoreRoutes = () => {
+      targetRoute.options.loader = () => loading;
+      targetRoute.options.pendingMs = 0;
+      targetRoute.options.pendingMinMs = 0;
+      restoreRoute = () => {
         if (originalLoader === undefined) {
-          delete cameraRoute.options.loader;
+          delete targetRoute.options.loader;
         } else {
-          cameraRoute.options.loader = originalLoader;
+          targetRoute.options.loader = originalLoader;
         }
         if (originalPendingMs === undefined) {
-          delete camerasRoute.options.pendingMs;
+          delete targetRoute.options.pendingMs;
         } else {
-          camerasRoute.options.pendingMs = originalPendingMs;
+          targetRoute.options.pendingMs = originalPendingMs;
         }
         if (originalPendingMinMs === undefined) {
-          delete camerasRoute.options.pendingMinMs;
+          delete targetRoute.options.pendingMinMs;
         } else {
-          camerasRoute.options.pendingMinMs = originalPendingMinMs;
+          targetRoute.options.pendingMinMs = originalPendingMinMs;
         }
       };
     });
 
     expect(
-      await screen.findByRole("status", { name: "正在加载摄像头内容" }),
+      await screen.findByRole("status", { name: testCase.pendingLabel }),
     ).toHaveAttribute("aria-busy", "true");
     expect(
       screen.getByRole("navigation", { name: "主菜单" }),
@@ -234,11 +258,14 @@ test("Cameras Pending 保留 Shell 并提供可访问状态", async () => {
 
     act(() => finishLoading());
     expect(
-      await screen.findByRole("heading", { level: 1, name: "camera-42" }),
+      await screen.findByRole("heading", {
+        level: 1,
+        name: testCase.heading,
+      }),
     ).toBeInTheDocument();
   } finally {
     finishLoading();
-    restoreRoutes();
+    restoreRoute();
   }
 });
 
