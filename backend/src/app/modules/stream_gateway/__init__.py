@@ -1,1 +1,1 @@
-"""Media stream gateway module."""
+"""媒体流网关模块。"""

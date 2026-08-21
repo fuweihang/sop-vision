@@ -19,7 +19,7 @@ class CameraCreate(BaseModel):
     def validate_source_url(self) -> Self:
         scheme = urlsplit(self.source_url.get_secret_value()).scheme.lower()
         if scheme not in {"rtsp", "rtsps"}:
-            raise ValueError("source_url must use the rtsp or rtsps scheme")
+            raise ValueError("source_url 必须使用 rtsp 或 rtsps 协议")
         return self
 
 
@@ -30,11 +30,11 @@ class CameraUpdate(BaseModel):
     @model_validator(mode="after")
     def validate_update(self) -> Self:
         if self.name is None and self.source_url is None:
-            raise ValueError("at least one field must be provided")
+            raise ValueError("至少需要提供一个字段")
         if self.source_url is not None:
             scheme = urlsplit(self.source_url.get_secret_value()).scheme.lower()
             if scheme not in {"rtsp", "rtsps"}:
-                raise ValueError("source_url must use the rtsp or rtsps scheme")
+                raise ValueError("source_url 必须使用 rtsp 或 rtsps 协议")
         return self
 
 

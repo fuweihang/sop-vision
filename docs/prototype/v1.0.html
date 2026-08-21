@@ -7,7 +7,7 @@
       name="description"
       content="SOP Vision shadcn/ui-first interactive prototype"
     />
-    <title>SOP Vision · Prototype v0.1</title>
+    <title>SOP Vision · 原型 v0.1</title>
     <style>
       :root {
         color-scheme: light;
@@ -1559,7 +1559,7 @@
           </button>
         </div>
         <div class="sidebar-content" data-slot="sidebar-content">
-          <div class="menu-label">Workspace</div>
+          <div class="menu-label">工作区</div>
           <ul class="menu" data-slot="sidebar-menu">
             <li>
               <button
@@ -1573,7 +1573,7 @@
                   <path d="M14.5 6.5 18 4v16l-3.5-2.5"></path>
                   <rect x="3" y="6" width="12" height="12" rx="2"></rect>
                 </svg>
-                <span class="menu-copy">Cameras</span>
+                <span class="menu-copy">摄像头</span>
                 <span class="menu-count" data-camera-count>0</span>
               </button>
             </li>
@@ -1581,7 +1581,7 @@
               <button
                 class="menu-btn"
                 type="button"
-                title="Detection Tasks"
+                title="检测任务"
                 data-route="/tasks"
                 data-menu="tasks"
               >
@@ -1589,7 +1589,7 @@
                   <circle cx="11" cy="11" r="7"></circle>
                   <path d="m20 20-4-4M8 11h6M11 8v6"></path>
                 </svg>
-                <span class="menu-copy">Detection Tasks</span>
+                <span class="menu-copy">检测任务</span>
                 <span class="menu-count" data-task-count>0</span>
               </button>
             </li>
@@ -2559,7 +2559,7 @@
             '</dd></div><div class="info-row"><dt>密码</dt><dd>已配置 · 不显示明文</dd></div><div class="info-row"><dt>预览源</dt><dd>' +
             escapeHtml(source?.name || "未配置") +
             "</dd></div></dl></div></section></div>" +
-            '<section class="card"><div class="card-body"><div class="section-heading"><div><h2>Camera Sources</h2><p class="section-description">选择一路信号作为默认预览源</p></div><span class="badge">' +
+            '<section class="card"><div class="card-body"><div class="section-heading"><div><h2>摄像头来源</h2><p class="section-description">选择一路信号作为默认预览源</p></div><span class="badge">' +
             camera.sources.length +
             ' 路</span></div><div class="table-wrap"><table><thead><tr><th>预览</th><th>源名称</th><th>脱敏 RTSP 地址</th><th>状态</th></tr></thead><tbody>' +
             sourceRows +
@@ -2607,7 +2607,7 @@
 
         function renderTaskList() {
           updateShell("tasks");
-          renderBreadcrumb("Detection Tasks", "/tasks");
+          renderBreadcrumb("检测任务", "/tasks");
           const query = taskSearch.trim().toLowerCase();
           const filtered = tasks.filter((task) => {
             const camera = getCamera(task.cameraId);
@@ -2688,7 +2688,7 @@
 
         function renderTaskDetail(task) {
           updateShell("tasks");
-          renderBreadcrumb("Detection Tasks", "/tasks", task.name);
+          renderBreadcrumb("检测任务", "/tasks", task.name);
           const camera = getCamera(task.cameraId);
           const source = camera?.sources[task.sourceIndex];
           const algorithm = getAlgorithm(task.algorithmId);
@@ -2734,7 +2734,7 @@
             (task.algorithmId === "ppe-compliance"
               ? "helmet missing · 91%"
               : "person #12 · 96%") +
-            '</span></div><span class="frame-meta">frame 18272 · 14:20:00.123</span><div class="paused-copy"><strong>任务已停止</strong><span>enabled = false</span></div></div><div class="roi-legend"><label class="switch-label"><button class="switch" type="button" role="switch" aria-checked="' +
+            '</span></div><span class="frame-meta">帧 18272 · 14:20:00.123</span><div class="paused-copy"><strong>任务已停止</strong><span>enabled = false</span></div></div><div class="roi-legend"><label class="switch-label"><button class="switch" type="button" role="switch" aria-checked="' +
             task.showRoi +
             '" data-task-roi-toggle="' +
             escapeHtml(task.id) +

@@ -9,13 +9,13 @@
     "lib": ["ES2023"],
     "types": ["node"],
     "skipLibCheck": true,
-    /* Bundler mode */
+    /* Bundler 模式 */
     "module": "nodenext",
     "allowImportingTsExtensions": true,
     "verbatimModuleSyntax": true,
     "moduleDetection": "force",
     "noEmit": true,
-    /* Linting */
+    /* 静态检查 */
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "erasableSyntaxOnly": true,

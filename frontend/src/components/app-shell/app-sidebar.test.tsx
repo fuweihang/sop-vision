@@ -25,7 +25,7 @@ function SidebarStateProbe() {
 
   return (
     <output
-      aria-label="Sidebar 状态"
+      aria-label="侧边栏状态"
       data-mobile={isMobile}
       data-open={open}
       data-open-mobile={openMobile}
@@ -167,7 +167,7 @@ test("从 767px 切换到 768px 时关闭 openMobile 且不修改桌面 open", a
 
   renderAt("/tasks", 767);
 
-  const state = await screen.findByRole("status", { name: "Sidebar 状态" });
+  const state = await screen.findByRole("status", { name: "侧边栏状态" });
   await user.click(screen.getByRole("button", { name: "打开主导航" }));
 
   expect(state).toHaveAttribute("data-mobile", "true");

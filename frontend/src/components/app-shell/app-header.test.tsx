@@ -76,7 +76,7 @@ function createDeepHeaderRouter() {
   const workspaceRoute = createRoute({
     getParentRoute: () => rootRoute,
     path: "/workspace",
-    staticData: { breadcrumb: "Workspace" },
+    staticData: { breadcrumb: "工作区" },
     component: Outlet,
   });
   const camerasRoute = createRoute({
@@ -88,13 +88,13 @@ function createDeepHeaderRouter() {
   const cameraRoute = createRoute({
     getParentRoute: () => camerasRoute,
     path: "$cameraId",
-    staticData: { breadcrumb: "Camera 42" },
+    staticData: { breadcrumb: "摄像头 42" },
     component: Outlet,
   });
   const settingsRoute = createRoute({
     getParentRoute: () => cameraRoute,
     path: "settings",
-    staticData: { breadcrumb: "Settings" },
+    staticData: { breadcrumb: "设置" },
   });
 
   return createTestRouter(
@@ -156,7 +156,7 @@ function createParameterizedHeaderRouter() {
   const tasksRoute = createRoute({
     getParentRoute: () => rootRoute,
     path: "/tasks",
-    staticData: { breadcrumb: "Items" },
+    staticData: { breadcrumb: "项目列表" },
     component: Outlet,
   });
   const taskRoute = createRoute({
@@ -164,7 +164,7 @@ function createParameterizedHeaderRouter() {
     path: "$taskId",
     staticData: {
       breadcrumb: {
-        label: "Item",
+        label: "项目",
         renderLink: (props) => (
           <Link
             to="/tasks/$taskId"
@@ -180,9 +180,9 @@ function createParameterizedHeaderRouter() {
     getParentRoute: () => taskRoute,
     path: "details",
     staticData: {
-      breadcrumb: "Details",
+      breadcrumb: "详情",
       back: {
-        label: "Back to item",
+        label: "返回项目",
         renderLink: (props) => (
           <Link
             to="/tasks/$taskId"
@@ -226,7 +226,7 @@ test.each([
   renderHeaderAt(path);
 
   const breadcrumb = await screen.findByRole("navigation", {
-    name: "breadcrumb",
+    name: "面包屑导航",
   });
   const currentItem = within(breadcrumb).getByText(label);
 
@@ -238,7 +238,7 @@ test("父 Breadcrumb 可点击且当前项不可点击", async () => {
   renderHeaderAt("/cameras/camera-42");
 
   const breadcrumb = await screen.findByRole("navigation", {
-    name: "breadcrumb",
+    name: "面包屑导航",
   });
 
   expect(
@@ -254,7 +254,7 @@ test("详情 Breadcrumb 优先显示 loader 返回的动态名称", async () => 
   render(<RouterProvider router={createDynamicHeaderRouter()} />);
 
   const breadcrumb = await screen.findByRole("navigation", {
-    name: "breadcrumb",
+    name: "面包屑导航",
   });
 
   expect(within(breadcrumb).getByText("总装线入口摄像头")).toHaveAttribute(
@@ -268,7 +268,7 @@ test("Breadcrumb 不设置 title 以禁用浏览器原生悬停提示", async ()
   renderHeaderAt("/cameras/camera-42");
 
   const breadcrumb = await screen.findByRole("navigation", {
-    name: "breadcrumb",
+    name: "面包屑导航",
   });
   const parentItem = within(breadcrumb).getByRole("link", { name: "摄像头" });
   const currentItem = within(breadcrumb).getByText(LONG_CAMERA_LABEL);
@@ -282,7 +282,7 @@ test("仅在 back 元数据存在时显示指向明确父路由的返回链接",
     <RouterProvider router={createHeaderRouter("/cameras")} />,
   );
 
-  await screen.findByRole("navigation", { name: "breadcrumb" });
+  await screen.findByRole("navigation", { name: "面包屑导航" });
   expect(screen.queryByRole("link", { name: "返回摄像头列表" })).toBeNull();
 
   unmount();
@@ -302,14 +302,14 @@ test("动态目标由 Router 替换相似参数名并编码参数值", async () 
   render(<RouterProvider router={createParameterizedHeaderRouter()} />);
 
   const breadcrumb = await screen.findByRole("navigation", {
-    name: "breadcrumb",
+    name: "面包屑导航",
   });
   const expectedHref = "/tasks/line%20camera";
 
   expect(
-    within(breadcrumb).getByRole("link", { name: "Item" }),
+    within(breadcrumb).getByRole("link", { name: "项目" }),
   ).toHaveAttribute("href", expectedHref);
-  expect(screen.getByRole("link", { name: "Back to item" })).toHaveAttribute(
+  expect(screen.getByRole("link", { name: "返回项目" })).toHaveAttribute(
     "href",
     expectedHref,
   );
@@ -354,7 +354,7 @@ test("长 Breadcrumb 保持 Header 固定高度并截断而不换行", async () 
   renderHeaderAt("/cameras/camera-42");
 
   const header = await screen.findByRole("banner");
-  const breadcrumb = screen.getByRole("navigation", { name: "breadcrumb" });
+  const breadcrumb = screen.getByRole("navigation", { name: "面包屑导航" });
   const list = breadcrumb.querySelector('[data-slot="breadcrumb-list"]');
   const currentItem = within(breadcrumb).getByText(LONG_CAMERA_LABEL);
 
@@ -371,7 +371,7 @@ test("长中文 Breadcrumb 保持合法列表结构", async () => {
   renderHeaderAt("/cameras/camera-42");
 
   const breadcrumb = await screen.findByRole("navigation", {
-    name: "breadcrumb",
+    name: "面包屑导航",
   });
   const list = breadcrumb.querySelector('[data-slot="breadcrumb-list"]');
 
@@ -392,7 +392,7 @@ test("Breadcrumb 在 Header 中心列内居中", async () => {
   renderHeaderAt("/cameras");
 
   const breadcrumb = await screen.findByRole("navigation", {
-    name: "breadcrumb",
+    name: "面包屑导航",
   });
   const centerRegion = breadcrumb.closest('[data-slot="app-header-center"]');
 
@@ -407,19 +407,19 @@ test("超过三层时压缩为第一项、Ellipsis 和当前项", async () => {
   render(<RouterProvider router={createDeepHeaderRouter()} />);
 
   const breadcrumb = await screen.findByRole("navigation", {
-    name: "breadcrumb",
+    name: "面包屑导航",
   });
 
   expect(
-    within(breadcrumb).getByRole("link", { name: "Workspace" }),
+    within(breadcrumb).getByRole("link", { name: "工作区" }),
   ).toBeInTheDocument();
   expect(
     breadcrumb.querySelector('[data-slot="breadcrumb-ellipsis"]'),
   ).toBeInTheDocument();
-  expect(within(breadcrumb).getByText("Settings")).toHaveAttribute(
+  expect(within(breadcrumb).getByText("设置")).toHaveAttribute(
     "aria-current",
     "page",
   );
   expect(within(breadcrumb).queryByText("摄像头")).toBeNull();
-  expect(within(breadcrumb).queryByText("Camera 42")).toBeNull();
+  expect(within(breadcrumb).queryByText("摄像头 42")).toBeNull();
 });

@@ -39,7 +39,7 @@ function findFirstVisible(elements: NodeListOf<HTMLElement>) {
 
 export function RouteFocusManager() {
   const pathname = useRouterState({
-    // resolvedLocation changes after the new route matches have rendered.
+    // 新路由匹配项渲染完成后，resolvedLocation 才会发生变化。
     select: (state) =>
       state.resolvedLocation?.pathname ?? state.location.pathname,
   });
@@ -65,8 +65,8 @@ export function RouteFocusManager() {
         mainContent.querySelectorAll<HTMLElement>("h1"),
       );
 
-      // Router scroll restoration runs on onRendered. preventScroll keeps this
-      // focus handoff from starting a second, competing scroll.
+      // Router 会在 onRendered 阶段恢复滚动；preventScroll 可避免焦点交接
+      // 再次触发滚动并与其竞争。
       (routeTarget ?? pageHeading)?.focus({ preventScroll: true });
     });
 

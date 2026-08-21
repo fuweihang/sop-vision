@@ -36,25 +36,25 @@ test("解析静态面包屑并省略没有元数据的匹配项", () => {
       pathname: "/items",
       staticData: {
         breadcrumb: {
-          label: "Items",
+          label: "项目",
           renderLink: renderItemsLink,
         },
       },
     }),
-    createMatch({ staticData: { breadcrumb: "Item details" } }),
+    createMatch({ staticData: { breadcrumb: "项目详情" } }),
   ]);
 
   expect(items).toEqual([
     {
       routeId: "/items",
       pathname: "/items",
-      label: "Items",
+      label: "项目",
       renderLink: renderItemsLink,
     },
     {
       routeId: "/items/$itemId",
       pathname: "/items/item-42",
-      label: "Item details",
+      label: "项目详情",
     },
   ]);
 });
@@ -62,7 +62,7 @@ test("解析静态面包屑并省略没有元数据的匹配项", () => {
 test("从 loader 数据解析动态标签", () => {
   const items = resolveBreadcrumbItems([
     createMatch({
-      loaderData: { name: "Inspection SOP" },
+      loaderData: { name: "巡检 SOP" },
       staticData: {
         breadcrumb: {
           label: (match) =>
@@ -76,13 +76,13 @@ test("从 loader 数据解析动态标签", () => {
                   ? loaderData.name
                   : undefined,
               "itemId",
-            ) ?? "Item details",
+            ) ?? "项目详情",
         },
       },
     }),
   ]);
 
-  expect(items[0]?.label).toBe("Inspection SOP");
+  expect(items[0]?.label).toBe("巡检 SOP");
 });
 
 test("loader 数据缺失时回退使用路由参数", () => {
@@ -98,7 +98,7 @@ test("保留在路由定义处完成类型检查的特殊链接渲染器", () =>
     createMatch({
       staticData: {
         breadcrumb: {
-          label: "Item details",
+          label: "项目详情",
           renderLink: renderItemLink,
         },
       },
@@ -110,11 +110,11 @@ test("保留在路由定义处完成类型检查的特殊链接渲染器", () =>
 
 test("从最深层匹配项解析返回元数据", () => {
   const parentBack = {
-    label: "Back to items",
+    label: "返回项目列表",
     renderLink: renderItemsLink,
   };
   const itemBack = {
-    label: "Back to item",
+    label: "返回项目",
     renderLink: renderItemLink,
   };
 
@@ -146,13 +146,13 @@ test("createFileRoute 接受扩展后的静态数据协议", () => {
         renderLink: renderItemsLink,
       },
       back: {
-        label: "Back to home",
+        label: "返回首页",
         renderLink: renderItemsLink,
       },
     },
   });
 
-  expect(route.options.staticData?.back?.label).toBe("Back to home");
+  expect(route.options.staticData?.back?.label).toBe("返回首页");
 });
 
 test("接受 useMatches 返回的匹配项联合类型", () => {
