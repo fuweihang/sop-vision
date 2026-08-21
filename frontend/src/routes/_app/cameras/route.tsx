@@ -45,7 +45,7 @@ function CamerasRouteError({ reset }: ErrorComponentProps) {
       description="摄像头页面暂时不可用，请稍后重试。"
       onRetry={() => router.invalidate()}
       reset={reset}
-      returnTo="/cameras"
+      returnLinkOptions={{ to: "/cameras" }}
       returnLabel="返回摄像头列表"
     />
   );
@@ -57,7 +57,7 @@ function CamerasRouteNotFound() {
       kind="camera"
       title="未找到摄像头"
       description="该摄像头不存在、已被删除，或当前地址无效。"
-      returnTo="/cameras"
+      returnLinkOptions={{ to: "/cameras" }}
       returnLabel="返回摄像头列表"
     />
   );

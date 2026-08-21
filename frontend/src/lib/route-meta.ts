@@ -1,13 +1,10 @@
-/** Shell 只接受站内绝对路由地址，避免把相对地址的解析语义带入元数据。 */
-export type ShellRoutePath = `/${string}`;
+import type { ComponentProps, ReactElement } from "react";
 
 /**
  * StaticDataRouteOption 本身不携带具体路由的泛型，因此在协议边界使用 unknown。
  * 各业务路由应在标签解析器中通过类型守卫收窄 loaderData 和 params。
  */
 export type ShellMatchParams = Readonly<Record<string, unknown>>;
-
-export type ShellRouteTargetParams = Readonly<Record<string, string>>;
 
 export interface ShellRouteMatchContext {
   routeId: string;
@@ -16,34 +13,30 @@ export interface ShellRouteMatchContext {
   loaderData?: unknown;
 }
 
-export type ShellRouteTargetParamsResolver = (
-  match: ShellRouteMatchContext,
-) => ShellRouteTargetParams;
+export type ShellLinkPresentationProps = Pick<
+  ComponentProps<"a">,
+  "aria-label" | "children" | "className"
+>;
 
-export interface ShellRouteTarget {
-  to: ShellRoutePath;
-  /** 动态目标可从当前 match 提取参数，解析后再交给路由适配层。 */
-  params?: ShellRouteTargetParams | ShellRouteTargetParamsResolver;
-}
-
-export interface ResolvedShellRouteTarget {
-  to: ShellRoutePath;
-  params?: ShellRouteTargetParams;
-}
+export type ShellLinkRenderer = (
+  props: ShellLinkPresentationProps,
+) => ReactElement;
 
 export type ShellBreadcrumbLabel =
   string | ((match: ShellRouteMatchContext) => string);
 
 export interface ShellBreadcrumbDefinition {
   label: ShellBreadcrumbLabel;
-  target?: ShellRouteTarget;
+  /** 特殊目标必须在路由定义处渲染 Link，以保留 Router 的完整类型推断。 */
+  renderLink?: ShellLinkRenderer;
 }
 
 export type ShellBreadcrumb = string | ShellBreadcrumbDefinition;
 
-export interface ShellBackDefinition extends ShellRouteTarget {
+export interface ShellBackDefinition {
   /** 返回链接或按钮使用的可访问名称。 */
   label: string;
+  renderLink: ShellLinkRenderer;
 }
 
 export interface ShellRouteMeta {
@@ -70,22 +63,10 @@ export interface ShellBreadcrumbItem {
   routeId: string;
   pathname: string;
   label: string;
-  target?: ResolvedShellRouteTarget;
+  renderLink?: ShellLinkRenderer;
 }
 
-export interface ShellBackItem extends ResolvedShellRouteTarget {
-  label: string;
-}
-
-export function resolveShellRouteTarget(
-  target: ShellRouteTarget,
-  match: ShellRouteMatchContext,
-): ResolvedShellRouteTarget {
-  const params =
-    typeof target.params === "function" ? target.params(match) : target.params;
-
-  return params === undefined ? { to: target.to } : { to: target.to, params };
-}
+export type ShellBackItem = ShellBackDefinition;
 
 /** 按 useMatches() 的父到子顺序解析有 breadcrumb 元数据的 match。 */
 export function resolveBreadcrumbItems(
@@ -110,12 +91,12 @@ export function resolveBreadcrumbItems(
       label,
     };
 
-    return definition.target === undefined
+    return definition.renderLink === undefined
       ? [baseItem]
       : [
           {
             ...baseItem,
-            target: resolveShellRouteTarget(definition.target, match),
+            renderLink: definition.renderLink,
           },
         ];
   });
@@ -130,10 +111,7 @@ export function resolveBackItem(
     const back = match?.staticData.back;
 
     if (match !== undefined && back !== undefined) {
-      return {
-        label: back.label,
-        ...resolveShellRouteTarget(back, match),
-      };
+      return back;
     }
   }
 

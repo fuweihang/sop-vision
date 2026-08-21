@@ -2,14 +2,19 @@ import {
   createFileRoute,
   type MakeRouteMatchUnion,
 } from "@tanstack/react-router";
+import { createElement } from "react";
 import { expect, test } from "vitest";
 
 import {
   getLoaderDataLabelOrParam,
   resolveBackItem,
   resolveBreadcrumbItems,
+  type ShellLinkRenderer,
   type ShellRouteMatch,
 } from "@/lib/route-meta";
+
+const renderItemsLink: ShellLinkRenderer = (props) => createElement("a", props);
+const renderItemLink: ShellLinkRenderer = (props) => createElement("a", props);
 
 function createMatch(
   overrides: Partial<ShellRouteMatch> = {},
@@ -32,7 +37,7 @@ test("解析静态面包屑并省略没有元数据的匹配项", () => {
       staticData: {
         breadcrumb: {
           label: "Items",
-          target: { to: "/items" },
+          renderLink: renderItemsLink,
         },
       },
     }),
@@ -44,7 +49,7 @@ test("解析静态面包屑并省略没有元数据的匹配项", () => {
       routeId: "/items",
       pathname: "/items",
       label: "Items",
-      target: { to: "/items" },
+      renderLink: renderItemsLink,
     },
     {
       routeId: "/items/$itemId",
@@ -88,50 +93,45 @@ test("loader 数据缺失时回退使用路由参数", () => {
   );
 });
 
-test("从当前匹配项解析目标参数", () => {
+test("保留在路由定义处完成类型检查的特殊链接渲染器", () => {
   const items = resolveBreadcrumbItems([
     createMatch({
       staticData: {
         breadcrumb: {
           label: "Item details",
-          target: {
-            to: "/items/$itemId",
-            params: (match) => ({ itemId: String(match.params.itemId) }),
-          },
+          renderLink: renderItemLink,
         },
       },
     }),
   ]);
 
-  expect(items[0]?.target).toEqual({
-    to: "/items/$itemId",
-    params: { itemId: "item-42" },
-  });
+  expect(items[0]?.renderLink).toBe(renderItemLink);
 });
 
 test("从最深层匹配项解析返回元数据", () => {
+  const parentBack = {
+    label: "Back to items",
+    renderLink: renderItemsLink,
+  };
+  const itemBack = {
+    label: "Back to item",
+    renderLink: renderItemLink,
+  };
+
   expect(
     resolveBackItem([
       createMatch({
         staticData: {
-          back: { to: "/items", label: "Back to items" },
+          back: parentBack,
         },
       }),
       createMatch({
         staticData: {
-          back: {
-            to: "/items/$itemId",
-            params: { itemId: "item-42" },
-            label: "Back to item",
-          },
+          back: itemBack,
         },
       }),
     ]),
-  ).toEqual({
-    to: "/items/$itemId",
-    params: { itemId: "item-42" },
-    label: "Back to item",
-  });
+  ).toBe(itemBack);
 });
 
 test("没有返回元数据时不产生返回项", () => {
@@ -143,11 +143,11 @@ test("createFileRoute 接受扩展后的静态数据协议", () => {
     staticData: {
       breadcrumb: {
         label: ({ pathname }) => pathname,
-        target: { to: "/" },
+        renderLink: renderItemsLink,
       },
       back: {
-        to: "/",
         label: "Back to home",
+        renderLink: renderItemsLink,
       },
     },
   });

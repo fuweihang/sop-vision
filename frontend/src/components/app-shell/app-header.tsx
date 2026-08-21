@@ -1,6 +1,6 @@
 import { ArrowLeft01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Link, useMatches } from "@tanstack/react-router";
+import { useMatches } from "@tanstack/react-router";
 
 import { AppBreadcrumbs } from "@/components/app-shell/app-breadcrumbs";
 import { ThemeToggle } from "@/components/app-shell/theme-toggle";
@@ -16,29 +16,17 @@ function RouteBackLink() {
     return null;
   }
 
-  const backTo: string = backItem.to;
-  const backLinkProps = {
+  return backItem.renderLink({
     "aria-label": backItem.label,
     className: buttonVariants({ variant: "ghost", size: "icon" }),
-    preload: "intent" as const,
-  };
-  const backLinkIcon = (
-    <HugeiconsIcon
-      data-icon="inline-start"
-      icon={ArrowLeft01Icon}
-      strokeWidth={2}
-    />
-  );
-
-  return backItem.params === undefined ? (
-    <Link to={backTo} {...backLinkProps}>
-      {backLinkIcon}
-    </Link>
-  ) : (
-    <Link to={backTo} params={backItem.params} {...backLinkProps}>
-      {backLinkIcon}
-    </Link>
-  );
+    children: (
+      <HugeiconsIcon
+        data-icon="inline-start"
+        icon={ArrowLeft01Icon}
+        strokeWidth={2}
+      />
+    ),
+  });
 }
 
 export function AppHeader() {

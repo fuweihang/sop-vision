@@ -20,15 +20,15 @@ export function AppMainNavigation() {
           <SidebarMenu className="gap-1">
             {mainNavigation.map((item) => {
               const isActive = Boolean(
-                matchRoute({ to: item.to, fuzzy: true }),
+                matchRoute({ to: item.linkOptions.to, fuzzy: true }),
               );
 
               return (
-                <SidebarMenuItem key={item.to}>
+                <SidebarMenuItem key={item.linkOptions.to}>
                   <SidebarMenuButton
                     render={
                       <Link
-                        to={item.to}
+                        {...item.linkOptions}
                         aria-current={isActive ? "page" : undefined}
                       />
                     }

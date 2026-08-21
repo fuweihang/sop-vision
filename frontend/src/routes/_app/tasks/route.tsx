@@ -45,7 +45,7 @@ function TasksRouteError({ reset }: ErrorComponentProps) {
       description="检测任务页面暂时不可用，请稍后重试。"
       onRetry={() => router.invalidate()}
       reset={reset}
-      returnTo="/tasks"
+      returnLinkOptions={{ to: "/tasks" }}
       returnLabel="返回检测任务列表"
     />
   );
@@ -57,7 +57,7 @@ function TasksRouteNotFound() {
       kind="task"
       title="未找到检测任务"
       description="该检测任务不存在、已被删除，或当前地址无效。"
-      returnTo="/tasks"
+      returnLinkOptions={{ to: "/tasks" }}
       returnLabel="返回检测任务列表"
     />
   );

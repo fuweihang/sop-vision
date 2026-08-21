@@ -3,6 +3,7 @@ import {
   createRootRoute,
   createRoute,
   createRouter,
+  Link,
   Outlet,
   RouterProvider,
 } from "@tanstack/react-router";
@@ -47,8 +48,8 @@ function createHeaderRouter(initialPath: string) {
     staticData: {
       breadcrumb: LONG_CAMERA_LABEL,
       back: {
-        to: "/cameras",
         label: "返回摄像头列表",
+        renderLink: (props) => <Link to="/cameras" {...props} />,
       },
     },
   });
@@ -107,45 +108,53 @@ function createDeepHeaderRouter() {
 
 function createParameterizedHeaderRouter() {
   const rootRoute = createRootRoute({ component: TestShell });
-  const itemsRoute = createRoute({
+  const tasksRoute = createRoute({
     getParentRoute: () => rootRoute,
-    path: "/items",
+    path: "/tasks",
     staticData: { breadcrumb: "Items" },
     component: Outlet,
   });
-  const itemRoute = createRoute({
-    getParentRoute: () => itemsRoute,
-    path: "$id/$id2",
+  const taskRoute = createRoute({
+    getParentRoute: () => tasksRoute,
+    path: "$taskId",
     staticData: {
       breadcrumb: {
         label: "Item",
-        target: {
-          to: "/items/$id/$id2",
-          params: { id: "line camera", id2: "@station" },
-        },
+        renderLink: (props) => (
+          <Link
+            to="/tasks/$taskId"
+            params={{ taskId: "line camera" }}
+            {...props}
+          />
+        ),
       },
     },
     component: Outlet,
   });
   const detailsRoute = createRoute({
-    getParentRoute: () => itemRoute,
+    getParentRoute: () => taskRoute,
     path: "details",
     staticData: {
       breadcrumb: "Details",
       back: {
-        to: "/items/$id/$id2",
-        params: { id: "line camera", id2: "@station" },
         label: "Back to item",
+        renderLink: (props) => (
+          <Link
+            to="/tasks/$taskId"
+            params={{ taskId: "line camera" }}
+            {...props}
+          />
+        ),
       },
     },
   });
 
   return createRouter({
     routeTree: rootRoute.addChildren([
-      itemsRoute.addChildren([itemRoute.addChildren([detailsRoute])]),
+      tasksRoute.addChildren([taskRoute.addChildren([detailsRoute])]),
     ]),
     history: createMemoryHistory({
-      initialEntries: ["/items/current/item/details"],
+      initialEntries: ["/tasks/current/details"],
     }),
   });
 }
@@ -262,7 +271,7 @@ test("动态目标由 Router 替换相似参数名并编码参数值", async () 
   const breadcrumb = await screen.findByRole("navigation", {
     name: "breadcrumb",
   });
-  const expectedHref = "/items/line%20camera/%40station";
+  const expectedHref = "/tasks/line%20camera";
 
   expect(
     within(breadcrumb).getByRole("link", { name: "Item" }),

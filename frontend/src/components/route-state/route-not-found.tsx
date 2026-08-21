@@ -5,7 +5,12 @@ import {
   Task01Icon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Link } from "@tanstack/react-router";
+import {
+  Link,
+  type RegisteredRouter,
+  type ValidateLinkOptions,
+} from "@tanstack/react-router";
+import type { ReactNode } from "react";
 
 import { PageContainer } from "@/components/layout/page-container";
 import { buttonVariants } from "@/components/ui/button";
@@ -17,16 +22,17 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@/components/ui/empty";
-import type { RouteReturnTarget } from "@/components/route-state/route-error";
-
 export type RouteNotFoundKind = "page" | "camera" | "task";
 
-export interface RouteNotFoundProps {
+export interface RouteNotFoundProps<
+  TRouter extends RegisteredRouter = RegisteredRouter,
+  TOptions = unknown,
+> {
   kind: RouteNotFoundKind;
   title: string;
   description: string;
   returnLabel: string;
-  returnTo: RouteReturnTarget;
+  returnLinkOptions: ValidateLinkOptions<TRouter, TOptions>;
 }
 
 const notFoundIcons = {
@@ -35,13 +41,16 @@ const notFoundIcons = {
   task: Task01Icon,
 };
 
+export function RouteNotFound<TRouter extends RegisteredRouter, TOptions>(
+  props: RouteNotFoundProps<TRouter, TOptions>,
+): ReactNode;
 export function RouteNotFound({
   kind,
   title,
   description,
   returnLabel,
-  returnTo,
-}: RouteNotFoundProps) {
+  returnLinkOptions,
+}: RouteNotFoundProps): ReactNode {
   return (
     <PageContainer>
       <Empty className="min-h-88">
@@ -57,7 +66,11 @@ export function RouteNotFound({
           <EmptyDescription>{description}</EmptyDescription>
         </EmptyHeader>
         <EmptyContent>
-          <Link to={returnTo} preload="intent" className={buttonVariants()}>
+          <Link
+            {...returnLinkOptions}
+            preload="intent"
+            className={buttonVariants()}
+          >
             <HugeiconsIcon
               data-icon="inline-start"
               icon={ArrowLeft01Icon}

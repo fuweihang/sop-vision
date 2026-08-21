@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 
 import { PageContainer } from "@/components/layout/page-container";
 import { PageHeader } from "@/components/layout/page-header";
@@ -13,8 +13,8 @@ export const Route = createFileRoute("/_app/tasks/$taskId")({
         "检测任务详情",
     },
     back: {
-      to: "/tasks",
       label: "返回检测任务列表",
+      renderLink: (props) => <Link to="/tasks" preload="intent" {...props} />,
     },
   },
   component: TaskDetailPage,
@@ -49,7 +49,7 @@ function TaskNotFound() {
       kind="task"
       title="未找到检测任务"
       description="该检测任务不存在或已被删除。"
-      returnTo="/tasks"
+      returnLinkOptions={{ to: "/tasks" }}
       returnLabel="返回检测任务列表"
     />
   );

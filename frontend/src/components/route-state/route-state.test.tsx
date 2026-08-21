@@ -37,7 +37,7 @@ test("Error 重试会调用框架 reset 与数据重试回调", async () => {
         description="检测任务页面暂时不可用，请稍后重试。"
         onRetry={onRetry}
         reset={reset}
-        returnTo="/tasks"
+        returnLinkOptions={{ to: "/tasks" }}
         returnLabel="返回检测任务列表"
       />
     ),

@@ -34,7 +34,7 @@ function RootRouteError({ reset }: ErrorComponentProps) {
       description="应用遇到意外问题，当前页面未能完成加载。"
       onRetry={() => router.invalidate()}
       reset={reset}
-      returnTo="/"
+      returnLinkOptions={{ to: "/" }}
       returnLabel="返回首页"
     />
   );
@@ -46,7 +46,7 @@ function RootRouteNotFound() {
       kind="page"
       title="页面不存在"
       description="当前地址没有对应的页面，请返回首页继续浏览。"
-      returnTo="/"
+      returnLinkOptions={{ to: "/" }}
       returnLabel="返回首页"
     />
   );

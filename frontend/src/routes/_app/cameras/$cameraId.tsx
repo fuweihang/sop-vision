@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 
 import { PageContainer } from "@/components/layout/page-container";
 import { PageHeader } from "@/components/layout/page-header";
@@ -13,8 +13,8 @@ export const Route = createFileRoute("/_app/cameras/$cameraId")({
         "摄像头详情",
     },
     back: {
-      to: "/cameras",
       label: "返回摄像头列表",
+      renderLink: (props) => <Link to="/cameras" preload="intent" {...props} />,
     },
   },
   component: CameraDetailPage,
@@ -49,7 +49,7 @@ function CameraNotFound() {
       kind="camera"
       title="未找到摄像头"
       description="该摄像头不存在或已被删除。"
-      returnTo="/cameras"
+      returnLinkOptions={{ to: "/cameras" }}
       returnLabel="返回摄像头列表"
     />
   );

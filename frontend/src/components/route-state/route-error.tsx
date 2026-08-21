@@ -4,8 +4,13 @@ import {
   ReloadIcon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Link, type ErrorComponentProps } from "@tanstack/react-router";
-import { useState } from "react";
+import {
+  Link,
+  type ErrorComponentProps,
+  type RegisteredRouter,
+  type ValidateLinkOptions,
+} from "@tanstack/react-router";
+import { useState, type ReactNode } from "react";
 
 import { PageContainer } from "@/components/layout/page-container";
 import { PageHeader } from "@/components/layout/page-header";
@@ -13,24 +18,28 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 
-export type RouteReturnTarget = "/" | "/cameras" | "/tasks";
-
-export interface RouteErrorProps extends Pick<ErrorComponentProps, "reset"> {
+export interface RouteErrorProps<
+  TRouter extends RegisteredRouter = RegisteredRouter,
+  TOptions = unknown,
+> extends Pick<ErrorComponentProps, "reset"> {
   title: string;
   description: string;
   onRetry: () => Promise<void> | void;
   returnLabel: string;
-  returnTo: RouteReturnTarget;
+  returnLinkOptions: ValidateLinkOptions<TRouter, TOptions>;
 }
 
+export function RouteError<TRouter extends RegisteredRouter, TOptions>(
+  props: RouteErrorProps<TRouter, TOptions>,
+): ReactNode;
 export function RouteError({
   title,
   description,
   onRetry,
   reset,
   returnLabel,
-  returnTo,
-}: RouteErrorProps) {
+  returnLinkOptions,
+}: RouteErrorProps): ReactNode {
   const [isRetrying, setIsRetrying] = useState(false);
 
   async function handleRetry() {
@@ -70,7 +79,7 @@ export function RouteError({
               {isRetrying ? "正在重试" : "重试"}
             </Button>
             <Link
-              to={returnTo}
+              {...returnLinkOptions}
               preload="intent"
               className={buttonVariants({ variant: "outline" })}
             >
