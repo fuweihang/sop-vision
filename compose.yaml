@@ -2,6 +2,7 @@ name: sop-vision
 
 volumes:
   postgres-data:
+  redis-data:
 
 services:
 
@@ -24,6 +25,29 @@ services:
       timeout: 5s
       retries: 5
       start_period: 10s
+
+  redis:
+    image: redis:${REDIS_IMAGE_TAG:-7-alpine}
+    restart: unless-stopped
+    command:
+      - redis-server
+      - --appendonly
+      - "yes"
+      - --appendfsync
+      - everysec
+    volumes:
+      - redis-data:/data
+    expose:
+      - "6379"
+    healthcheck:
+      test:
+        - CMD
+        - redis-cli
+        - ping
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
 
   mediamtx:
     image: bluenviron/mediamtx:${MEDIAMTX_IMAGE_TAG:-1}
@@ -49,6 +73,13 @@ services:
     restart: unless-stopped
     environment:
       DATABASE_URL: "${DATABASE_URL:-postgresql://sop_vision:sop_vision@postgres:5432/sop_vision}"
+      DATABASE_POOL_SIZE: "${DATABASE_POOL_SIZE:-5}"
+      DATABASE_MAX_OVERFLOW: "${DATABASE_MAX_OVERFLOW:-5}"
+      DATABASE_POOL_TIMEOUT: "${DATABASE_POOL_TIMEOUT:-30}"
+      DATABASE_POOL_RECYCLE: "${DATABASE_POOL_RECYCLE:-1800}"
+      DATABASE_CONNECT_TIMEOUT: "${DATABASE_CONNECT_TIMEOUT:-10}"
+      DATABASE_ECHO: "${DATABASE_ECHO:-false}"
+      REDIS_URL: "${REDIS_URL:-redis://redis:6379/0}"
       MEDIAMTX_API_URL: "${MEDIAMTX_API_URL:-http://mediamtx:9997}"
       MEDIAMTX_API_TIMEOUT: "${MEDIAMTX_API_TIMEOUT:-5}"
       PUBLIC_WEBRTC_BASE_URL: "${PUBLIC_WEBRTC_BASE_URL:-http://localhost:8889}"
@@ -60,6 +91,8 @@ services:
       mediamtx:
         condition: service_started
       postgres:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     healthcheck:
       test:

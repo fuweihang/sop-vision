@@ -1,0 +1,12 @@
+# 本地开发环境对主机运行的后端和前端进程的配置。
+# 需显式配合使用：docker compose -f compose.yaml -f compose.dev.yaml up -d --wait postgres redis mediamtx
+services:
+  redis:
+    ports:
+      # Redis 可供主机开发和测试进程使用，而无需将其暴露给 LAN。
+      - "127.0.0.1:${REDIS_HOST_PORT:-6379}:6379"
+
+  mediamtx:
+    ports:
+      # MediaMTX 控制 API 可供主机使用，而无需将其暴露给 LAN。
+      - "127.0.0.1:${MEDIAMTX_API_HOST_PORT:-9997}:9997"
