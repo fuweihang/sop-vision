@@ -49,6 +49,18 @@ export default defineConfig(
     },
   },
   {
+    files: ["src/components/ui/*.tsx"],
+    rules: {
+      "react-refresh/only-export-components": [
+        "warn",
+        {
+          allowConstantExport: true,
+          allowExportNames: ["buttonVariants", "badgeVariants", "useSidebar"],
+        },
+      ],
+    },
+  },
+  {
     files: ["src/routes/**/*.tsx"],
     rules: {
       "react-refresh/only-export-components": "off",
