@@ -1,6 +1,6 @@
 # 04｜Camera 详情
 
-> 前置：[Cameras 基础契约](./01-foundation.md)  
+> 前置：[Cameras 基础契约](../01-foundation/README.md)  
 > 交付：`GET /cameras/{camera_id}`、详情路由、Source 信息和凭据响应边界
 
 ## 1. 完成目标

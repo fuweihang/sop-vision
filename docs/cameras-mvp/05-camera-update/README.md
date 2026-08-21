@@ -1,6 +1,6 @@
 # 05｜更新 Camera 与 Source 集合
 
-> 前置：[Cameras 基础契约](./01-foundation.md)、[Camera 详情](./04-camera-detail.md)  
+> 前置：[Cameras 基础契约](../01-foundation/README.md)、[Camera 详情](../04-camera-detail/README.md)  
 > 交付：`PUT /cameras/{camera_id}`、编辑表单和 Source 差异保存
 
 ## 1. 完成目标
@@ -71,7 +71,7 @@ Content-Type: application/json
 - 数组顺序是保存后的 Source 顺序。
 - 唯一 `is_default_preview=true` 项成为默认源。
 
-成功返回 `200`、`Cache-Control: no-store` 和与 [Camera 详情](./04-camera-detail.md) 相同的 CameraDetail。
+成功返回 `200`、`Cache-Control: no-store` 和与 [Camera 详情](../04-camera-detail/README.md) 相同的 CameraDetail。
 
 ## 4. 校验规则
 

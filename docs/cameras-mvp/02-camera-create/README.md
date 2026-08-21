@@ -1,6 +1,6 @@
 # 02｜创建 Camera
 
-> 前置：[Cameras 基础契约](./01-foundation.md)  
+> 前置：[Cameras 基础契约](../01-foundation/README.md)  
 > 交付：`POST /cameras`、新增表单、聚合事务和独立验收场景
 
 ## 1. 完成目标

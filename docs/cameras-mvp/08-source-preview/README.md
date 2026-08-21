@@ -1,6 +1,6 @@
 # 08｜CameraSource WHEP 预览
 
-> 前置：[Cameras 基础契约](./01-foundation.md)、[Camera 详情](./04-camera-detail.md)  
+> 前置：[Cameras 基础契约](../01-foundation/README.md)、[Camera 详情](../04-camera-detail/README.md)  
 > 交付：Playback API、MediaMTX Adapter、WHEP 播放器和失败恢复
 
 ## 1. 完成目标

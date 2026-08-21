@@ -1,6 +1,6 @@
 # 09｜删除 Camera
 
-> 前置：[Cameras 基础契约](./01-foundation.md)、[Camera 详情](./04-camera-detail.md)  
+> 前置：[Cameras 基础契约](../01-foundation/README.md)、[Camera 详情](../04-camera-detail/README.md)  
 > 交付：`DELETE /cameras/{camera_id}`、危险操作确认、聚合删除和缓存清理
 
 ## 1. 完成目标

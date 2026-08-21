@@ -1,6 +1,6 @@
 # 03｜Camera 列表
 
-> 前置：[Cameras 基础契约](./01-foundation.md)  
+> 前置：[Cameras 基础契约](../01-foundation/README.md)  
 > 交付：`GET /cameras`、卡片列表、搜索、分页和空状态
 
 ## 1. 完成目标
@@ -86,7 +86,7 @@ GET /api/v1/cameras?q=洗手&page=1&page_size=20&sort=name
 - 状态或播放字段降级时仍返回 `200`，配置字段和分页结果不得缺失。
 - 批量读取状态必须按当前页 Source ID 一次完成，不得对每张卡片发起独立网络请求。
 
-状态聚合的准确规则由 [Source 状态](./07-source-status.md) 所有；播放器生命周期由 [Source 预览](./08-source-preview.md) 所有。
+状态聚合的准确规则由 [Source 状态](../07-source-status/README.md) 所有；播放器生命周期由 [Source 预览](../08-source-preview/README.md) 所有。
 
 ## 6. 前端卡片契约
 

@@ -1,6 +1,6 @@
 # 06｜切换默认预览源
 
-> 前置：[Cameras 基础契约](./01-foundation.md)、[Camera 详情](./04-camera-detail.md)  
+> 前置：[Cameras 基础契约](../01-foundation/README.md)、[Camera 详情](../04-camera-detail/README.md)  
 > 交付：默认源 PATCH API 和详情页单选交互
 
 ## 1. 完成目标

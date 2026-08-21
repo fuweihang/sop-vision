@@ -1,6 +1,6 @@
 # 07｜CameraSource 状态
 
-> 前置：[Cameras 基础契约](./01-foundation.md)  
+> 前置：[Cameras 基础契约](../01-foundation/README.md)  
 > 交付：MediaMTX Control API Adapter、Path 状态映射、Camera 状态聚合及列表/详情投影
 
 ## 1. 完成目标

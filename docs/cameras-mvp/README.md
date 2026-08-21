@@ -76,15 +76,15 @@ Camera.default_preview_source_id ─── 1 CameraSource
 
 | 顺序 | 文档 | 独立可演示结果 |
 | --- | --- | --- |
-| 1 | [基础契约](./01-foundation.md) | 数据库迁移、公共 Schema、API Client 和契约测试 |
-| 2 | [创建 Camera](./02-camera-create.md) | 从表单创建包含多路 Source 的 Camera |
-| 3 | [Camera 列表](./03-camera-list.md) | 搜索、分页并展示 Camera 卡片 |
-| 4 | [Camera 详情](./04-camera-detail.md) | 通过独立路由查看 Camera 和 Source 信息 |
-| 5 | [更新 Camera](./05-camera-update.md) | 编辑基础字段和完整 Source 集合 |
-| 6 | [切换默认预览源](./06-default-preview-source.md) | 从详情页切换默认 Source |
-| 7 | [Source 状态](./07-source-status.md) | 展示 Source 状态和 Camera 聚合状态 |
-| 8 | [Source 预览](./08-source-preview.md) | 获取 WHEP 地址并管理播放器生命周期 |
-| 9 | [删除 Camera](./09-camera-delete.md) | 二次确认后删除 Camera 聚合 |
+| 1 | [基础契约](./01-foundation/README.md) | 数据库迁移、公共 Schema、API Client 和契约测试 |
+| 2 | [创建 Camera](./02-camera-create/README.md) | 从表单创建包含多路 Source 的 Camera |
+| 3 | [Camera 列表](./03-camera-list/README.md) | 搜索、分页并展示 Camera 卡片 |
+| 4 | [Camera 详情](./04-camera-detail/README.md) | 通过独立路由查看 Camera 和 Source 信息 |
+| 5 | [更新 Camera](./05-camera-update/README.md) | 编辑基础字段和完整 Source 集合 |
+| 6 | [切换默认预览源](./06-default-preview-source/README.md) | 从详情页切换默认 Source |
+| 7 | [Source 状态](./07-source-status/README.md) | 展示 Source 状态和 Camera 聚合状态 |
+| 8 | [Source 预览](./08-source-preview/README.md) | 获取 WHEP 地址并管理播放器生命周期 |
+| 9 | [删除 Camera](./09-camera-delete/README.md) | 二次确认后删除 Camera 聚合 |
 
 基础契约是所有功能切片的公共前置。其余切片可通过文档规定的 Fixture、Fake 和 Mock API 并行开发。
 
