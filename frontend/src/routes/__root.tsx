@@ -1,10 +1,5 @@
 import type { QueryClient } from "@tanstack/react-query";
-import {
-  createRootRouteWithContext,
-  Outlet,
-  useRouter,
-  type ErrorComponentProps,
-} from "@tanstack/react-router";
+import { createRootRouteWithContext, Outlet } from "@tanstack/react-router";
 import type { AxiosInstance } from "axios";
 
 import { RouteError } from "@/components/route-state/route-error";
@@ -25,15 +20,11 @@ function RootLayout() {
   return <Outlet />;
 }
 
-function RootRouteError({ reset }: ErrorComponentProps) {
-  const router = useRouter();
-
+function RootRouteError() {
   return (
     <RouteError
       title="应用暂时无法显示"
       description="应用遇到意外问题，当前页面未能完成加载。"
-      onRetry={() => router.invalidate()}
-      reset={reset}
       returnLinkOptions={{ to: "/" }}
       returnLabel="返回首页"
     />

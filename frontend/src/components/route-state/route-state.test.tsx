@@ -26,17 +26,13 @@ test("Pending 提供可访问状态并隐藏装饰性 Skeleton", () => {
   ).toBeGreaterThan(0);
 });
 
-test("Error 重试会调用框架 reset 与数据重试回调", async () => {
+test("Error 重试通过 Router invalidate 重新加载路由", async () => {
   const user = userEvent.setup();
-  const reset = vi.fn();
-  const onRetry = vi.fn(() => Promise.resolve());
   const rootRoute = createRootRoute({
     component: () => (
       <RouteError
         title="无法加载检测任务内容"
         description="检测任务页面暂时不可用，请稍后重试。"
-        onRetry={onRetry}
-        reset={reset}
         returnLinkOptions={{ to: "/tasks" }}
         returnLabel="返回检测任务列表"
       />
@@ -46,10 +42,10 @@ test("Error 重试会调用框架 reset 与数据重试回调", async () => {
     routeTree: rootRoute,
     history: createMemoryHistory({ initialEntries: ["/"] }),
   });
+  const invalidate = vi.spyOn(router, "invalidate");
 
   render(<RouterProvider router={router} />);
   await user.click(await screen.findByRole("button", { name: "重试" }));
 
-  expect(reset).toHaveBeenCalledTimes(1);
-  expect(onRetry).toHaveBeenCalledTimes(1);
+  expect(invalidate).toHaveBeenCalledTimes(1);
 });

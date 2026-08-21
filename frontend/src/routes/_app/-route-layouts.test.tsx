@@ -242,7 +242,7 @@ test("Cameras Pending 保留 Shell 并提供可访问状态", async () => {
   }
 });
 
-test("Cameras 子路由失败时保留 Shell，并可通过 reset/invalidate 重试", async () => {
+test("Cameras 子路由失败时保留 Shell，并可通过 invalidate 重试", async () => {
   const user = userEvent.setup();
   const consoleWarn = vi.spyOn(console, "warn").mockImplementation(() => {});
   let shouldFail = true;

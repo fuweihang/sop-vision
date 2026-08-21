@@ -1,10 +1,4 @@
-import {
-  createFileRoute,
-  Outlet,
-  useLocation,
-  useRouter,
-  type ErrorComponentProps,
-} from "@tanstack/react-router";
+import { createFileRoute, Outlet, useLocation } from "@tanstack/react-router";
 
 import { RouteError } from "@/components/route-state/route-error";
 import { RouteNotFound } from "@/components/route-state/route-not-found";
@@ -36,15 +30,11 @@ function TasksRoutePending() {
   );
 }
 
-function TasksRouteError({ reset }: ErrorComponentProps) {
-  const router = useRouter();
-
+function TasksRouteError() {
   return (
     <RouteError
       title="无法加载检测任务内容"
       description="检测任务页面暂时不可用，请稍后重试。"
-      onRetry={() => router.invalidate()}
-      reset={reset}
       returnLinkOptions={{ to: "/tasks" }}
       returnLabel="返回检测任务列表"
     />

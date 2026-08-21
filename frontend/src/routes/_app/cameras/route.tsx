@@ -1,10 +1,4 @@
-import {
-  createFileRoute,
-  Outlet,
-  useLocation,
-  useRouter,
-  type ErrorComponentProps,
-} from "@tanstack/react-router";
+import { createFileRoute, Outlet, useLocation } from "@tanstack/react-router";
 
 import { RouteError } from "@/components/route-state/route-error";
 import { RouteNotFound } from "@/components/route-state/route-not-found";
@@ -36,15 +30,11 @@ function CamerasRoutePending() {
   );
 }
 
-function CamerasRouteError({ reset }: ErrorComponentProps) {
-  const router = useRouter();
-
+function CamerasRouteError() {
   return (
     <RouteError
       title="无法加载摄像头内容"
       description="摄像头页面暂时不可用，请稍后重试。"
-      onRetry={() => router.invalidate()}
-      reset={reset}
       returnLinkOptions={{ to: "/cameras" }}
       returnLabel="返回摄像头列表"
     />

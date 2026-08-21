@@ -6,25 +6,23 @@ import {
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
   Link,
-  type ErrorComponentProps,
   type RegisteredRouter,
   type ValidateLinkOptions,
+  useRouter,
 } from "@tanstack/react-router";
-import { useState, type ReactNode } from "react";
+import type { ReactNode } from "react";
 
 import { PageContainer } from "@/components/layout/page-container";
 import { PageHeader } from "@/components/layout/page-header";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button, buttonVariants } from "@/components/ui/button";
-import { Spinner } from "@/components/ui/spinner";
 
 export interface RouteErrorProps<
   TRouter extends RegisteredRouter = RegisteredRouter,
   TOptions = unknown,
-> extends Pick<ErrorComponentProps, "reset"> {
+> {
   title: string;
   description: string;
-  onRetry: () => Promise<void> | void;
   returnLabel: string;
   returnLinkOptions: ValidateLinkOptions<TRouter, TOptions>;
 }
@@ -35,23 +33,10 @@ export function RouteError<TRouter extends RegisteredRouter, TOptions>(
 export function RouteError({
   title,
   description,
-  onRetry,
-  reset,
   returnLabel,
   returnLinkOptions,
 }: RouteErrorProps): ReactNode {
-  const [isRetrying, setIsRetrying] = useState(false);
-
-  async function handleRetry() {
-    setIsRetrying(true);
-    reset();
-
-    try {
-      await onRetry();
-    } finally {
-      setIsRetrying(false);
-    }
-  }
+  const router = useRouter();
 
   return (
     <PageContainer>
@@ -62,21 +47,13 @@ export function RouteError({
         <AlertDescription>
           <p>你可以重试加载，或返回一个确定的页面继续操作。</p>
           <div className="mt-4 flex flex-wrap gap-2">
-            <Button
-              type="button"
-              onClick={() => void handleRetry()}
-              disabled={isRetrying}
-            >
-              {isRetrying ? (
-                <Spinner data-icon="inline-start" />
-              ) : (
-                <HugeiconsIcon
-                  data-icon="inline-start"
-                  icon={ReloadIcon}
-                  strokeWidth={2}
-                />
-              )}
-              {isRetrying ? "正在重试" : "重试"}
+            <Button type="button" onClick={() => void router.invalidate()}>
+              <HugeiconsIcon
+                data-icon="inline-start"
+                icon={ReloadIcon}
+                strokeWidth={2}
+              />
+              重试
             </Button>
             <Link
               {...returnLinkOptions}
