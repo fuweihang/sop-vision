@@ -1,23 +1,24 @@
 import {
-  createMemoryHistory,
   createRootRoute,
   createRoute,
-  createRouter,
   Link,
   Outlet,
   RouterProvider,
 } from "@tanstack/react-router";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, expect, test, vi } from "vitest";
+import { expect, test } from "vitest";
 
 import { AppHeader } from "@/components/app-shell/app-header";
 import { ThemeToggle } from "@/components/app-shell/theme-toggle";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/providers/theme-provider";
+import { getLoaderDataLabelOrParam } from "@/lib/route-meta";
 import { Route as CamerasRoute } from "@/routes/_app/cameras/route";
 import { Route as TasksRoute } from "@/routes/_app/tasks/route";
+import { setViewportWidth } from "@/test/browser-mocks";
+import { createTestRouter } from "@/test/render-router";
 
 const LONG_CAMERA_LABEL = "名称非常长且必须保持单行显示的生产线摄像头测试标签";
 
@@ -59,13 +60,15 @@ function createHeaderRouter(initialPath: string) {
     staticData: { breadcrumb: "检测任务" },
   });
 
-  return createRouter({
-    routeTree: rootRoute.addChildren([
-      camerasRoute.addChildren([cameraDetailRoute]),
-      tasksRoute,
-    ]),
-    history: createMemoryHistory({ initialEntries: [initialPath] }),
-  });
+  return createTestRouter(
+    {
+      routeTree: rootRoute.addChildren([
+        camerasRoute.addChildren([cameraDetailRoute]),
+        tasksRoute,
+      ]),
+    },
+    { initialEntries: [initialPath] },
+  );
 }
 
 function createDeepHeaderRouter() {
@@ -94,16 +97,58 @@ function createDeepHeaderRouter() {
     staticData: { breadcrumb: "Settings" },
   });
 
-  return createRouter({
-    routeTree: rootRoute.addChildren([
-      workspaceRoute.addChildren([
-        camerasRoute.addChildren([cameraRoute.addChildren([settingsRoute])]),
+  return createTestRouter(
+    {
+      routeTree: rootRoute.addChildren([
+        workspaceRoute.addChildren([
+          camerasRoute.addChildren([cameraRoute.addChildren([settingsRoute])]),
+        ]),
       ]),
-    ]),
-    history: createMemoryHistory({
+    },
+    {
       initialEntries: ["/workspace/cameras/camera-42/settings"],
-    }),
+    },
+  );
+}
+
+function createDynamicHeaderRouter() {
+  const rootRoute = createRootRoute({ component: TestShell });
+  const camerasRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/cameras",
+    staticData: { breadcrumb: "摄像头" },
+    component: Outlet,
   });
+  const cameraDetailRoute = createRoute({
+    getParentRoute: () => camerasRoute,
+    path: "$cameraId",
+    loader: () => ({ name: "总装线入口摄像头" }),
+    staticData: {
+      breadcrumb: {
+        label: (match) =>
+          getLoaderDataLabelOrParam(
+            match,
+            (loaderData) =>
+              typeof loaderData === "object" &&
+              loaderData !== null &&
+              "name" in loaderData &&
+              typeof loaderData.name === "string"
+                ? loaderData.name
+                : undefined,
+            "cameraId",
+          ) ?? "摄像头详情",
+      },
+    },
+  });
+
+  return createTestRouter(
+    {
+      routeTree: rootRoute.addChildren([
+        camerasRoute.addChildren([cameraDetailRoute]),
+      ]),
+    },
+    { initialEntries: ["/cameras/camera-42"] },
+  );
 }
 
 function createParameterizedHeaderRouter() {
@@ -149,34 +194,14 @@ function createParameterizedHeaderRouter() {
     },
   });
 
-  return createRouter({
-    routeTree: rootRoute.addChildren([
-      tasksRoute.addChildren([taskRoute.addChildren([detailsRoute])]),
-    ]),
-    history: createMemoryHistory({
-      initialEntries: ["/tasks/current/details"],
-    }),
-  });
-}
-
-function setViewport(width: number) {
-  Object.defineProperty(window, "innerWidth", {
-    configurable: true,
-    value: width,
-  });
-  Object.defineProperty(window, "matchMedia", {
-    configurable: true,
-    value: vi.fn((query: string) => ({
-      matches: query === "(max-width: 767px)" && width < 768,
-      media: query,
-      onchange: null,
-      addEventListener: vi.fn(),
-      removeEventListener: vi.fn(),
-      addListener: vi.fn(),
-      removeListener: vi.fn(),
-      dispatchEvent: vi.fn(),
-    })),
-  });
+  return createTestRouter(
+    {
+      routeTree: rootRoute.addChildren([
+        tasksRoute.addChildren([taskRoute.addChildren([detailsRoute])]),
+      ]),
+    },
+    { initialEntries: ["/tasks/current/details"] },
+  );
 }
 
 function renderHeaderAt(initialPath: string) {
@@ -186,12 +211,6 @@ function renderHeaderAt(initialPath: string) {
 
   return router;
 }
-
-beforeEach(() => {
-  setViewport(1024);
-  localStorage.clear();
-  document.documentElement.className = "";
-});
 
 test.each([
   [CamerasRoute, "摄像头"],
@@ -229,6 +248,20 @@ test("父 Breadcrumb 可点击且当前项不可点击", async () => {
     "aria-current",
     "page",
   );
+});
+
+test("详情 Breadcrumb 优先显示 loader 返回的动态名称", async () => {
+  render(<RouterProvider router={createDynamicHeaderRouter()} />);
+
+  const breadcrumb = await screen.findByRole("navigation", {
+    name: "breadcrumb",
+  });
+
+  expect(within(breadcrumb).getByText("总装线入口摄像头")).toHaveAttribute(
+    "aria-current",
+    "page",
+  );
+  expect(within(breadcrumb).queryByText("camera-42")).toBeNull();
 });
 
 test("Breadcrumb 不设置 title 以禁用浏览器原生悬停提示", async () => {
@@ -283,7 +316,7 @@ test("动态目标由 Router 替换相似参数名并编码参数值", async () 
 });
 
 test("移动端 SidebarTrigger 保留在 Header leading 区", async () => {
-  setViewport(500);
+  setViewportWidth(500);
   renderHeaderAt("/cameras");
 
   expect(await screen.findByRole("button", { name: "打开主导航" })).toHaveClass(
@@ -332,6 +365,27 @@ test("长 Breadcrumb 保持 Header 固定高度并截断而不换行", async () 
     "whitespace-nowrap",
   );
   expect(currentItem).toHaveClass("truncate");
+});
+
+test("长中文 Breadcrumb 保持合法列表结构", async () => {
+  renderHeaderAt("/cameras/camera-42");
+
+  const breadcrumb = await screen.findByRole("navigation", {
+    name: "breadcrumb",
+  });
+  const list = breadcrumb.querySelector('[data-slot="breadcrumb-list"]');
+
+  expect(list).not.toBeNull();
+  expect(
+    Array.from(list?.children ?? []).every(
+      (child) => child.tagName.toLowerCase() === "li",
+    ),
+  ).toBe(true);
+  expect(list?.querySelector("li li")).toBeNull();
+  expect(within(breadcrumb).getByText(LONG_CAMERA_LABEL)).toHaveAttribute(
+    "aria-current",
+    "page",
+  );
 });
 
 test("Breadcrumb 在 Header 中心列内居中", async () => {

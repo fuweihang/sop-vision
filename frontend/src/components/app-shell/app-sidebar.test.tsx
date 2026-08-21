@@ -1,14 +1,12 @@
 import {
-  createMemoryHistory,
   createRootRoute,
   createRoute,
-  createRouter,
   Outlet,
   RouterProvider,
 } from "@tanstack/react-router";
 import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { expect, test, vi } from "vitest";
+import { expect, test } from "vitest";
 
 import { AppSidebar } from "@/components/app-shell/app-sidebar";
 import { SidebarRouteSync } from "@/components/app-shell/sidebar-route-sync";
@@ -19,8 +17,8 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { TooltipProvider } from "@/components/ui/tooltip";
-
-const mediaQueryListeners = new Set<() => void>();
+import { setViewportWidth } from "@/test/browser-mocks";
+import { createTestRouter } from "@/test/render-router";
 
 function SidebarStateProbe() {
   const { isMobile, open, openMobile } = useSidebar();
@@ -51,7 +49,7 @@ function TestShell() {
   );
 }
 
-function createTestRouter(initialPath: string) {
+function createSidebarRouter(initialPath: string) {
   const rootRoute = createRootRoute({ component: TestShell });
   const camerasRoute = createRoute({
     getParentRoute: () => rootRoute,
@@ -76,51 +74,12 @@ function createTestRouter(initialPath: string) {
     tasksRoute.addChildren([taskDetailRoute]),
   ]);
 
-  return createRouter({
-    routeTree,
-    history: createMemoryHistory({ initialEntries: [initialPath] }),
-  });
-}
-
-function setViewport(width: number) {
-  mediaQueryListeners.clear();
-  Object.defineProperty(window, "innerWidth", {
-    configurable: true,
-    value: width,
-  });
-  Object.defineProperty(window, "matchMedia", {
-    configurable: true,
-    value: vi.fn((query: string) => ({
-      get matches() {
-        return query === "(max-width: 767px)" && window.innerWidth < 768;
-      },
-      media: query,
-      onchange: null,
-      addEventListener: vi.fn((_type: string, listener: () => void) => {
-        mediaQueryListeners.add(listener);
-      }),
-      removeEventListener: vi.fn((_type: string, listener: () => void) => {
-        mediaQueryListeners.delete(listener);
-      }),
-      addListener: vi.fn(),
-      removeListener: vi.fn(),
-      dispatchEvent: vi.fn(),
-    })),
-  });
-}
-
-function resizeViewport(width: number) {
-  Object.defineProperty(window, "innerWidth", {
-    configurable: true,
-    value: width,
-  });
-
-  mediaQueryListeners.forEach((listener) => listener());
+  return createTestRouter({ routeTree }, { initialEntries: [initialPath] });
 }
 
 function renderAt(initialPath: string, width = 1024) {
-  setViewport(width);
-  const router = createTestRouter(initialPath);
+  setViewportWidth(width);
+  const router = createSidebarRouter(initialPath);
 
   render(<RouterProvider router={router} />);
 
@@ -162,7 +121,7 @@ test("选择菜单链接后关闭移动端 Sheet", async () => {
   });
 });
 
-test("浏览器后退时关闭移动端 Sheet", async () => {
+test("浏览器后退和前进时都关闭移动端 Sheet", async () => {
   const user = userEvent.setup();
   const router = renderAt("/tasks", 500);
 
@@ -185,6 +144,22 @@ test("浏览器后退时关闭移动端 Sheet", async () => {
       screen.queryByRole("link", { name: "检测任务" }),
     ).not.toBeInTheDocument();
   });
+
+  await user.click(await screen.findByRole("button", { name: "打开主导航" }));
+  expect(
+    await screen.findByRole("link", { name: "摄像头" }),
+  ).toBeInTheDocument();
+
+  act(() => {
+    router.history.forward();
+  });
+
+  await waitFor(() => {
+    expect(router.state.location.pathname).toBe("/cameras");
+    expect(
+      screen.queryByRole("link", { name: "摄像头" }),
+    ).not.toBeInTheDocument();
+  });
 });
 
 test("从 767px 切换到 768px 时关闭 openMobile 且不修改桌面 open", async () => {
@@ -199,7 +174,7 @@ test("从 767px 切换到 768px 时关闭 openMobile 且不修改桌面 open", a
   expect(state).toHaveAttribute("data-open", "true");
   expect(state).toHaveAttribute("data-open-mobile", "true");
 
-  act(() => resizeViewport(768));
+  act(() => setViewportWidth(768));
 
   await waitFor(() => {
     expect(state).toHaveAttribute("data-mobile", "false");
@@ -207,7 +182,7 @@ test("从 767px 切换到 768px 时关闭 openMobile 且不修改桌面 open", a
   });
   expect(state).toHaveAttribute("data-open", "true");
 
-  act(() => resizeViewport(767));
+  act(() => setViewportWidth(767));
 
   await waitFor(() => {
     expect(state).toHaveAttribute("data-mobile", "true");
@@ -230,4 +205,16 @@ test("可通过键盘操作桌面折叠按钮", async () => {
     "aria-expanded",
     "false",
   );
+});
+
+test("桌面 Sidebar 折叠后悬停菜单项会打开 Tooltip", async () => {
+  const user = userEvent.setup();
+  renderAt("/cameras");
+
+  await user.keyboard("{Control>}b{/Control}");
+  const camerasLink = await screen.findByRole("link", { name: "摄像头" });
+
+  await user.hover(camerasLink);
+
+  await waitFor(() => expect(camerasLink).toHaveAttribute("data-popup-open"));
 });

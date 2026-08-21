@@ -1,63 +1,92 @@
-import {
-  createMemoryHistory,
-  createRouter,
-  notFound,
-  RouterProvider,
-} from "@tanstack/react-router";
-import { act, render, screen, waitFor, within } from "@testing-library/react";
+import { notFound } from "@tanstack/react-router";
+import { act, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, expect, test, vi } from "vitest";
+import { expect, test, vi } from "vitest";
 
-import { apiClient } from "@/lib/api-client";
-import { queryClient } from "@/lib/query-client";
-import { routeTree } from "@/routeTree.gen";
-import { ThemeProvider } from "@/providers/theme-provider";
-
-function createTestRouter(initialPath: string) {
-  return createRouter({
-    routeTree,
-    context: { apiClient, queryClient },
-    history: createMemoryHistory({ initialEntries: [initialPath] }),
-  });
-}
-
-type TestRouter = ReturnType<typeof createTestRouter>;
+import { renderAppRoute, type AppTestRouter } from "@/test/render-router";
+import { setViewportWidth } from "@/test/browser-mocks";
 
 function renderRoute(
   initialPath: string,
-  configure?: (router: TestRouter) => void,
+  configure?: (router: AppTestRouter) => void,
 ) {
-  const router = createTestRouter(initialPath);
-
-  configure?.(router);
-
-  render(
-    <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
-      <RouterProvider router={router} />
-    </ThemeProvider>,
-  );
-
-  return router;
+  return renderAppRoute(initialPath, configure).router;
 }
 
-beforeEach(() => {
-  Object.defineProperty(window, "innerWidth", {
-    configurable: true,
-    value: 1024,
-  });
-  Object.defineProperty(window, "matchMedia", {
-    configurable: true,
-    value: vi.fn((query: string) => ({
-      matches: false,
-      media: query,
-      onchange: null,
-      addEventListener: vi.fn(),
-      removeEventListener: vi.fn(),
-      addListener: vi.fn(),
-      removeListener: vi.fn(),
-      dispatchEvent: vi.fn(),
-    })),
-  });
+test("根路径重定向到摄像头列表并渲染 Shell", async () => {
+  const router = renderRoute("/");
+
+  expect(
+    await screen.findByRole("heading", { level: 1, name: "摄像头" }),
+  ).toBeInTheDocument();
+  expect(router.state.location.pathname).toBe("/cameras");
+  expect(
+    screen.getByRole("navigation", { name: "主菜单" }),
+  ).toBeInTheDocument();
+});
+
+test.each([
+  ["true", "expanded", "折叠侧边栏"],
+  ["false", "collapsed", "展开侧边栏"],
+])(
+  "sidebar_state=%s 决定桌面 Sidebar 初始状态",
+  async (cookieValue, expectedState, triggerLabel) => {
+    document.cookie = `sidebar_state=${cookieValue}; path=/`;
+    renderRoute("/cameras");
+
+    await screen.findByRole("heading", { level: 1, name: "摄像头" });
+
+    expect(
+      document.querySelector('[data-slot="sidebar"][data-state]'),
+    ).toHaveAttribute("data-state", expectedState);
+    expect(screen.getByRole("button", { name: triggerLabel })).toHaveAttribute(
+      "aria-expanded",
+      cookieValue,
+    );
+  },
+);
+
+test.each([
+  ["Control", "{Control>}b{/Control}"],
+  ["Meta", "{Meta>}b{/Meta}"],
+])("%s+B 切换桌面 Sidebar 并持久化状态", async (_modifier, shortcut) => {
+  const user = userEvent.setup();
+  renderRoute("/cameras");
+
+  await screen.findByRole("heading", { level: 1, name: "摄像头" });
+  await user.keyboard(shortcut);
+
+  expect(
+    document.querySelector('[data-slot="sidebar"][data-state]'),
+  ).toHaveAttribute("data-state", "collapsed");
+  expect(document.cookie).toContain("sidebar_state=false");
+});
+
+test("767px 渲染移动 Sheet，768px 渲染桌面 Sidebar", async () => {
+  const user = userEvent.setup();
+  setViewportWidth(767);
+  const mobileRender = renderAppRoute("/cameras");
+
+  await screen.findByRole("heading", { level: 1, name: "摄像头" });
+  expect(screen.queryByRole("navigation", { name: "主菜单" })).toBeNull();
+
+  await user.click(screen.getByRole("button", { name: "打开主导航" }));
+  expect(await screen.findByRole("dialog", { name: "主导航" })).toHaveAttribute(
+    "data-mobile",
+    "true",
+  );
+
+  mobileRender.unmount();
+  setViewportWidth(768);
+  renderRoute("/cameras");
+
+  expect(
+    await screen.findByRole("navigation", { name: "主菜单" }),
+  ).toBeInTheDocument();
+  expect(screen.queryByRole("dialog", { name: "主导航" })).toBeNull();
+  expect(
+    document.querySelector('[data-slot="sidebar"][data-state]'),
+  ).toBeInTheDocument();
 });
 
 test.each([

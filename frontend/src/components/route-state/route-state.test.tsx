@@ -1,15 +1,11 @@
-import {
-  createMemoryHistory,
-  createRootRoute,
-  createRouter,
-  RouterProvider,
-} from "@tanstack/react-router";
+import { createRootRoute, RouterProvider } from "@tanstack/react-router";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { expect, test, vi } from "vitest";
 
 import { RouteError } from "@/components/route-state/route-error";
 import { RoutePending } from "@/components/route-state/route-pending";
+import { createTestRouter } from "@/test/render-router";
 
 test("Pending 提供可访问状态并隐藏装饰性 Skeleton", () => {
   render(<RoutePending label="正在加载摄像头内容" variant="camera-list" />);
@@ -38,10 +34,10 @@ test("Error 重试通过 Router invalidate 重新加载路由", async () => {
       />
     ),
   });
-  const router = createRouter({
-    routeTree: rootRoute,
-    history: createMemoryHistory({ initialEntries: ["/"] }),
-  });
+  const router = createTestRouter(
+    { routeTree: rootRoute },
+    { initialEntries: ["/"] },
+  );
   const invalidate = vi.spyOn(router, "invalidate");
 
   render(<RouterProvider router={router} />);
