@@ -7,7 +7,7 @@ import threading
 import time
 from collections.abc import Callable
 
-from PySide6.QtCore import QObject, QRectF, Qt, QTimer, Signal
+from PySide6.QtCore import QObject, QPointF, QRectF, Qt, QTimer, Signal
 from PySide6.QtGui import (
     QCloseEvent,
     QColor,
@@ -16,6 +16,7 @@ from PySide6.QtGui import (
     QImage,
     QPainter,
     QPen,
+    QPolygonF,
 )
 from PySide6.QtWidgets import (
     QApplication,
@@ -29,13 +30,21 @@ from PySide6.QtWidgets import (
     QPushButton,
     QScrollArea,
     QSizePolicy,
+    QSplitter,
+    QToolButton,
     QVBoxLayout,
     QWidget,
 )
 
+from algorithm.common.roi import RoiConfig
 from algorithm.contracts.detection import DetectionObject, FrameDetection
 
-from .geometry import fit_content_rect, map_normalized_bbox
+from .geometry import (
+    ContentRect,
+    fit_content_rect,
+    map_normalized_bbox,
+    map_normalized_polygon,
+)
 from .redis_subscriber import RedisDetectionSubscriber
 from .schema_form import SchemaForm, SchemaValidationError
 from .state import DetectionOverlayState
@@ -53,6 +62,34 @@ class ViewerSignals(QObject):
     operation_finished = Signal(str, bool, str, object)
 
 
+class CollapsibleSection(QWidget):
+    """A compact, initially collapsed section for infrequently edited fields."""
+
+    def __init__(self, title: str, content: QWidget) -> None:
+        super().__init__()
+        self.toggle = QToolButton()
+        self.toggle.setText(title)
+        self.toggle.setCheckable(True)
+        self.toggle.setChecked(False)
+        self.toggle.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
+        self.toggle.setArrowType(Qt.ArrowType.RightArrow)
+        self.content = content
+        self.content.setVisible(False)
+
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(4)
+        layout.addWidget(self.toggle)
+        layout.addWidget(self.content)
+        self.toggle.toggled.connect(self._set_expanded)
+
+    def _set_expanded(self, expanded: bool) -> None:
+        self.toggle.setArrowType(
+            Qt.ArrowType.DownArrow if expanded else Qt.ArrowType.RightArrow
+        )
+        self.content.setVisible(expanded)
+
+
 class VideoCanvas(QWidget):
     """等比显示视频，并在真实内容区域内绘制归一化 bbox。"""
 
@@ -60,6 +97,7 @@ class VideoCanvas(QWidget):
         super().__init__()
         self._image: QImage | None = None
         self._objects: tuple[DetectionObject, ...] = ()
+        self._roi: RoiConfig | None = None
         self.setMinimumSize(640, 360)
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
 
@@ -84,6 +122,14 @@ class VideoCanvas(QWidget):
         self._objects = objects
         self.update()
 
+    @property
+    def roi(self) -> RoiConfig | None:
+        return self._roi
+
+    def set_roi(self, roi: RoiConfig | None) -> None:
+        self._roi = roi
+        self.update()
+
     def paintEvent(self, _event: object) -> None:
         painter = QPainter(self)
         painter.fillRect(self.rect(), QColor("#111827"))
@@ -103,6 +149,7 @@ class VideoCanvas(QWidget):
         target = QRectF(content.x, content.y, content.width, content.height)
         painter.drawImage(target, self._image)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
+        self._draw_roi(painter, content)
 
         for detection in self._objects:
             left, top, right, bottom = map_normalized_bbox(detection.bbox, content)
@@ -123,6 +170,38 @@ class VideoCanvas(QWidget):
                 label,
             )
 
+    def _draw_roi(self, painter: QPainter, content: ContentRect) -> None:
+        roi = self._roi
+        if roi is None:
+            return
+        mapped = map_normalized_polygon(roi.points, content)
+        polygon = QPolygonF([QPointF(x, y) for x, y in mapped])
+        color = QColor("#facc15")
+        pen = QPen(color, 2.5, Qt.PenStyle.DashLine)
+        pen.setJoinStyle(Qt.PenJoinStyle.RoundJoin)
+        painter.setPen(pen)
+        painter.setBrush(Qt.BrushStyle.NoBrush)
+        painter.drawPolygon(polygon)
+
+        first_x, first_y = mapped[0]
+        label = f"ROI: {roi.roi_id}"
+        metrics = QFontMetrics(painter.font())
+        label_width = metrics.horizontalAdvance(label) + 8
+        label_height = metrics.height() + 4
+        label_x = max(
+            content.x,
+            min(first_x, content.x + content.width - label_width),
+        )
+        label_y = max(content.y, first_y - label_height)
+        label_rect = QRectF(label_x, label_y, label_width, label_height)
+        painter.fillRect(label_rect, QColor(250, 204, 21, 210))
+        painter.setPen(QColor("#111827"))
+        painter.drawText(
+            label_rect.adjusted(4, 0, -4, 0),
+            Qt.AlignmentFlag.AlignVCenter,
+            label,
+        )
+
 
 def _class_color(class_id: int) -> QColor:
     colors = ("#22c55e", "#3b82f6", "#f59e0b", "#ef4444", "#a855f7")
@@ -136,14 +215,12 @@ class ViewerWindow(QMainWindow):
         self,
         *,
         task_id: str,
-        rtsp_url: str,
-        redis_url: str,
         daemon_url: str = "http://127.0.0.1:8090",
         database_url: str = DEFAULT_DATABASE_URL,
     ) -> None:
         super().__init__()
         self.setWindowTitle("SOP Vision Detection Viewer")
-        self.resize(1100, 760)
+        self.resize(1280, 800)
         self._signals = ViewerSignals()
         self._signals.detection.connect(self._on_detection)
         self._signals.redis_status.connect(self._on_redis_status)
@@ -153,41 +230,51 @@ class ViewerWindow(QMainWindow):
         self._generation = 0
         self._video_feed: RtspVideoFeed | None = None
         self._subscriber: RedisDetectionSubscriber | None = None
+        self._preview_task_id: str | None = None
+        self._preview_rtsp_url: str | None = None
+        self._preview_redis_url: str | None = None
         self._last_frame_sequence = 0
         self._overlay = DetectionOverlayState(expires_after_seconds=2.0)
 
-        central = QWidget()
-        layout = QVBoxLayout(central)
-
         task_group = QGroupBox("Worker 任务配置（外部客户端模拟）")
+        task_group.setMinimumWidth(360)
+        task_group.setMaximumWidth(520)
         task_layout = QVBoxLayout(task_group)
+
+        identity = QFormLayout()
+        task_row = QHBoxLayout()
+        self.task_input = QLineEdit(task_id)
+        self.load_task_button = QPushButton("加载")
+        task_row.addWidget(self.task_input, stretch=1)
+        task_row.addWidget(self.load_task_button)
+        identity.addRow("Task ID", task_row)
+
+        worker_row = QHBoxLayout()
+        self.worker_type_input = QComboBox()
+        self.refresh_types_button = QPushButton("刷新")
+        worker_row.addWidget(self.worker_type_input, stretch=1)
+        worker_row.addWidget(self.refresh_types_button)
+        identity.addRow("Worker 类型", worker_row)
+        task_layout.addLayout(identity)
+
+        advanced_content = QWidget()
         endpoints = QFormLayout()
+        endpoints.setContentsMargins(0, 0, 0, 0)
         self.daemon_input = QLineEdit(daemon_url)
         self.database_input = QLineEdit(database_url)
         endpoints.addRow("Daemon URL", self.daemon_input)
         endpoints.addRow("Database URL", self.database_input)
-        task_layout.addLayout(endpoints)
-
-        identity = QHBoxLayout()
-        self.task_input = QLineEdit(task_id)
-        self.worker_type_input = QComboBox()
-        self.worker_type_input.setMinimumWidth(160)
-        self.refresh_types_button = QPushButton("刷新类型")
-        self.load_task_button = QPushButton("加载任务")
-        identity.addWidget(QLabel("Task ID"))
-        identity.addWidget(self.task_input, stretch=1)
-        identity.addWidget(QLabel("Worker 类型"))
-        identity.addWidget(self.worker_type_input)
-        identity.addWidget(self.refresh_types_button)
-        identity.addWidget(self.load_task_button)
-        task_layout.addLayout(identity)
+        advanced_content.setLayout(endpoints)
+        self.advanced_section = CollapsibleSection("高级连接设置", advanced_content)
+        self.advanced_toggle = self.advanced_section.toggle
+        self.advanced_panel = self.advanced_section.content
+        task_layout.addWidget(self.advanced_section)
 
         self.schema_form = SchemaForm()
         schema_scroll = QScrollArea()
         schema_scroll.setWidgetResizable(True)
-        schema_scroll.setMaximumHeight(260)
         schema_scroll.setWidget(self.schema_form)
-        task_layout.addWidget(schema_scroll)
+        task_layout.addWidget(schema_scroll, stretch=1)
 
         task_controls = QHBoxLayout()
         self.start_worker_button = QPushButton("保存并启动")
@@ -199,20 +286,16 @@ class ViewerWindow(QMainWindow):
         task_controls.addStretch(1)
         task_layout.addLayout(task_controls)
         self.task_status = QLabel("任务配置：等待加载 Schema")
+        self.task_status.setWordWrap(True)
         task_layout.addWidget(self.task_status)
-        layout.addWidget(task_group)
 
         source_group = QGroupBox("Detector 预览")
+        source_group.setMinimumWidth(640)
         source_layout = QVBoxLayout(source_group)
-        form = QFormLayout()
-        self.rtsp_input = QLineEdit(rtsp_url)
-        self.redis_input = QLineEdit(redis_url)
-        form.addRow("RTSP URL", self.rtsp_input)
-        form.addRow("Redis URL", self.redis_input)
-        source_layout.addLayout(form)
 
         controls = QHBoxLayout()
-        self.connect_button = QPushButton("连接")
+        self.connect_button = QPushButton("重新连接")
+        self.connect_button.setEnabled(False)
         self.disconnect_button = QPushButton("断开")
         self.disconnect_button.setEnabled(False)
         controls.addWidget(self.connect_button)
@@ -241,11 +324,21 @@ class ViewerWindow(QMainWindow):
         self.metrics_label = QLabel("推理：-    Worker FPS：-    消息年龄：-")
         source_layout.addWidget(self.objects_label)
         source_layout.addWidget(self.metrics_label)
-        layout.addWidget(source_group, stretch=1)
-        self.setCentralWidget(central)
+
+        self.main_splitter = QSplitter(Qt.Orientation.Horizontal)
+        self.main_splitter.setChildrenCollapsible(False)
+        self.main_splitter.addWidget(task_group)
+        self.main_splitter.addWidget(source_group)
+        self.main_splitter.setStretchFactor(0, 0)
+        self.main_splitter.setStretchFactor(1, 1)
+        self.main_splitter.setSizes([420, 860])
+        self.task_panel = task_group
+        self.preview_panel = source_group
+        self.setCentralWidget(self.main_splitter)
 
         self.connect_button.clicked.connect(self.connect_sources)
         self.disconnect_button.clicked.connect(self.disconnect_sources)
+        self.task_input.textChanged.connect(self._on_task_id_changed)
         self.refresh_types_button.clicked.connect(self.refresh_worker_types)
         self.load_task_button.clicked.connect(self.load_task_configuration)
         self.worker_type_input.currentTextChanged.connect(self.load_worker_schema)
@@ -385,6 +478,7 @@ class ViewerWindow(QMainWindow):
             self.worker_type_input.setCurrentText(record.worker_type)
             self.worker_type_input.blockSignals(False)
             self.schema_form.set_schema(value["schema"], record.config)
+            self._set_preview_config(record.config)
             self.task_status.setText(
                 f"任务配置：已加载，最后更新 {record.updated_at.isoformat()}"
             )
@@ -394,22 +488,20 @@ class ViewerWindow(QMainWindow):
             self.task_status.setText(
                 f"任务配置：{response['runtime_state']}，PID {response['pid']}"
             )
-            rtsp_url = config.get("rtsp_url")
-            redis_url = config.get("redis_url")
-            if isinstance(rtsp_url, str) and isinstance(redis_url, str):
-                self.rtsp_input.setText(rtsp_url)
-                self.redis_input.setText(redis_url)
+            self._set_preview_config(config)
+            if self._has_preview_config():
                 self.connect_sources()
         elif name == "stop":
             self.task_status.setText("任务配置：Worker 已停止")
 
     def connect_sources(self) -> None:
         task_id = self.task_input.text().strip()
-        rtsp_url = self.rtsp_input.text().strip()
-        redis_url = self.redis_input.text().strip()
-        if not task_id or not rtsp_url or not redis_url:
-            self.result_status.setText("检测：Task、RTSP 和 Redis 均不能为空")
+        if not task_id or not self._has_preview_config():
+            self.result_status.setText("检测：当前任务不支持视频预览")
+            self.connect_button.setEnabled(False)
             return
+        assert self._preview_rtsp_url is not None
+        assert self._preview_redis_url is not None
 
         self._stop_components()
         generation = self._generation
@@ -419,13 +511,13 @@ class ViewerWindow(QMainWindow):
         self.canvas.clear_frame()
 
         self._video_feed = RtspVideoFeed(
-            rtsp_url,
+            self._preview_rtsp_url,
             on_status=lambda status: self._signals.rtsp_status.emit(
                 generation, status.connected, status.detail
             ),
         )
         self._subscriber = RedisDetectionSubscriber(
-            redis_url,
+            self._preview_redis_url,
             task_id,
             on_message=lambda message: self._signals.detection.emit(
                 generation, message
@@ -451,8 +543,57 @@ class ViewerWindow(QMainWindow):
         self.result_status.setText("检测：已断开")
         self.objects_label.setText("目标：-")
         self.metrics_label.setText("推理：-    Worker FPS：-    消息年龄：-")
-        self.connect_button.setEnabled(True)
+        self.connect_button.setEnabled(self._has_preview_config())
         self.disconnect_button.setEnabled(False)
+
+    def _set_preview_config(self, config: object) -> None:
+        if self._video_feed is not None or self._subscriber is not None:
+            self.disconnect_sources()
+        roi = None
+        if isinstance(config, dict) and config.get("roi") is not None:
+            try:
+                roi = RoiConfig.model_validate(config["roi"])
+            except ValueError:
+                pass
+        self.canvas.set_roi(roi)
+        rtsp_url = config.get("rtsp_url") if isinstance(config, dict) else None
+        redis_url = config.get("redis_url") if isinstance(config, dict) else None
+        if (
+            isinstance(rtsp_url, str)
+            and rtsp_url.strip()
+            and isinstance(redis_url, str)
+            and redis_url.strip()
+        ):
+            self._preview_rtsp_url = rtsp_url.strip()
+            self._preview_redis_url = redis_url.strip()
+            self._preview_task_id = self.task_input.text().strip()
+            if self._video_feed is None and self._subscriber is None:
+                self.connect_button.setEnabled(True)
+                self.result_status.setText("检测：任务配置已就绪")
+            return
+
+        self._preview_task_id = None
+        self._preview_rtsp_url = None
+        self._preview_redis_url = None
+        self.disconnect_sources()
+        self.connect_button.setEnabled(False)
+        self.result_status.setText("检测：当前 Worker 不支持视频预览")
+
+    def _has_preview_config(self) -> bool:
+        return (
+            self._preview_task_id == self.task_input.text().strip()
+            and bool(self._preview_task_id)
+            and self._preview_rtsp_url is not None
+            and self._preview_redis_url is not None
+        )
+
+    def _on_task_id_changed(self, task_id: str) -> None:
+        if self._preview_task_id is None or task_id.strip() == self._preview_task_id:
+            return
+        if self._video_feed is not None or self._subscriber is not None:
+            self.disconnect_sources()
+        self.connect_button.setEnabled(False)
+        self.result_status.setText("检测：请先加载当前任务配置")
 
     def closeEvent(self, event: QCloseEvent) -> None:
         self._timer.stop()
@@ -544,8 +685,6 @@ def _unix_ms() -> int:
 def run_viewer(
     *,
     task_id: str,
-    rtsp_url: str,
-    redis_url: str,
     daemon_url: str = "http://127.0.0.1:8090",
     database_url: str = DEFAULT_DATABASE_URL,
 ) -> int:
@@ -553,8 +692,6 @@ def run_viewer(
     app.setFont(QFont("Source Han Sans CN", 10))
     window = ViewerWindow(
         task_id=task_id,
-        rtsp_url=rtsp_url,
-        redis_url=redis_url,
         daemon_url=daemon_url,
         database_url=database_url,
     )

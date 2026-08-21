@@ -144,6 +144,11 @@ uv run --extra viewer algorithm-viewer \
 Viewer 从 Daemon 获取 Worker 类型与标准 JSON Schema，动态生成参数控件并执行客户端
 校验。它可从数据库加载已有任务，也可使用“保存并启动”或“保存并重载”先 UPSERT 参数、
 再调用控制命令。Detector 启动成功后，Viewer 自动使用配置中的 RTSP/Redis 地址连接预览。
+界面采用可拖动的左右分栏：左侧编辑任务参数，右侧显示视频；Daemon 和数据库连接地址
+位于默认收起的“高级连接设置”中。Viewer 不提供独立的 RTSP/Redis 覆盖输入，数据库任务
+配置是预览地址的唯一来源。
+当任务配置包含 ROI 时，Viewer 会在视频内容区域绘制黄色虚线多边形并标注区域 ID；
+`roi=null` 时不绘制边框。多边形仅用于展示当前过滤区域，不改变 Worker 的中心点过滤规则。
 
 Viewer 不做 RTP/RTCP/PTS 时间同步，也不缓存历史视频帧；它把最近 2 秒内收到的最新检测
 结果叠加到当前画面，适合联调消息和绘制效果，不作为逐帧准确性验收工具。关闭 Viewer

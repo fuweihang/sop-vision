@@ -48,3 +48,18 @@ def map_normalized_bbox(
     right = content.x + max(x1, x2) * content.width
     bottom = content.y + max(y1, y2) * content.height
     return left, top, right, bottom
+
+
+def map_normalized_polygon(
+    points: tuple[tuple[float, float], ...],
+    content: ContentRect,
+) -> tuple[tuple[float, float], ...]:
+    """把归一化多边形顶点映射到视频内容区域，并裁剪到内容边界。"""
+
+    return tuple(
+        (
+            content.x + min(max(x, 0.0), 1.0) * content.width,
+            content.y + min(max(y, 0.0), 1.0) * content.height,
+        )
+        for x, y in points
+    )

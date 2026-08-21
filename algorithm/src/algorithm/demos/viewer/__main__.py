@@ -10,11 +10,12 @@ from collections.abc import Sequence
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="algorithm-viewer",
-        description="Display one RTSP stream with the latest Redis detection result.",
+        description=(
+            "Configure one database-backed Worker and display its latest "
+            "detection result."
+        ),
     )
     parser.add_argument("--task-id", default="detector-001")
-    parser.add_argument("--rtsp-url", default="rtsp://localhost:8554/cam102")
-    parser.add_argument("--redis-url", default="redis://127.0.0.1:63793/0")
     parser.add_argument("--daemon-url", default="http://127.0.0.1:8090")
     parser.add_argument(
         "--database-url",
@@ -38,8 +39,6 @@ def main(argv: Sequence[str] | None = None) -> int:
         raise
     return run_viewer(
         task_id=args.task_id,
-        rtsp_url=args.rtsp_url,
-        redis_url=args.redis_url,
         daemon_url=args.daemon_url,
         database_url=args.database_url,
     )
