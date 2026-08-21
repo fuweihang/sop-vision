@@ -1,4 +1,4 @@
-"""本地配置驱动的 ROI 模型与几何辅助函数。"""
+"""ROI 参数模型与几何辅助函数。"""
 
 from __future__ import annotations
 
@@ -16,8 +16,12 @@ class RoiConfig(BaseModel):
 
     model_config = ConfigDict(extra="forbid", frozen=True)
 
-    roi_id: str = Field(default="main", min_length=1)
-    points: tuple[Point, ...]
+    roi_id: str = Field(title="区域 ID", default="main", min_length=1)
+    points: tuple[Point, ...] = Field(
+        title="多边形顶点",
+        description="至少三个 [x, y] 归一化坐标点，取值范围为 0 到 1。",
+        min_length=3,
+    )
 
     @model_validator(mode="after")
     def validate_polygon(self) -> RoiConfig:

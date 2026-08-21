@@ -71,5 +71,6 @@ node_modules/
 out/
 
 docs.local
-mediamtx/docker-compose.yml
-mediamtx/mediamtx.yml
+algorithm/docker/mediamtx/docker-compose.yml
+algorithm/docker/mediamtx/mediamtx.yml
+algorithm/docker/postgres/docker-compose.yml

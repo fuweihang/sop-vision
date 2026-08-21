@@ -4,23 +4,37 @@ from __future__ import annotations
 
 import asyncio
 import functools
+from collections.abc import AsyncIterator, Callable
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Annotated, AsyncIterator, Callable
+from typing import Annotated, Any
 
 from fastapi import Depends, FastAPI, HTTPException, Request, Response, status
 
-from .config_loader import ConfigLoadError
+from algorithm.common.config import project_root
+from algorithm.database import RepositoryUnavailableError, TaskParameterRepository
+
+from .configuration import WorkerConfigurationError
 from .manager import (
+    WorkerAlreadyRunningError,
     WorkerBusyError,
     WorkerManager,
     WorkerNotFoundError,
+    WorkerPoolFullError,
     WorkerStartError,
     WorkerStartTimeout,
     WorkerStopError,
 )
-from .models import CommandResponse, HealthResponse
+from .models import (
+    CommandResponse,
+    HealthResponse,
+    WorkerTypeListResponse,
+    WorkerTypeSummary,
+)
+from .registry import get_worker_definition, worker_type_names
+
+DEFAULT_DATABASE_URL = "postgresql://sop_vision:sop_vision@localhost:5432/sop_vision"
 
 
 async def require_empty_body(request: Request) -> None:
@@ -35,11 +49,17 @@ EmptyBody = Annotated[None, Depends(require_empty_body)]
 
 
 def create_app(
-    config_path: Path | None = None,
     *,
     manager: WorkerManager | None = None,
+    database_url: str = DEFAULT_DATABASE_URL,
+    resource_root: Path | None = None,
+    max_workers: int = 4,
 ) -> FastAPI:
-    worker_manager = manager or WorkerManager(config_path or Path("config.json"))
+    worker_manager = manager or WorkerManager(
+        TaskParameterRepository(database_url),
+        resource_root or project_root(),
+        max_workers=max_workers,
+    )
 
     @asynccontextmanager
     async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
@@ -57,13 +77,34 @@ def create_app(
 
     @app.get("/healthz", response_model=HealthResponse)
     async def health(response: Response) -> HealthResponse:
-        readable = await _run_blocking(worker_manager.config_is_readable)
-        if not readable:
+        reachable = await _run_blocking(worker_manager.database_is_reachable)
+        if not reachable:
             response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
         return HealthResponse(
-            status="ok" if readable else "degraded",
-            config_readable=readable,
+            status="ok" if reachable else "degraded",
+            database_reachable=reachable,
+            active_workers=worker_manager.active_workers,
+            max_workers=worker_manager.max_workers,
         )
+
+    @app.get("/v1/worker-types", response_model=WorkerTypeListResponse)
+    async def list_worker_types() -> WorkerTypeListResponse:
+        return WorkerTypeListResponse(
+            worker_types=tuple(
+                WorkerTypeSummary(
+                    worker_type=worker_type,
+                    schema_url=f"/v1/worker-types/{worker_type}/schema",
+                )
+                for worker_type in worker_type_names()
+            )
+        )
+
+    @app.get("/v1/worker-types/{worker_type}/schema")
+    async def worker_type_schema(worker_type: str) -> dict[str, Any]:
+        try:
+            return get_worker_definition(worker_type).parameter_schema()
+        except ValueError as error:
+            raise HTTPException(status_code=404, detail=str(error)) from error
 
     def command_route(
         path: str,
@@ -72,15 +113,22 @@ def create_app(
         async def run(task_id: str, _empty: EmptyBody) -> CommandResponse:
             try:
                 return await _run_blocking(operation, task_id)
-            except ConfigLoadError as error:
+            except WorkerConfigurationError as error:
                 raise HTTPException(
                     status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
-                    detail="local config.json is invalid; see daemon logs",
+                    detail=f"stored worker configuration is invalid: {error}",
+                ) from error
+            except RepositoryUnavailableError as error:
+                raise HTTPException(
+                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                    detail="task parameter database is unavailable",
                 ) from error
             except WorkerNotFoundError as error:
                 raise HTTPException(status_code=404, detail=str(error)) from error
-            except WorkerBusyError as error:
+            except (WorkerBusyError, WorkerAlreadyRunningError) as error:
                 raise HTTPException(status_code=409, detail=str(error)) from error
+            except WorkerPoolFullError as error:
+                raise HTTPException(status_code=429, detail=str(error)) from error
             except WorkerStartTimeout as error:
                 raise HTTPException(status_code=504, detail=str(error)) from error
             except WorkerStartError as error:
@@ -92,7 +140,6 @@ def create_app(
 
     command_route("/v1/workers/{task_id}/start", worker_manager.start)
     command_route("/v1/workers/{task_id}/reload", worker_manager.reload)
-    command_route("/v1/workers/{task_id}/restart", worker_manager.restart)
     command_route("/v1/workers/{task_id}/stop", worker_manager.stop)
 
     return app

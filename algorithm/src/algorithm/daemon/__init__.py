@@ -1,1 +1,1 @@
-"""本地配置驱动的 AIWorker 守护进程。"""
+"""PostgreSQL 配置驱动的 AIWorker 守护进程。"""

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import datetime
 from enum import StrEnum
 
 from pydantic import BaseModel, ConfigDict
@@ -10,7 +11,6 @@ from pydantic import BaseModel, ConfigDict
 class CommandName(StrEnum):
     START = "start"
     RELOAD = "reload"
-    RESTART = "restart"
     STOP = "stop"
 
 
@@ -30,6 +30,7 @@ class CommandResponse(BaseModel):
     runtime_state: RuntimeState
     pid: int | None
     config_revision: str
+    config_updated_at: datetime
     forced_stop: bool = False
 
 
@@ -37,4 +38,19 @@ class HealthResponse(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
     status: str
-    config_readable: bool
+    database_reachable: bool
+    active_workers: int
+    max_workers: int
+
+
+class WorkerTypeSummary(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    worker_type: str
+    schema_url: str
+
+
+class WorkerTypeListResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    worker_types: tuple[WorkerTypeSummary, ...]

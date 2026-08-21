@@ -63,6 +63,10 @@
     "description": "📹 RTSP 最新帧读取器",
     "tooltip": "持续解码视频流、自动重连并只保留最新帧"
   },
+  "src/algorithm/database": {
+    "description": "🗄️ 任务参数数据库",
+    "tooltip": "PostgreSQL 任务参数记录与共享 Repository"
+  },
   "src/algorithm/contracts": {
     "description": "📨 消息契约",
     "tooltip": "跨 Worker、Redis 与平台共享的稳定数据模型"
@@ -85,7 +89,15 @@
   },
   "src/algorithm/demos/viewer/window.py": {
     "description": "🖼️ Viewer 主窗口",
-    "tooltip": "视频显示、连接控制、状态展示和检测框绘制"
+    "tooltip": "Schema 配置、Worker 控制、视频显示和检测框绘制"
+  },
+  "src/algorithm/demos/viewer/schema_form.py": {
+    "description": "🧾 Schema 动态表单",
+    "tooltip": "从标准 JSON Schema 生成 Qt 参数控件并执行客户端校验"
+  },
+  "src/algorithm/demos/viewer/task_client.py": {
+    "description": "🔌 Viewer 任务客户端",
+    "tooltip": "后台读写 PostgreSQL 并调用 Algorithm Daemon"
   },
   "src/algorithm/demos/viewer/redis_subscriber.py": {
     "description": "📥 Redis 检测订阅",
@@ -113,15 +125,15 @@
   },
   "src/algorithm/daemon/api.py": {
     "description": "🌐 REST 控制 API",
-    "tooltip": "健康检查及 Worker start、reload、restart、stop 接口"
+    "tooltip": "健康、Worker Schema 及 start、reload、stop 接口"
   },
-  "src/algorithm/daemon/config_loader.py": {
-    "description": "📥 本地配置加载器",
-    "tooltip": "严格读取、校验并版本化 config.json"
+  "src/algorithm/daemon/configuration.py": {
+    "description": "✅ 数据库配置校验",
+    "tooltip": "校验单条任务参数、解析资源路径并计算配置版本"
   },
   "src/algorithm/daemon/manager.py": {
     "description": "🎛️ Worker 生命周期管理器",
-    "tooltip": "串行调度 Worker 的启动、重载、重启与停止"
+    "tooltip": "有界进程池中串行调度 Worker 的启动、重载与停止"
   },
   "src/algorithm/daemon/models.py": {
     "description": "📋 控制面响应模型",
@@ -149,7 +161,7 @@
   },
   "src/algorithm/workers/detector/__main__.py": {
     "description": "🧪 Detector 调试入口",
-    "tooltip": "绕过守护进程，从本地配置启动单个 Detector"
+    "tooltip": "绕过守护进程，从 PostgreSQL 启动单个 Detector"
   },
   "src/algorithm/workers/detector/app.py": {
     "description": "▶️ 无界面检测主循环",
@@ -177,19 +189,19 @@
   },
   "tests/unit/daemon": {
     "description": "🛡️ 守护进程测试",
-    "tooltip": "控制 API、配置加载和进程管理测试"
+    "tooltip": "控制 API、数据库配置校验和进程池测试"
   },
   "tests/unit/daemon/test_api.py": {
     "description": "🌐 控制 API 测试",
     "tooltip": "验证最小 REST 接口和空命令请求体"
   },
-  "tests/unit/daemon/test_config_loader.py": {
-    "description": "📥 配置加载测试",
-    "tooltip": "验证完整配置校验、路径解析、版本与凭据脱敏"
+  "tests/unit/daemon/test_configuration.py": {
+    "description": "✅ 配置校验测试",
+    "tooltip": "验证数据库参数校验、路径解析、版本与凭据脱敏"
   },
   "tests/unit/daemon/test_manager.py": {
     "description": "🎛️ 生命周期管理测试",
-    "tooltip": "验证 start、reload、restart、stop 与异常进程处理"
+    "tooltip": "验证 start、reload、stop、容量限制与异常进程处理"
   },
   "tests/unit/demos/viewer": {
     "description": "🎞️ Viewer 单元测试",
@@ -230,10 +242,6 @@
   "关于数据流.md": {
     "description": "🔄 数据流设计",
     "tooltip": "算法服务、Redis、FastAPI 与前端之间的数据流说明"
-  },
-  "config.example.json": {
-    "description": "⚙️ 本地配置示例",
-    "tooltip": "AIWorker 参数和 ROI 的完整示例；复制为 config.json 使用"
   },
   "pyproject.toml": {
     "description": "📦 Python 项目配置",

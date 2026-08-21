@@ -8,17 +8,22 @@ authors = [
 ]
 requires-python = ">=3.12"
 dependencies = [
+    "alembic>=1.16.0,<2",
     "fastapi>=0.116.0",
+    "httpx>=0.28.1",
     "numpy>=2.2.6",
     "opencv-python>=4.11.0.86",
+    "psycopg[binary,pool]>=3.2.0,<4",
     "pydantic>=2.11.7",
     "redis>=6.4.0,<8",
+    "sqlalchemy>=2.0.0,<3",
     "ultralytics>=8.4.118",
     "uvicorn>=0.35.0",
 ]
 
 [project.optional-dependencies]
 viewer = [
+    "jsonschema>=4.25.0,<5",
     "pyside6>=6.8,<7",
 ]
 
@@ -30,7 +35,7 @@ detector = "algorithm.workers.detector.__main__:main"
 
 [dependency-groups]
 dev = [
-    "httpx>=0.28.1",
+    "jsonschema>=4.25.0,<5",
     "pytest>=8.4.1",
 ]
 

@@ -9,19 +9,33 @@ from pathlib import Path
 
 import uvicorn
 
+from algorithm.common.config import project_root
+from algorithm.database import TaskParameterRepository
+
 from .api import create_app
 from .manager import WorkerManager
+
+DEFAULT_DATABASE_URL = "postgresql://sop_vision:sop_vision@localhost:5432/sop_vision"
 
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="algorithm-daemon",
-        description="Run the local-config SOP Vision AIWorker daemon.",
+        description="Run the PostgreSQL-backed SOP Vision AIWorker daemon.",
     )
     parser.add_argument(
-        "--config",
+        "--database-url",
+        default=os.getenv("ALGORITHM_DATABASE_URL", DEFAULT_DATABASE_URL),
+    )
+    parser.add_argument(
+        "--resource-root",
         type=Path,
-        default=Path(os.getenv("ALGORITHM_CONFIG_PATH", "config.json")),
+        default=Path(os.getenv("ALGORITHM_RESOURCE_ROOT", str(project_root()))),
+    )
+    parser.add_argument(
+        "--max-workers",
+        type=int,
+        default=int(os.getenv("ALGORITHM_MAX_WORKERS", "4")),
     )
     parser.add_argument("--host", default="0.0.0.0")
     parser.add_argument("--port", type=int, default=8090)
@@ -37,7 +51,9 @@ def main() -> None:
     )
     args = build_parser().parse_args()
     manager = WorkerManager(
-        args.config,
+        TaskParameterRepository(args.database_url),
+        args.resource_root,
+        max_workers=args.max_workers,
         startup_timeout=args.startup_timeout,
         graceful_stop_timeout=args.stop_timeout,
     )

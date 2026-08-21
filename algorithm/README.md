@@ -1,277 +1,174 @@
 # SOP Vision Algorithm
 
-`algorithm` 是 SOP Vision 的算法服务。守护进程通过本地 `config.json`
-管理独立 AIWorker；外部平台只发送启动、重载、重启和停止命令，不传递算法参数。
-Detector 从 RTSP 拉流、在 GPU 上执行 YOLO，并将检测元数据直接写入 Redis，整个
-Worker 不创建 OpenCV 窗口。
+`algorithm` 是 SOP Vision 的算法服务。外部客户端把任务参数保存到 PostgreSQL，再只携带
+`task_id` 调用 Algorithm Daemon；守护进程从数据库读取并严格校验配置，在有界独立进程池
+中运行 AIWorker。Detector 从 RTSP 拉流、执行 YOLO，并把检测元数据直接写入 Redis。
 
 ## 架构
 
 ```text
-运维人员 ──修改──> config.json
-                      │
-平台 FastAPI ──HTTP──> Algorithm Daemon ──spawn/Event/Pipe──> AIWorker
-                                                          │
-平台 FastAPI <────────────────── Redis <────检测结果───────┘
-                                      │
-RTSP ───────────────────────> Qt Viewer <────最新检测结果──┘
+                         GET JSON Schema
+Qt / 平台客户端 <──────────────────────── Algorithm Daemon
+      │                                      ▲
+      │ UPSERT task_id/type/config           │ start/reload/stop(task_id)
+      ▼                                      │
+PostgreSQL ───────────读取已提交配置───────────┘
+                                               │ spawn/Event/Pipe
+                                               ▼
+RTSP ─────────────────────────────────────> AIWorker ──> Redis
+  └────────────────────> Qt Viewer <────────────┘
 ```
 
-- 守护进程只提供控制面，不转发检测结果。
-- Worker 直接发布实时结果和最近一帧快照。
-- ROI 是本地配置的一部分，修改后通过 `reload` 完整重启 Worker 生效。
-- 守护进程启动后不会自动启动任何 Worker，也不会持久化运行状态。
-- Qt Viewer 是独立的本地演示工具，不受守护进程管理；它把 Redis 最新结果叠加到
-  当前 RTSP 画面，不保证检测结果和显示帧严格同步。
+- PostgreSQL 是唯一任务配置源，不再读取 `config.json`。
+- 守护进程不自动启动或自动重启 Worker，也不持久化运行状态。
+- Worker 进程池默认最多同时运行 4 个任务，容量耗尽时 `start` 返回 429。
+- Qt Viewer 同时承担外部客户端模拟、Worker 控制和检测结果预览。
 
-## 目录结构
-
-```text
-algorithm/
-├── config.example.json                 # 本地 Worker 配置示例
-├── folder-alias.json                   # VS Code 资源树公共标注
-├── resources/
-│   ├── models/                         # YOLO PyTorch/ONNX 模型权重
-│   └── samples/
-│       └── roi.json                    # 归一化多边形 ROI 示例
-├── src/algorithm/
-│   ├── algorithms/                     # 与具体 Worker 生命周期解耦的算法实现
-│   │   └── object_detection/
-│   │       └── yolo.py                 # Ultralytics YOLO 推理适配器
-│   ├── common/                         # Worker 共享基础设施
-│   │   ├── config.py                   # 项目路径与敏感 URL 脱敏
-│   │   ├── redis_telemetry.py          # 检测结果和最新快照异步发布
-│   │   ├── roi.py                      # ROI 配置、状态和几何判断
-│   │   └── rtsp.py                     # 自动重连的 RTSP 最新帧读取器
-│   ├── contracts/
-│   │   └── detection.py                # Redis frame_detection 消息契约
-│   ├── demos/
-│   │   └── viewer/                     # 单任务 RTSP + Redis Qt 演示 Viewer
-│   ├── daemon/                         # AIWorker 守护进程
-│   │   ├── __main__.py                 # algorithm-daemon CLI 入口
-│   │   ├── api.py                      # RESTful 控制面
-│   │   ├── config_loader.py            # config.json 加载、校验与版本化
-│   │   ├── manager.py                  # Worker 进程生命周期管理
-│   │   ├── models.py                   # 控制命令与健康响应模型
-│   │   └── registry.py                 # 受信任 Worker 类型注册表
-│   ├── workers/
-│   │   ├── base.py                     # spawn 子进程通用入口
-│   │   └── detector/
-│   │       ├── __main__.py             # 单个 Detector 调试入口
-│   │       ├── app.py                  # 无界面检测与结果发布主循环
-│   │       └── config.py               # Detector 本地配置模型
-│   └── tools/                          # 运维命令扩展位置
-├── tests/
-│   ├── unit/                           # 隔离外部依赖的单元测试
-│   │   └── daemon/                     # API、配置加载和进程管理测试
-│   └── integration/                    # 真实 Redis 等外部组件集成测试
-├── pyproject.toml                      # 项目元数据、依赖和 CLI 入口
-├── uv.lock                             # 可复现依赖锁文件
-└── 关于数据流.md                        # Redis、FastAPI 与前端数据流设计
-```
-
-`config.json` 是实际运行配置，包含视频源等敏感信息，因此不会提交到 Git；它通常由
-`config.example.json` 复制后按部署环境填写。各目录和核心文件的相同职责说明也维护在
-`folder-alias.json` 中，供 VS Code Folder Alias 扩展展示。
-
-### 目录职责
-
-| 目录 | 职责 | 放置原则 |
-| --- | --- | --- |
-| `resources/` | 保存模型权重和示例输入 | 不放业务逻辑；大型模型文件默认不提交 Git |
-| `algorithms/` | 封装 YOLO 等可复用算法能力 | 只负责模型加载、推理和输出转换，不管理进程、RTSP 或 Redis |
-| `common/` | 提供多个 Worker 共用的基础设施 | 放置配置辅助、视频读取、ROI 几何和消息发布等通用组件 |
-| `contracts/` | 定义跨组件传输的数据契约 | 使用严格、可版本化的 Pydantic 模型，不放具体业务流程 |
-| `demos/` | 保存本地演示程序 | 不作为生产 Worker，不受守护进程管理，也不参与控制面 |
-| `daemon/` | 实现算法服务控制面 | 负责本地配置加载、REST 命令和 Worker 子进程生命周期，不参与推理和结果转发 |
-| `workers/` | 编排一种具体 AI 任务 | 组合视频源、算法、ROI 和输出组件；每个 Worker 可作为独立进程运行 |
-| `tools/` | 保存人工运维或诊断命令 | 只放非服务常驻进程使用的辅助 CLI，不承载 Worker 主流程 |
-| `tests/unit/` | 快速验证单个模块 | 使用假 Worker、RTSP 和 Redis，不能依赖真实摄像头或 GPU |
-| `tests/integration/` | 验证真实组件之间的协作 | 可连接真实 Redis 等外部服务，并与普通单元测试分开执行 |
-
-新增模型适配器应放在 `algorithms/`；新增守护进程管理能力应放在 `daemon/`；新增完整
-算法任务则在 `workers/<worker_name>/` 中编排，并优先复用 `common/` 与 `contracts/`
-中的组件，避免在不同 Worker 中复制基础设施代码。
-
-## 安装
+## 安装与数据库迁移
 
 要求 Python 3.12，推荐使用 `uv`：
 
 ```bash
 uv sync --dev
-cp config.example.json config.json
+uv sync --dev --extra viewer   # 需要 Qt Viewer 时
 ```
 
-需要运行 Qt Viewer 时安装可选依赖：
+根目录 Compose 已提供 PostgreSQL，默认宿主机连接信息为：
+
+```text
+postgresql://sop_vision:sop_vision@localhost:5432/sop_vision
+```
+
+首次使用或版本升级时运行 Alembic：
 
 ```bash
-uv sync --dev --extra viewer
+docker compose up -d postgres
+cd algorithm
+ALGORITHM_DATABASE_URL=postgresql://sop_vision:sop_vision@localhost:5432/sop_vision \
+  uv run alembic upgrade head
 ```
 
-`config.json` 包含视频源凭据，已被 `.gitignore` 排除。生产环境建议将文件权限设置为
-仅算法服务用户可读。相对模型路径以配置文件所在目录为基准。
+迁移创建 `worker_task_parameters`：
 
-配置示例：
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| `task_id` | `TEXT` 主键 | 外部系统提供的任务 ID |
+| `worker_type` | `TEXT` | 注册表中的 Worker 类型 |
+| `config` | `JSONB` | 不含 `task_id` 的参数对象 |
+| `updated_at` | `TIMESTAMPTZ` | 数据库触发器维护的最后更新时间 |
+
+客户端必须先提交 UPSERT 事务，再调用 Daemon。数据库只约束 JSON 顶层结构；具体字段由
+对应 Worker 的 Pydantic 模型在启动时再次校验。
+
+## 配置
+
+```dotenv
+ALGORITHM_DATABASE_URL=postgresql://sop_vision:sop_vision@localhost:5432/sop_vision
+ALGORITHM_MAX_WORKERS=4
+ALGORITHM_RESOURCE_ROOT=/absolute/path/to/sop-vision/algorithm
+```
+
+相对模型路径以 `ALGORITHM_RESOURCE_ROOT` 为基准；未设置时使用安装包所在的 algorithm
+工程根目录。配置和错误日志不会回显 RTSP、Redis 或数据库凭据。
+
+当前 Detector 参数示例（存入 `config` 列）：
 
 ```json
 {
-  "schema_version": 1,
-  "workers": {
-    "detector-001": {
-      "type": "detector",
-      "config": {
-        "camera_id": "camera-001",
-        "source_id": "source-001",
-        "rtsp_url": "rtsp://user:password@camera/stream",
-        "redis_url": "redis://127.0.0.1:63793/0",
-        "model_path": "resources/models/yolo26n.pt",
-        "image_size": 640,
-        "confidence": 0.5,
-        "device": "0",
-        "reconnect_delay_seconds": 2.0,
-        "algorithm_id": "yolo_object_detection",
-        "algorithm_version": "0.1.0",
-        "roi": {
-          "roi_id": "main",
-          "points": [[0.2, 0.2], [0.8, 0.2], [0.8, 0.8], [0.2, 0.8]]
-        }
-      }
-    }
+  "camera_id": "camera-001",
+  "source_id": "source-001",
+  "rtsp_url": "rtsp://user:password@camera/stream",
+  "redis_url": "redis://127.0.0.1:63793/0",
+  "model_path": "resources/models/yolo26n.pt",
+  "image_size": 640,
+  "confidence": 0.5,
+  "device": "0",
+  "reconnect_delay_seconds": 2.0,
+  "algorithm_id": "yolo_object_detection",
+  "algorithm_version": "0.1.0",
+  "roi": {
+    "roi_id": "main",
+    "points": [[0.2, 0.2], [0.8, 0.2], [0.8, 0.8], [0.2, 0.8]]
   }
 }
 ```
 
-`workers` 的 key 就是 `task_id`。将 `roi` 设置为 `null` 可执行全画面检测。
-ROI 坐标归一化到 `[0, 1]`，至少需要三个不重复且能组成非零面积多边形的点。
-
-更新配置时应先写临时文件，再在同一文件系统内原子重命名为 `config.json`，避免守护
-进程读取到半写入内容。
+`roi=null` 表示全画面检测。ROI 坐标归一化到 `[0, 1]`，至少需要三个不重复且能组成
+非零面积多边形的点。
 
 ## 启动与控制
 
-启动守护进程：
-
 ```bash
-uv run algorithm-daemon
-```
-
-默认监听 `0.0.0.0:8090`，默认读取当前目录的 `config.json`。可以覆盖：
-
-```bash
-ALGORITHM_CONFIG_PATH=/etc/sop-vision/config.json \
 uv run algorithm-daemon --host 127.0.0.1 --port 8090
 ```
 
-第一版没有应用层鉴权，必须部署在可信网络并通过防火墙限制访问。
+配置发现：
 
-控制指定任务，请发送空请求体：
+```bash
+curl http://127.0.0.1:8090/v1/worker-types
+curl http://127.0.0.1:8090/v1/worker-types/detector/schema
+```
+
+控制命令只接受空请求体：
 
 ```bash
 curl -X POST http://127.0.0.1:8090/v1/workers/detector-001/start
 curl -X POST http://127.0.0.1:8090/v1/workers/detector-001/reload
-curl -X POST http://127.0.0.1:8090/v1/workers/detector-001/restart
 curl -X POST http://127.0.0.1:8090/v1/workers/detector-001/stop
 curl http://127.0.0.1:8090/healthz
 ```
 
-命令语义：
+- `start`：读取数据库最新配置并启动；任务已运行时返回 409。
+- `reload`：先验证数据库最新配置，再停止旧 Worker 并启动新 Worker；配置无效时旧进程
+  继续运行。
+- `stop`：优雅停止，超时后 terminate/kill；已配置但未运行的任务幂等成功。
 
-- `start`：重新读取配置；任务未运行时按磁盘配置启动，已运行时幂等成功。
-- `reload`：先停止任务，再读取配置并使用新参数启动；配置无效时保持停止。
-- `restart`：不读取磁盘，使用最后一次成功加载到内存的配置重新启动。
-- `stop`：只停止 Worker，守护进程继续运行，并保留内存配置以供 `restart` 使用。
+404 表示任务或类型不存在，422 表示配置非法，429 表示进程容量耗尽，503 表示数据库
+不可用，504 表示 Worker 未在期限内就绪。命令同步等待模型加载与主循环就绪。
 
-命令同步等待模型加载和 Worker 主循环就绪。RTSP 或 Redis 暂时断开不会影响启动成功，
-对应组件会在后台持续重连。Worker 意外退出后不会自动重启。
-
-也可以绕过守护进程调试单个任务：
+绕过守护进程调试单个 Detector 时也从数据库读取：
 
 ```bash
-uv run detector --config config.json --task-id detector-001
+uv run detector --task-id detector-001
 ```
 
-## Qt Viewer 演示
-
-Viewer 独立连接 RTSP，并直接订阅 Worker 写入 Redis 的检测结果。推荐按以下顺序启动：
-
-1. 启动 Redis 和 MediaMTX。
-2. 启动 `algorithm-daemon`。
-3. 调用 Worker 的 `start` 接口。
-4. 启动 Viewer：
+## Qt Viewer 外部客户端模拟
 
 ```bash
 uv run --extra viewer algorithm-viewer \
   --task-id detector-001 \
-  --rtsp-url rtsp://localhost:8554/cam102 \
-  --redis-url redis://127.0.0.1:63793/0
+  --daemon-url http://127.0.0.1:8090 \
+  --database-url postgresql://sop_vision:sop_vision@localhost:5432/sop_vision
 ```
 
-这些参数只用于预填充窗口输入框，不会写入 `config.json` 或其他本地文件。也可以直接
-启动命令后在窗口中修改 Task ID、RTSP URL 和 Redis URL，再点击“连接”。
+Viewer 从 Daemon 获取 Worker 类型与标准 JSON Schema，动态生成参数控件并执行客户端
+校验。它可从数据库加载已有任务，也可使用“保存并启动”或“保存并重载”先 UPSERT 参数、
+再调用控制命令。Detector 启动成功后，Viewer 自动使用配置中的 RTSP/Redis 地址连接预览。
 
-Viewer 使用两条彼此独立的实时链路：
-
-```text
-MediaMTX ──RTSP──────────────> Viewer 当前画面
-AIWorker ──Redis Pub/Sub─────> Viewer 最新检测结果
-```
-
-当前版本不做 RTP/RTCP/PTS 时间同步，也不缓存历史视频帧。Viewer 始终把最近 2 秒内
-收到的最新结果叠加到当前画面；收到空 `objects`、Redis 断线或结果超过 2 秒时立即
-清除旧框。因此它适合联调消息和绘制效果，不适合作为逐帧准确性验收工具。
+Viewer 不做 RTP/RTCP/PTS 时间同步，也不缓存历史视频帧；它把最近 2 秒内收到的最新检测
+结果叠加到当前画面，适合联调消息和绘制效果，不作为逐帧准确性验收工具。关闭 Viewer
+只断开预览，不会停止 Worker。
 
 ## 检测结果
 
-每个完成推理的帧都会生成 `frame_detection`。没有目标时也发送空 `objects`：
-
-```json
-{
-  "schema_version": 1,
-  "type": "frame_detection",
-  "task_id": "detector-001",
-  "camera_id": "camera-001",
-  "source_id": "source-001",
-  "algorithm_id": "yolo_object_detection",
-  "algorithm_version": "0.1.0",
-  "run_id": "54a81572-94a1-4bd5-a39f-f4ff06ef587a",
-  "frame_id": 18272,
-  "frame_ts_ms": 1786501200123,
-  "published_at_ms": 1786501200180,
-  "source_width": 1920,
-  "source_height": 1080,
-  "roi_id": "main",
-  "objects": [
-    {
-      "class_id": 0,
-      "class_name": "person",
-      "confidence": 0.96,
-      "bbox": [0.21, 0.11, 0.48, 0.91],
-      "attributes": {}
-    }
-  ],
-  "metrics": {"inference_ms": 18.4, "fps": 24.7}
-}
-```
-
-Worker 同时执行：
+Worker 对每个推理帧执行：
 
 ```text
 PUBLISH vision:telemetry:{task_id}
 SET vision:task:{task_id}:latest <json> EX 5
 ```
 
-Redis 断线或发布速度落后于推理时，只保留最新待发送结果，不阻塞推理，也不补发过期帧。
-Redis 仅传输检测元数据，不传输原始视频帧、JPEG 或视频流。
-
-`frame_ts_ms` 是 Worker 的 OpenCV RTSP 解码器返回该帧后的本机 Unix 毫秒时间；它
-不是摄像机采集时间或 RTSP/RTP PTS。`published_at_ms` 是推理完成并构建 Redis 消息
-时的本机 Unix 毫秒时间。`frame_id` 只在同一个 `run_id` 内有意义。
+Redis 只传输检测元数据，不传输原始视频。断线或发布落后时只保留最新待发送结果，不阻塞
+推理，也不补发过期帧。消息契约定义在 `src/algorithm/contracts/detection.py`。
 
 ## 测试
 
 ```bash
 uv run pytest
+uv run --extra viewer pytest
+TEST_DATABASE_URL=postgresql://... uv run pytest \
+  tests/integration/test_postgres_task_parameters_integration.py
 ```
 
-单元测试使用假 Worker、假 RTSP 和假 Redis，不依赖真实摄像头或 GPU。
-安装 `viewer` extra 后会额外运行 Qt offscreen 冒烟测试；未安装时该测试自动跳过。
+普通单元测试使用假数据库、假进程、假 RTSP 和假 Redis，不依赖摄像头或 GPU。真实
+PostgreSQL 与 Redis 集成测试分别通过 `TEST_DATABASE_URL`、`TEST_REDIS_URL` 显式启用。
