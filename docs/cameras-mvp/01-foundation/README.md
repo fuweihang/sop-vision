@@ -3,6 +3,8 @@
 > 阶段：Cameras MVP 公共前置  
 > 交付：领域模型、数据库迁移、HTTP 公共机制、前端 API Client、Mock 和契约测试
 
+> 实施拆分：见 [Foundation 顺序执行计划](./execution-plan/README.md)。该计划把本基线拆成可单独指派、提交和验收的步骤；本文件仍是需求与验收事实源。
+
 ## 1. 完成目标
 
 建立 Cameras 所需的最小数据和 HTTP 基础，使后续功能切片只定义自己的业务行为，不重复设计 ID、错误和分页。
