@@ -1,35 +1,65 @@
-from collections.abc import AsyncGenerator
-from contextlib import asynccontextmanager
+"""FastAPI composition root：组装路由、中间件与进程级资源生命周期。"""
+
+from collections.abc import AsyncGenerator, Callable
+from contextlib import AbstractAsyncContextManager, AsyncExitStack, asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app import __version__
-from app.core.config import get_settings
+from app.core.config import Settings, get_settings
+from app.core.database import DatabaseRuntime, create_database_runtime
 from app.modules.stream_gateway.api.router import router as stream_gateway_router
 from app.modules.stream_gateway.services.mediamtx import MediaMTXClient
 
-
-@asynccontextmanager
-async def lifespan(application: FastAPI) -> AsyncGenerator[None]:
-    settings = get_settings()
-    client = MediaMTXClient(
-        base_url=settings.mediamtx_api_url,
-        timeout=settings.mediamtx_api_timeout,
-    )
-    application.state.stream_gateway_mediamtx_client = client
-    try:
-        yield
-    finally:
-        await client.close()
+DatabaseRuntimeFactory = Callable[[Settings], DatabaseRuntime]
+# FastAPI lifespan 接收应用实例，并返回由框架进入/退出的异步上下文管理器。
+AppLifespan = Callable[[FastAPI], AbstractAsyncContextManager[None]]
 
 
-def create_app() -> FastAPI:
-    settings = get_settings()
+def create_lifespan(
+    settings: Settings,
+    database_runtime_factory: DatabaseRuntimeFactory,
+) -> AppLifespan:
+    """创建绑定本次应用配置和数据库工厂的 lifespan。
+
+    ``AsyncExitStack`` 按后进先出关闭资源，而且即使一个关闭回调抛错仍会继续执行其余
+    回调。这样 MediaMTX client 与数据库连接池不会因另一个资源清理失败而泄漏。工厂
+    参数也让测试可以注入隔离 Runtime，无需改写进程全局单例。
+    """
+
+    @asynccontextmanager
+    async def lifespan(application: FastAPI) -> AsyncGenerator[None]:
+        async with AsyncExitStack() as stack:
+            # Engine/Session factory 只在进入 lifespan 时创建；模块导入不会连接数据库。
+            database_runtime = database_runtime_factory(settings)
+            stack.push_async_callback(database_runtime.dispose)
+            application.state.database_runtime = database_runtime
+
+            # MediaMTX 客户端复用现有应用级生命周期，并在数据库 Runtime 之前关闭。
+            client = MediaMTXClient(
+                base_url=settings.mediamtx_api_url,
+                timeout=settings.mediamtx_api_timeout,
+            )
+            stack.push_async_callback(client.close)
+            application.state.stream_gateway_mediamtx_client = client
+            yield
+
+    return lifespan
+
+
+def create_app(
+    settings: Settings | None = None,
+    database_runtime_factory: DatabaseRuntimeFactory = create_database_runtime,
+) -> FastAPI:
+    """创建可独立测试的应用实例；未注入配置时使用缓存的进程环境配置。"""
+
+    if settings is None:
+        settings = get_settings()
     application = FastAPI(
         title=settings.app_name,
         version=__version__,
-        lifespan=lifespan,
+        lifespan=create_lifespan(settings, database_runtime_factory),
     )
     application.add_middleware(
         CORSMiddleware,

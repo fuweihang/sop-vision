@@ -7,6 +7,7 @@ MediaMTX Control API。
 ## 当前能力
 
 - FastAPI 应用工厂与 lifespan 资源管理。
+- SQLAlchemy async Engine/Session factory 与 Alembic 迁移骨架。
 - `/api/v1/health/live` 存活检查。
 - `/api/v1/health/ready` MediaMTX Control API 就绪检查。
 - 摄像头请求/响应模型和路由骨架。
@@ -29,17 +30,12 @@ MediaMTX Control API。
 
 ```bash
 uv sync
-uv run --env-file ../.env uvicorn app.main:app \
+cp .env.local.example .env.local
+uv run --env-file .env.local uvicorn app.main:app \
   --app-dir src \
-  --host 0.0.0.0 \
+  --host 127.0.0.1 \
   --port 3001 \
   --reload
-```
-
-若根目录没有 `.env`，可先执行：
-
-```bash
-cp ../.env.example ../.env
 ```
 
 启动后可访问：
@@ -68,9 +64,15 @@ Backend 在 Compose 网络中通过 `http://mediamtx:9997` 访问 MediaMTX，并
 
 | 环境变量 | 默认值 | 说明 |
 | --- | --- | --- |
+| `DATABASE_URL` | 必填 | SQLAlchemy PostgreSQL URL，必须显式使用 `postgresql+psycopg://` |
+| `DATABASE_POOL_SIZE` | `5` | 常驻连接池大小 |
+| `DATABASE_MAX_OVERFLOW` | `5` | 连接池允许的临时溢出连接数 |
+| `DATABASE_POOL_TIMEOUT` | `30` | 获取连接的最长等待秒数 |
+| `DATABASE_POOL_RECYCLE` | `1800` | 连接回收秒数；`-1` 表示不按时间回收 |
+| `DATABASE_CONNECT_TIMEOUT` | `10` | 建立 PostgreSQL 连接的超时秒数 |
+| `DATABASE_ECHO` | `false` | 是否输出 SQL；即使开启也隐藏 SQL 参数 |
 | `MEDIAMTX_API_URL` | `http://mediamtx:9997` | MediaMTX Control API 内部地址 |
 | `MEDIAMTX_API_TIMEOUT` | `5` | Control API 请求超时（秒） |
-| `DATABASE_URL` | `postgresql://...@postgres:5432/sop_vision` | PostgreSQL 内部连接地址（持久化代码待实现） |
 | `PUBLIC_WEBRTC_BASE_URL` | `http://localhost:8889` | 返回给浏览器的 WebRTC 公共地址 |
 | `BACKEND_PORT` | `3001` | Backend 映射到宿主机的端口 |
 | `BACKEND_LOG_LEVEL` | `info` | Uvicorn 日志级别 |
@@ -78,18 +80,47 @@ Backend 在 Compose 网络中通过 `http://mediamtx:9997` 访问 MediaMTX，并
 
 应用尚未读写摄像头数据库。MediaMTX 当前 path 配置仍作为首期运行时状态来源。
 
+`DATABASE_URL` 的密码在 Settings 表示和校验异常文本中脱敏。`TEST_DATABASE_URL`
+不是应用配置，只供数据库集成测试使用；测试绝不回退到应用数据库。
+
+## 数据库迁移
+
+在 `backend/` 目录执行正常的前向迁移：
+
+```bash
+uv run --env-file .env.local alembic current
+uv run --env-file .env.local alembic upgrade head
+```
+
+完整回滚链只能在独立测试数据库上验收。`.env.local` 中的
+`TEST_DATABASE_URL` 必须指向与应用库不同、名称以 `_test` 结尾且尚不存在的数据库：
+
+```bash
+uv run --env-file .env.local pytest \
+  tests/core/database/test_migrations.py \
+  -q
+```
+
+测试会创建该数据库，执行 `upgrade head → downgrade base → upgrade head`，核对每一步
+revision，并在结束时删除本次创建的数据库。它拒绝接管或删除预先存在的同名数据库。
+
 ## 项目结构
 
 ```text
 backend/
+├── alembic.ini
 ├── Dockerfile
+├── migrations/
+│   ├── env.py
+│   └── versions/
 ├── pyproject.toml
 ├── uv.lock
 ├── src/
 │   └── app/
 │       ├── main.py
 │       ├── core/
-│       │   └── config.py
+│       │   ├── config.py
+│       │   └── database/
 │       └── modules/
 │           └── stream_gateway/
 │               ├── api/
@@ -110,11 +141,14 @@ backend/
 ## 质量检查
 
 ```bash
-uv run pytest
-uv run pytest --cov=app --cov-report=term-missing
+uv run --env-file .env.local pytest
+uv run --env-file .env.local pytest --cov=app --cov-report=term-missing
 uv run ruff check .
 uv run ruff format --check .
 ```
+
+未配置 `TEST_DATABASE_URL` 时，迁移集成测试会明确跳过；CI 和数据库迁移验收必须配置
+该变量并确认测试实际执行。
 
 添加依赖时使用 `uv add package-name` 或 `uv add --dev package-name`，并同时提交
 `pyproject.toml` 与 `uv.lock`。

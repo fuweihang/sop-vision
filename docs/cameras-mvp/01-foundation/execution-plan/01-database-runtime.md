@@ -55,21 +55,25 @@ backend/
 - 应用 lifespan 结束时调用 Engine dispose。
 - PostgreSQL 空库可执行 `upgrade head → downgrade base → upgrade head`。
 - 捕获的配置日志和异常文本不包含测试数据库密码。
+- 迁移集成测试只使用显式 `TEST_DATABASE_URL`，拒绝回退到应用 `DATABASE_URL`；
+  测试数据库名必须以 `_test` 结尾且与应用数据库不同。
 
 建议验收命令：
 
 ```bash
 cd backend
-uv run alembic upgrade head
-uv run alembic downgrade base
-uv run pytest tests/core/database tests/test_config.py
+uv run --env-file .env.local pytest tests/core/database tests/test_config.py
 uv run ruff check .
 uv run ruff format --check .
 ```
 
+其中迁移测试在 `TEST_DATABASE_URL` 指向的临时测试库内执行
+`upgrade head → downgrade base → upgrade head`，不得直接对 `DATABASE_URL` 执行验收回滚。
+
 ## 6. 退出条件
 
 - 从全新 PostgreSQL 数据库可重复完成迁移和回滚。
+- 迁移验收只创建和清理本次测试建立的独立测试数据库，不接管已存在的同名数据库。
 - FastAPI 测试生命周期结束后没有未关闭连接告警。
 - 本步骤没有 Camera ORM、Repository 或业务表。
 - 数据库凭据不出现在日志、测试快照和异常响应中。

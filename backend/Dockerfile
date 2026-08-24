@@ -15,6 +15,9 @@ COPY pyproject.toml uv.lock README.md ./
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --locked --no-install-project --no-editable
 
+# 构建阶段包含迁移配置，使项目安装环境与最终运行镜像使用同一 revision 链。
+COPY alembic.ini ./
+COPY migrations ./migrations
 COPY src ./src
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --locked --no-editable
@@ -31,6 +34,9 @@ WORKDIR /app
 RUN useradd --create-home --uid 10001 app
 
 COPY --from=builder --chown=app:app /app/.venv /app/.venv
+# 迁移文件不是 Python wheel 内容，必须显式复制到运行镜像供运维命令使用。
+COPY --from=builder --chown=app:app /app/alembic.ini /app/alembic.ini
+COPY --from=builder --chown=app:app /app/migrations /app/migrations
 
 USER app
 
