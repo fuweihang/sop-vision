@@ -25,6 +25,10 @@ services:
       timeout: 5s
       retries: 5
       start_period: 10s
+    networks:
+      default:
+        aliases:
+          - sop-vision-postgres
 
   redis:
     image: redis:${REDIS_IMAGE_TAG:-7-alpine}
@@ -48,6 +52,10 @@ services:
       timeout: 3s
       retries: 5
       start_period: 5s
+    networks:
+      default:
+        aliases:
+          - sop-vision-redis
 
   mediamtx:
     image: bluenviron/mediamtx:${MEDIAMTX_IMAGE_TAG:-1}
