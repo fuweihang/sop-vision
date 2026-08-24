@@ -1,115 +1,193 @@
-# Cameras Foundation 顺序执行计划
+# Cameras Foundation 执行计划
 
-> 来源：[01｜Cameras 基础契约](../README.md)  
-> 执行方式：按顺序实施，不要求并行  
-> 计划粒度：每一步均可单独指派、提交、回滚和验收
+> 需求事实源：[Foundation 契约](../README.md)
+>
+> 执行方式：步骤 1–9 严格顺序；每步可单独提交和验收
 
-## 1. 拆分目标
+## 当前基线
 
-Foundation 同时包含持久化、领域、HTTP、契约和前端基础设施。如果一次性交付，数据库约束、错误语义和生成类型会在末期才发生集成冲突。本计划按依赖方向拆分，使每一步都满足以下条件：
+| 步骤              | 状态                   | 代码证据                                                                   |
+| ----------------- | ---------------------- | -------------------------------------------------------------------------- |
+| 1 数据库运行时    | 已完成                 | `app/core/database/`、Alembic 基线、生命周期与迁移测试                     |
+| 2 关系模型        | 已完成                 | Camera 无外键 DDL、稳定约束、巡检与 PostgreSQL 测试                        |
+| 3 领域模型        | 已完成                 | 不可变聚合、规范化、固定 ID/时钟与领域测试                                 |
+| 4 Repository/UoW  | 已完成                 | 专用端口、SQLAlchemy/Fake 实现、事务与并发测试                             |
+| 5 HTTP 公共机制   | 已实现，验收隔离待修复 | trace、Problem、严格 UUID、分页依赖及 probe 测试                           |
+| 6 OpenAPI 契约    | 未开始                 | 仍保留早期 `stream_gateway/schemas/camera.py`，无 `contracts/openapi.json` |
+| 7 前端 Client     | 未开始                 | 仍使用 `frontend/src/lib/api-client.ts`，无生成类型                        |
+| 8 前端状态与 Mock | 未开始                 | 有通用 Route State/MSW 基础，尚无 Cameras 场景集合                         |
+| 9 契约门禁        | 未开始                 | 尚无 regenerate-and-diff 和占位清理门禁                                    |
 
-- 只有一个主要架构关注点。
-- 明确消费的前置产物和向后续提供的接口。
-- 不依赖尚未实现的 Camera 业务 Service 即可测试；步骤 6 的占位 Router 只验证 HTTP 契约。
-- 通过自动化验收后即可合并，不以“后续再补测试”为完成条件。
-- 失败时可以回滚当前步骤，而不推翻之前已经冻结的契约。
+代码检查结果：不加载本地数据库配置时 Backend 为 `94 passed, 13 skipped`；加载
+`.env.local` 后，PostgreSQL 迁移、约束、事务和并发测试均执行，但环境中的
+`BACKEND_CORS_ORIGINS` 会覆盖测试 fixture，使固定 `localhost` 的 CORS 用例失败。临时固定
+测试 Origin 后为 `107 passed`。进入步骤 6 前，应让测试配置不受调用者环境污染，并确保标准
+验收命令直接全绿。
 
-“可独立执行”不表示步骤彼此无依赖，而是指执行者只需读取本步骤、Foundation 事实源和列明的前置产物，就可以完成实现与验收。
-
-## 2. 已知仓库基线
-
-- Backend 已有 FastAPI 应用工厂和 `stream_gateway` 模块；步骤 1–3 已建立
-  SQLAlchemy 异步运行时、Alembic 迁移链、Camera 无外键 ORM 表、引用完整性
-  Repository 骨架和框架无关的 Camera 领域模型，完整 Repository/UoW 仍由步骤 4 交付。
-- 现有 `stream_gateway/schemas/camera.py` 是早期单流占位契约，与 Cameras MVP 聚合模型不一致，不能继续作为事实源。
-- Frontend 已有 Axios、TanStack Query、MSW、Camera 路由骨架和通用 Route State 组件，但尚无 OpenAPI 生成链路或 Cameras Query Key。
-- Compose 已提供 PostgreSQL 17；数据库集成测试应使用 PostgreSQL，不用 SQLite 模拟 UUID、延迟唯一约束、行锁或排序约束。
-- Foundation 在步骤 6 注册全部 Cameras MVP 路径；业务未实现期间，占位 handler 直接抛出
-  `NotImplementedError`，其运行结果不属于公共契约。
-
-## 3. 架构边界
-
-### 3.1 模块所有权
-
-- `app/modules/cameras/`：Camera 聚合、领域规则、持久化端口、ORM 映射和 Cameras HTTP Schema。
-- `app/modules/stream_gateway/`：MediaMTX 适配器及运行时媒体能力；不再拥有 Camera 配置模型。
-- `app/core/database/`：Engine、Session、Alembic 接线等进程级数据库基础设施。
-- `app/core/http/`：Problem Details、trace ID 和框架异常转换等跨模块 HTTP 机制。
-- `contracts/`：可复现生成的 OpenAPI 跨端契约。
-
-不要建立跨所有业务的 Generic Repository 或全能 Base Service。Foundation 只定义 Cameras MVP 已确认消费者需要的端口。
-
-占位 Router 也不得成为架构扩张理由：禁止为尚未实现的功能新增专用异常层、占位 Service、
-占位 Port、依赖装配、contract-only FastAPI 应用、component registry、通用 handler 工厂或
-其他只服务于占位阶段的抽象。每个占位 operation 只声明真实契约元数据，并以一行
-`raise NotImplementedError` 结束。
-
-### 3.2 依赖方向
+## 架构边界
 
 ```text
-HTTP Schema / API dependency
-            ↓
-    Cameras application ports
-            ↓
-       Cameras domain
-            ↑
-SQLAlchemy repository / Unit of Work
+HTTP Schema / dependency
+          ↓
+Cameras application ports
+          ↓
+     Cameras domain
+          ↑
+SQLAlchemy repository / UoW
 
-OpenAPI artifact → generated frontend types → API client / MSW
+OpenAPI → generated frontend types → Client / MSW
 ```
 
-领域层不得导入 FastAPI、Pydantic、SQLAlchemy、Axios 或 MediaMTX 类型。外部依赖错误必须在适配器或 HTTP 边界转换，不能渗入领域对象。
+- `app/modules/cameras/` 拥有 Camera 聚合、持久化端口/适配器和 Cameras HTTP Schema。
+- `app/modules/stream_gateway/` 只拥有 MediaMTX 运行时能力，不拥有 Camera 配置模型。
+- `app/core/database/` 和 `app/core/http/` 只提供跨模块基础设施。
+- `contracts/` 保存确定性生成的跨端 OpenAPI 产物。
+- 不建立 Generic Repository、全能 Base Service 或只服务占位阶段的抽象。
 
-## 4. 执行顺序
+## 步骤 1｜数据库运行时（已完成）
 
-| 顺序 | 步骤 | 独立交付结果 | 主要后续消费者 |
-| --- | --- | --- | --- |
-| 1 | [数据库运行时与迁移骨架](./01-database-runtime.md) | 可配置、可释放、可迁移的 PostgreSQL 接线 | 步骤 2、4 |
-| 2 | [关系模型与无外键约束迁移](./02-relational-schema.md) | `cameras/camera_sources` 表、约束、升级与回滚测试 | 步骤 4 |
-| 3 | [领域模型与规范化规则](./03-domain-model.md) | 与框架无关的 Camera 聚合和值规则 | 步骤 4、6 |
-| 4 | [Repository 与事务边界](./04-repository-uow.md) | 可原子保存和读取聚合的持久化端口及实现 | 功能切片 02–09 |
-| 5 | [HTTP 公共机制](./05-http-foundation.md) | trace ID、Problem Details、严格 UUID、分页查询 | 步骤 6、功能路由 |
-| 6 | [公共 Schema、占位 Router 与 OpenAPI](./06-openapi-contract.md) | 可复现的路径级契约、最小占位 Router 和后端 Schema 测试 | 步骤 7、8、功能切片 |
-| 7 | [前端类型、Client 与错误映射](./07-frontend-client.md) | 唯一类型来源、API 错误解析和 Query Key | 功能页面、步骤 8 |
-| 8 | [前端状态基元与 Mock Server](./08-frontend-mocks.md) | 可切换的成功/失败场景与共享页面状态 | 功能切片 02–09 |
-| 9 | [契约门禁与 Foundation 收口](./09-contract-gates.md) | CI 漂移检测、安全回归和交接说明 | 所有后续切片 |
+产物：
 
-默认采用严格顺序。即使团队具备并行能力，也应至少等当前步骤的公共接口和自动化验收合并后再开始下一步，避免重复定义契约。
+- 必填、脱敏的 `DATABASE_URL` 和连接池配置。
+- 惰性 AsyncEngine、独立 AsyncSession factory、lifespan dispose。
+- Alembic metadata 接线和不含业务 DDL 的基线 revision。
+- 只接受独立 `*_test` 数据库的迁移测试。
 
-## 5. 每步统一交付要求
+验收：Session 无隐式 commit；异常 rollback；`upgrade head → downgrade base → upgrade head`；
+日志和异常不含数据库密码。
 
-每个步骤的 PR 或提交必须包含：
+## 步骤 2｜关系模型（已完成）
 
-1. 本步骤代码、配置和迁移文件。
-2. 与风险匹配的单元测试或 PostgreSQL 集成测试。
-3. 受影响的启动、生成或测试命令说明。
-4. 对已冻结公共接口的变更说明；无变更也要明确写“无”。
-5. 不包含后续步骤的业务实现；步骤 6 明确声明、直接抛出 `NotImplementedError` 的最小 Router
-   是唯一允许的开发期占位。
+产物：
 
-每步验收先运行该步骤列出的定向测试，再运行受影响工程的完整 lint/test。只要本步骤的退出条件未满足，就不进入下一步。
+- `cameras` 与 `camera_sources` 表，无任何外键。
+- 原生 UUID/INET/timestamptz；IPv4、端口、非负顺序 CHECK。
+- `(camera_id, url_suffix)` 与 `(camera_id, sort_order)` 延迟唯一约束及 Camera 索引。
+- 四类跨表引用完整性巡检，只告警不修复。
 
-## 6. 全局非目标
+本步骤只拥有表、约束、索引、迁移和巡检；Repository 行为、锁与并发由步骤 4 所有。
 
-- 不实现 Camera 创建、列表、详情、更新、默认源切换、播放或删除的业务行为；这些路径仅以
-  直接抛出 `NotImplementedError` 且不保证可调用的最小占位 Router 存在。
-- 不访问真实摄像头，不要求 MediaMTX 在线。
-- 不引入鉴权、RBAC、WebSocket、Redis、审计或可靠异步清理。
-- 不把真实密码、真实完整 RTSP URL 或敏感响应写入日志、快照、生成产物或浏览器持久化
-  存储；唯一例外是 CameraDetail 契约和 Fixture 中明确标记的固定测试凭据。
-- 不修改生成的 `frontend/src/routeTree.gen.ts`。
+验收：实际 PostgreSQL DDL、升级/回滚、大小写敏感后缀、延迟约束和无外键检查通过。
 
-## 7. Foundation 完成判定
+## 步骤 3｜领域模型（已完成）
 
-步骤 1–9 全部完成后，后续任一 Cameras 功能切片都应能直接复用以下产物：
+产物：
 
-- PostgreSQL 迁移与真实约束。
-- Camera 聚合、Repository、Unit of Work、固定 ID/时钟 Fixture。
-- 统一 Problem Details、严格 UUID、分页与 trace ID。
-- 可复现 OpenAPI、前端生成类型、API Client、Query Key 和字段错误映射。
-- MSW 场景入口和加载/刷新/空/失败状态基元。
-- CI 中的迁移、契约漂移与敏感数据回归门禁。
+- 框架无关、不可变的 `Camera/CameraSource` 聚合。
+- 创建、重建、完整更新、默认源切换和 RTSP URL 派生。
+- UUID/Clock 端口、生产实现、固定测试实现和 Builder。
+- 稳定字段错误和聚合损坏错误；Secret 默认输出脱敏。
 
-此时 Cameras 路径已经注册并进入 OpenAPI，但 handler 仍直接抛出 `NotImplementedError`，不
-代表任何业务能力完成，也没有完成态页面。`02-camera-create` 首先在原 Router 中替换自己拥有
-的 `NotImplementedError` 并实现创建业务能力。
+验收：字段规范化、聚合不变量、Source ID/创建时间保留、连续顺序、损坏数据拒绝及敏感输出
+测试通过；领域测试不启动 FastAPI、PostgreSQL 或 MediaMTX。
+
+## 步骤 4｜Repository 与 UoW（已完成）
+
+产物：
+
+- `CameraRepository.add/save/get/list/count/delete` 和 `CameraUnitOfWork` Protocol。
+- 显式领域/ORM Mapper、SQLAlchemy 实现、Fake Store/UoW 和共享 contract tests。
+- Camera → Source 固定锁顺序、完整集合差异更新、显式删除和约束错误转换。
+- 名称/IP 字面搜索、固定排序、分页和批量 Source 读取。
+
+验收：Fake 与 PostgreSQL 共享契约通过；提交/回滚可见性、延迟约束、并发保存/删除、损坏数据
+和敏感错误边界由真实 PostgreSQL 测试证明。
+
+## 步骤 5｜HTTP 公共机制（已实现，待收口）
+
+产物：
+
+- ASGI trace middleware、ContextVar 和日志 Filter；成功/错误/CORS 响应均有同源 ID。
+- RFC 9457 风格 Problem/FieldError 与框架、领域、数据库异常转换。
+- canonical UUID v4 类型、嵌套字段路径转换、分页和搜索依赖。
+- 仅存在于测试的 probe router；无 Camera CRUD handler。
+
+收口任务：
+
+1. 修复 `Settings` 测试 fixture 被进程 `BACKEND_CORS_ORIGINS` 覆盖的问题。
+2. 使用标准 `uv run --env-file .env.local pytest` 运行全部 107 项且无失败/跳过。
+3. 保持请求原始 input、数据库错误、密码和完整 RTSP URL 不进入 Problem 或日志。
+
+## 步骤 6｜Schema、占位 Router 与 OpenAPI
+
+建立唯一的后端 HTTP Schema 来源：
+
+- `CameraCreateRequest/CameraUpdateRequest` 及 Source item。
+- `CameraDetail/CameraSourceDetail`、`CameraSummary/CameraPage`。
+- 默认源变更、状态摘要、PlaybackInfo 和公共 Problem response。
+- 请求模型 `extra="forbid"`；列表与 Playback Schema 通过黑名单测试禁止敏感字段。
+
+目标响应矩阵：列表 `200/422/503`；创建 `201/422/503`；详情 `200/404/422/500/503`；更新
+`200/404/422/503`；默认源 `200/404/422/503`；删除 `204/404/422/503`；Playback
+`200/404/409/422/502/503`。Cameras 只使用 `cameras`、`camera-sources` tag；现有健康检查保留
+`healthLiveness/healthReadiness` operation ID，readiness 的 `503` 引用公共 Problem。
+
+在真实应用注册全部目标路径和稳定 operation ID。未实现 handler 的函数体只能直接
+`raise NotImplementedError`：不装配 Service/Repository，不定义占位错误协议，也不建立第二个
+契约应用。OpenAPI 只描述目标成功和业务错误，路径存在不代表业务已可调用。
+
+生成 `contracts/openapi.json` 时不进入 lifespan、不连接依赖；固定元数据、排序、缩进和换行，
+连续生成必须字节一致。创建 `201` 声明 Location/no-store，详情和更新声明 no-store，Playback
+`409` 声明 Retry-After，所有响应声明 X-Trace-Id。顶层请求/响应使用经 Schema 校验的固定
+example；只有 CameraDetail example 可以包含明确标记的测试凭据和完整测试 RTSP URL。
+
+退出条件：删除或迁移早期单流 Camera Schema；七条业务路径的 Schema、响应头、媒体类型和
+operation ID 结构测试通过；调用占位接口的临时结果不进入正式契约。
+
+## 步骤 7｜前端类型、Client 与错误映射
+
+- 从 `contracts/openapi.json` 生成包含 operation 的 TypeScript 类型，生成文件不手改。
+- 收敛为单一 Axios Client；非 Problem 网络错误不伪造业务 code。
+- 运行时验证 Problem，准确映射 `sources[1].name` 等动态字段。
+- 提供 Foundation 冻结的三个 Query Key；规范化空 q，不加入 sort。
+- 删除 Cameras 手写 DTO；敏感详情不进入持久化缓存、console 或错误上报。
+
+退出条件：重新生成后无需手工补丁，Frontend build/lint/test 通过；占位 Backend 的临时错误
+不产生前端分支。
+
+## 步骤 8｜页面状态基元与 MSW
+
+- 复用设计系统实现首次加载、后台刷新、空数据、搜索无结果和可恢复错误组合基元。
+- 使用生成类型建立固定 UUID/时间的 Cameras Fixture Builder 和显式 MSW 场景。
+- 覆盖成功、嵌套 `422`、`404/409/502/503`、首次失败和后台刷新失败。
+- 每例重置 handler/计数器；未处理请求直接失败，绝不访问真实 Backend/MediaMTX。
+
+退出条件：后续切片可选择场景独立开发；公共基元不内置具体 CRUD；Frontend 全套检查通过。
+
+## 步骤 9｜契约门禁与交接
+
+CI 顺序：Backend 检查 → PostgreSQL 迁移/Repository 测试 → 导出 OpenAPI → 生成 TS →
+工作区漂移检查 → Frontend 检查 → 敏感数据专项测试。
+
+门禁必须发现字段/必填性/类型/枚举、operation ID、错误响应和媒体类型漂移，并阻止列表或
+Playback 新增敏感字段。使用唯一 leak sentinel 覆盖领域、Pydantic、SQLAlchemy、Problem、
+日志、生成物、MSW 非详情响应和浏览器存储。
+
+Foundation 收口时允许七个 handler 仍是一行 `raise NotImplementedError`；MVP 发布门禁则要求
+它们已被对应功能切片原位替换。每个功能切片替换 handler 时必须同步重新生成 OpenAPI、前端
+类型和 Fixture，并增加运行时行为测试。
+
+## 统一交付要求
+
+- 每步包含实现、与风险匹配的测试、必要命令说明和公共契约变更说明。
+- 当前步骤未通过定向测试和受影响工程完整检查前，不进入下一步。
+- Foundation 不实现 Camera CRUD、MediaMTX 状态/播放、鉴权、Redis、WebSocket 或可靠清理。
+- 不修改生成的 `frontend/src/routeTree.gen.ts`；不把真实凭据写入文档、日志、快照或产物。
+
+当前通用验收命令：
+
+```bash
+cd backend
+uv run --env-file .env.local pytest
+uv run ruff check .
+uv run ruff format --check .
+
+cd ../frontend
+pnpm test
+pnpm lint
+pnpm format:check
+pnpm build
+```
+
+步骤 6–9 新增的 OpenAPI 导出、类型生成和漂移检查必须提供稳定脚本，并加入上述完整门禁；
+不得依赖开发者手工记忆命令。

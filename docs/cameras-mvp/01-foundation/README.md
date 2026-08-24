@@ -1,151 +1,68 @@
-# 01｜Cameras 基础契约
+# 01｜Cameras Foundation 契约
 
-> 阶段：Cameras MVP 公共前置  
-> 交付：领域模型、数据库迁移、HTTP 公共机制、前端 API Client、Mock 和契约测试
+> 公共前置；实施状态与步骤见[执行计划](./execution-plan/README.md)。
 
-> 实施拆分：见 [Foundation 顺序执行计划](./execution-plan/README.md)。该计划把本基线拆成可单独指派、提交和验收的步骤；本文件仍是需求与验收事实源。
+Foundation 只建立后续切片共享的数据、事务、HTTP、跨端类型和测试基础，不交付可操作的
+Camera 页面或业务行为。本文件是公共规则的唯一事实源；功能文档只描述差异。
 
-## 1. 完成目标
+## 领域与字段
 
-建立 Cameras 所需的最小数据和 HTTP 基础，使后续功能切片只定义自己的业务行为，不重复设计 ID、错误和分页。
+| 字段                        | 规则                                                                        |
+| --------------------------- | --------------------------------------------------------------------------- |
+| `camera_id/source_id`       | 服务端生成 UUID v4，全局唯一，创建后不变                                    |
+| `name`                      | trim 后 `1-128` 字符                                                        |
+| `ip_address`                | IPv4                                                                        |
+| `rtsp_port`                 | `1-65535`，创建默认 `554`                                                   |
+| `username/password`         | 分别 `1-128`、`1-512` 字符，不自动 trim                                     |
+| `default_preview_source_id` | 必须属于当前 Camera                                                         |
+| `url_suffix`                | trim、移除全部前导 `/`，结果 `1-1024` 字符；其余大小写、查询串和尾 `/` 不变 |
+| `sort_order`                | 请求数组顺序，从 `0` 开始连续                                               |
+| `created_at/updated_at`     | 服务端 RFC 3339 UTC 时间                                                    |
 
-本模块完成时不要求存在可操作页面或真实 Camera 业务行为，但全部 Cameras MVP 路径必须已
-注册到 FastAPI；占位 handler 直接抛出 `NotImplementedError`，不承诺可调用性。数据库迁移、
-公共 Schema、API Client 和 Mock Server 必须能够独立测试。
+Camera 至少包含一路 Source，且恰好一路默认。规范化后缀在同一 Camera 内大小写敏感唯一。
+已有 Source 更新时保留 `source_id/created_at`；新增项生成新 ID；持久化数据不满足不变量时
+抛出聚合损坏错误，不静默修复或返回部分数据。
 
-## 2. 范围
+公共字段错误 code：必填 `REQUIRED`、超长 `STRING_TOO_LONG`、非法 IPv4
+`INVALID_IP_ADDRESS`、非法 UUID `INVALID_UUID`、数值越界 `OUT_OF_RANGE`、未知字段
+`UNKNOWN_FIELD`。聚合和所有权错误由对应功能切片定义字段位置。
 
-### 后端
-
-- 建立 `cameras` 和 `camera_sources` 表及仓储接口。
-- 定义全局唯一、服务端生成的 UUID v4 `camera_id/source_id`。
-- 实现统一 Problem Details、字段错误、分页参数和搜索规范化。
-- 注册全部 Cameras MVP 占位 Router，并把目标 HTTP 契约导出到 OpenAPI。
-- 把框架默认字段错误转换为统一 Problem 模型。
-
-### 前端
-
-- 提供类型化 API Client、Problem Details 解析和字段错误映射。
-- 提供 Cameras Query Key 工厂。
-- 提供首次加载、后台刷新、空数据、搜索无结果和错误状态基元。
-- 只使用 OpenAPI 生成 Cameras HTTP 类型，并用契约测试阻止手写 DTO 漂移。
-
-### 不属于本模块
-
-- Camera 路由的真实业务行为及页面；Foundation 只交付直接抛出 `NotImplementedError` 的最小
-  占位 handler。
-- MediaMTX Path 状态映射和 WHEP 播放。
-- 通用登录、权限、WebSocket 或全平台基础设施。
-
-## 3. 领域模型
-
-### 3.1 Camera
-
-| 字段 | 类型 | 规则 |
-| --- | --- | --- |
-| `camera_id` | UUID | 服务端生成 UUID v4；主键，全局唯一且创建后不可改变 |
-| `name` | string | trim 后 `1-128` 字符 |
-| `ip_address` | string | 合法 IPv4 文本 |
-| `rtsp_port` | integer | `1-65535`，创建默认 `554` |
-| `username` | string | `1-128` 字符 |
-| `password` | string | `1-512` 字符 |
-| `default_preview_source_id` | UUID | 必须属于当前 Camera |
-| `created_at` | datetime | 服务端生成 RFC 3339 UTC |
-| `updated_at` | datetime | 服务端生成 RFC 3339 UTC |
-
-MVP 不为名称或 IP 建立唯一索引。
-
-### 3.2 CameraSource
-
-| 字段 | 类型 | 规则 |
-| --- | --- | --- |
-| `source_id` | UUID | 服务端生成 UUID v4；主键，全局唯一且创建后不可改变 |
-| `camera_id` | UUID | 所属聚合的逻辑引用；删除 Camera 时由 Repository 在同一事务显式删除 |
-| `name` | string | trim 后 `1-128` 字符 |
-| `url_suffix` | string | 规范化后 `1-1024` 字符 |
-| `sort_order` | integer | 从 `0` 开始，同 Camera 内连续排序 |
-| `created_at` | datetime | 服务端生成 RFC 3339 UTC |
-| `updated_at` | datetime | 服务端生成 RFC 3339 UTC |
-
-同一 Camera 内对 `(camera_id, url_suffix)` 建立唯一约束。`url_suffix` 比较区分大小写。
-
-PostgreSQL 中上述 ID 字段使用原生 `uuid` 类型，不使用字符串列。UUID 规则：
-
-- 使用符合 RFC 9562 的 UUID v4。
-- 由服务端生成；Frontend 不生成正式业务 ID。
-- API 使用小写、带连字符的标准形式，例如 `8f14e45f-ea9d-4a7d-9b6d-8c9f0a1b2c3d`。
-- 不接受无连字符、花括号包裹、大写或其他非标准文本形式。
-- 无效 UUID 路径或字段返回 `422 VALIDATION_ERROR`，字段 code 为 `INVALID_UUID`。
-
-### 3.3 聚合约束
-
-- Camera 必须至少包含一路 Source。
-- `default_preview_source_id` 必须指向同一 Camera 下的一路 Source。
-- Camera 与 Source 的创建、完整更新和删除使用同一数据库事务。
-- Source 顺序由请求数组顺序决定，服务端持久化为连续 `sort_order`。
-- 已有 Source 更新时保留 `source_id/created_at`；新增 Source 生成新 ID。
-- Source 连接状态和播放地址不写入上述配置表。
-
-## 4. URL 与敏感数据规则
-
-完整 RTSP URL 的生成规则为：
+完整 RTSP URL 按以下冻结语义派生，不单独持久化：
 
 ```text
 rtsp://{username}:{password}@{ip_address}:{rtsp_port}/{url_suffix}
 ```
 
-`url_suffix` 规范化步骤：
+## 持久化与事务
 
-1. 去除首尾空白。
-2. 去除开头的全部 `/`。
-3. 规范化后为空则校验失败。
-4. 不改变内部字符、大小写、查询字符串或尾部 `/`。
+PostgreSQL 使用原生 `uuid`、`inet` 和 `timestamptz`。`cameras` 与 `camera_sources` 不建立
+外键；数据库负责主键、IPv4、端口、非负顺序，以及同 Camera 后缀/顺序的延迟唯一约束。
 
-密码按当前 MVP 产品语义保存并在 Camera 详情中回填。必须执行以下保护：
+跨表不变量由 Camera 专用 Repository/UoW 维护：
 
-- Camera 详情响应包含 `Cache-Control: no-store`。
-- 应用日志、访问日志、异常追踪和指标标签不得记录密码。
-- 不得记录完整带凭据 RTSP URL。
-- Problem Details 的 `detail/context/errors` 不得回显密码或完整 RTSP URL。
-- 列表响应和播放信息响应不得包含用户名、密码或 RTSP URL。
+- 所有既有聚合写入先锁 Camera，再按 `source_id` 锁全部 Source。
+- `add/save/delete` 只 flush；Application Service 显式调用 UoW `commit/rollback`。
+- 创建、完整更新和删除在一个事务内完成；删除先显式删除 Source，再删除 Camera。
+- 数据库提交后才能更新或释放 MediaMTX 映射；外部失败不能伪装成数据库回滚。
+- ORM Row 不进入领域/Application Service；领域对象不依赖 FastAPI、Pydantic 或 SQLAlchemy。
+- 引用完整性巡检检测孤儿 Source、缺失/跨 Camera 默认源和无 Source Camera，只告警不修复。
 
-## 5. 通用 HTTP 契约
+公共持久化端口为 `CameraRepository.add/save/get/list/count/delete` 和
+`CameraUnitOfWork.commit/rollback`。列表搜索对名称和 IPv4 做大小写无关的字面包含匹配；
+`%/_/\` 不作为 SQL 通配符。结果固定按 `created_at ASC, camera_id ASC` 分页，越界页返回空集。
 
-- REST 前缀为 `/api/v1`。
-- 成功请求和响应使用 `application/json`；错误使用 `application/problem+json`。
-- JSON 字段使用 `snake_case`，枚举使用大写英文字符串。
-- 时间使用 RFC 3339 UTC。
-- OpenAPI 将 `camera_id/source_id/default_preview_source_id` 声明为 `type: string, format: uuid`。
-- UUID 只用于相等比较和路由，不允许客户端从中推导创建时间或业务含义。
-- 每个路由必须有稳定且唯一的 `operation_id`。
+## HTTP 契约
 
-## 6. 分页、搜索和固定顺序
+- API 前缀 `/api/v1`；JSON 字段使用 `snake_case`，枚举使用大写英文值。
+- UUID 路径和字段只接受小写、带连字符、RFC variant 正确的 UUID v4 文本。
+- 每条路由使用显式、全局唯一的 `operation_id`。
+- 成功响应为 `application/json`；结构化错误为 `application/problem+json`。
+- 列表参数：`page >= 1`，`1 <= page_size <= 100`，`q` trim 后最长 100，空白等同未提供。
+- 额外查询参数被忽略；请求 DTO 的未知字段返回 `422 UNKNOWN_FIELD`。
+- 成功和错误响应均携带 `X-Trace-Id`；Problem body 使用同一 `trace_id`。
 
-Camera 列表统一支持：
-
-| 参数 | 类型 | 默认 | 规则 |
-| --- | --- | --- | --- |
-| `page` | integer | `1` | `>= 1` |
-| `page_size` | integer | `20` | `1-100` |
-| `q` | string | 无 | trim，最长 100；空字符串等同未提供 |
-
-分页响应结构：
-
-```json
-{
-  "items": [],
-  "page": 1,
-  "page_size": 20,
-  "total": 0
-}
-```
-
-Camera 列表固定按 `created_at ASC, camera_id ASC` 返回，即先创建的 Camera 在前，相同创建
-时间使用 `camera_id` 升序保证稳定分页。API 不声明排序参数；额外查询参数（包括旧的
-`sort`）被忽略，不报错也不改变固定顺序。非法页码和非法 page size 返回
-`422 VALIDATION_ERROR`，并指向对应查询字段。
-
-## 7. 错误模型
+Problem 采用以下稳定字段；前端业务分支只能依赖 `status/code/errors/context`，不能比较
+`title/detail`：
 
 ```json
 {
@@ -155,79 +72,61 @@ Camera 列表固定按 `created_at ASC, camera_id ASC` 返回，即先创建的 
   "code": "VALIDATION_ERROR",
   "detail": "存在一个或者多个无效字段。",
   "instance": "/api/v1/cameras",
-  "trace_id": "tr_01J...",
+  "trace_id": "tr_...",
   "errors": [
-    {
-      "field": "sources[0].url_suffix",
-      "code": "REQUIRED",
-      "detail": "请输入视频源 URL 后缀。"
-    }
+    { "field": "sources[0].name", "code": "REQUIRED", "detail": "..." }
   ],
   "context": {}
 }
 ```
 
-稳定字段为 `status/code/errors[].field/errors[].code/context`。前端不得依赖 `title/detail` 编写业务分支。
+| HTTP  | 公共用途                             |
+| ----- | ------------------------------------ |
+| `400` | 请求整体语义无效                     |
+| `404` | Camera 或 Source 不存在              |
+| `409` | 播放尚不可用                         |
+| `422` | 路径、查询或请求字段错误             |
+| `500` | 持久化聚合损坏等服务端不变量错误     |
+| `502` | MediaMTX 响应无效                    |
+| `503` | 当前请求必需的数据库或媒体依赖不可用 |
 
-`type` 使用 `urn:sop-vision:problem:<kebab-case-code>` 形式，例如
-`urn:sop-vision:problem:camera-not-found`。该 URN 是跨环境稳定的问题类型标识，不依赖可用
-域名、服务 IP 或部署地址，也不要求客户端尝试访问。开发、测试和生产环境不得为同一错误
-生成不同 `type`；客户端业务分支仍以稳定的 `code` 为准。
+框架校验不得公开 Pydantic 原始 input；数据库错误不得公开 SQL、参数或约束名。仅当应用层能
+准确定位字段时，数据库后缀冲突才可转换为 `DUPLICATE_SOURCE_SUFFIX`。
 
-| HTTP | 使用场景 |
-| --- | --- |
-| `400` | JSON 可解析但请求整体语义无效 |
-| `404` | Camera 或 CameraSource 不存在 |
-| `409` | 播放尚不可用 |
-| `422` | 请求体或查询字段校验失败 |
-| `502` | MediaMTX 返回无效响应 |
-| `503` | PostgreSQL 或 MediaMTX 等当前请求必需的依赖暂不可用 |
+## 敏感数据
 
-所有响应包含或透传 `trace_id`；日志使用同一标识关联请求。
+- CameraDetail 是唯一返回 `username/password/rtsp_url` 的公共形状，成功响应必须
+  `Cache-Control: no-store`。
+- 列表、PlaybackInfo、Problem、日志、指标、追踪和错误上报不得包含凭据或完整 RTSP URL。
+- Secret/ORM/领域对象的默认 `repr/str` 不得输出密码。
+- CameraDetail 只在当前浏览器会话内存中短期保存，不进入 localStorage、IndexedDB、离线缓存
+  或持久化 Query cache；错误上报不得附带完整响应。
 
-## 8. OpenAPI 与前端基础
+## 前端公共契约
 
-- OpenAPI 标签仅使用 `cameras` 和 `camera-sources`。
-- 请求、成功响应及所有已声明错误都使用显式 Schema。
-- Foundation 注册 API 总表中的全部路径；未实现 handler 直接抛出 `NotImplementedError`。
-- 占位路由注册到正常应用，但不保证运行时状态码或错误正文，也不把临时失败写入正式
-  OpenAPI 响应。
-- 禁止为占位阶段新增专用异常、状态码、Service/Port、依赖装配、独立契约应用或通用占位
-  抽象；Router 只声明契约并直接抛出 `NotImplementedError`。
-- Pydantic 请求模型包含与各功能文档一致的 Example。
-- 前端 Query Key 工厂只暴露：`cameras({q, page, page_size})`、`camera(cameraId)`、
-  `playback(sourceId)`。
-- Problem 解析器必须将 `sources[1].name` 等嵌套路径映射到动态表单行。
-- Mock Server 至少支持成功、字段错误、404、409、502 和 503。
-- CI 比较 OpenAPI 与前端类型，检测字段删除、类型变化和枚举破坏性变更。
+Query Key 只有以下三种：
 
-## 9. 依赖与 Fixture
+```text
+["cameras", {q, page, page_size}]
+["camera", cameraId]
+["playback", sourceId]
+```
 
-本模块只依赖 PostgreSQL 或可执行相同约束的测试数据库。必须提供：
+| 变更       | 更新或失效                                                  |
+| ---------- | ----------------------------------------------------------- |
+| 创建       | `cameras`                                                   |
+| 更新       | `cameras`、当前 `camera`、受连接变化或删除影响的 `playback` |
+| 切换默认源 | `cameras`、当前 `camera`                                    |
+| 删除       | `cameras`、当前 `camera`、所属 Source 的 `playback`         |
+| 状态刷新   | 仅合并 `cameras/camera` 的状态字段                          |
 
-- 空数据库迁移测试。
-- 从上一迁移版本升级测试。
-- Camera/Source 仓储 Fixture Builder。
-- 固定时钟和固定 ID 生成器。
-- 前端 Mock Server 场景切换入口。
+首次加载、后台刷新、空数据、搜索无结果和可恢复失败是不同页面状态。后台刷新保留旧内容；
+页面 URL 必须恢复列表查询或 Camera 详情。
 
-## 10. 独立验收
+## Foundation 完成条件
 
-1. 空数据库可完成迁移和回滚，DDL 不包含外键且主键、唯一和 CHECK 约束生效。
-2. 连续生成的 Camera/Source ID 均为合法 UUID v4，数据库主键拒绝重复 UUID。
-3. Camera 删除时所属 Source 由 Repository 在同一数据库事务显式删除，失败时完整回滚。
-4. 同一 Camera 内重复规范化后缀被数据库和领域层共同阻止。
-5. 嵌套字段错误能映射到准确前端表单项。
-6. OpenAPI 类型生成和契约检查可在 CI 中运行，全部占位 operation 的路径、operation ID 和
-   目标响应均可结构化校验。
-7. 占位 Router 没有引入任何只为未实现功能服务的额外架构层。
-8. 日志与错误体不包含测试密码或完整 RTSP URL。
-
-## 11. Definition of Done
-
-- 数据库迁移、领域模型、仓储接口和公共 HTTP 组件已实现并测试。
-- 前端 API Client、Query Key、Problem 解析和 Mock Server 可供后续切片使用。
-- 所有公共 Schema 有固定示例和契约测试。
-- 全部 Cameras MVP 路径已注册；未实现 handler 只抛出 `NotImplementedError`，文档不得把它们
-  描述为已完成业务 API，也不得为其临时失败建立正式客户端契约。
-- 实现说明记录迁移、类型生成、Mock 启动和测试命令。
+- 迁移、领域聚合、Repository/UoW、HTTP 公共机制均通过单元与 PostgreSQL 集成测试。
+- 全部 Cameras Schema 和目标路由注册到真实应用，OpenAPI 可确定性生成。
+- 前端类型只从 OpenAPI 生成，Client、Problem 解析、Query Key 和 MSW 基础可独立测试。
+- CI 检查迁移、契约漂移、生成产物、敏感数据和占位 handler。
+- Foundation 不实现 02–09 的业务 Service 或完成态页面。
