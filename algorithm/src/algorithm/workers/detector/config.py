@@ -13,8 +13,6 @@ class DetectorConfig(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
     task_id: str = Field(title="任务 ID", min_length=1)
-    camera_id: str = Field(title="摄像头 ID", min_length=1)
-    source_id: str = Field(title="视频源 ID", min_length=1)
     rtsp_url: str = Field(title="RTSP 地址", min_length=1)
     redis_url: str = Field(title="Redis 地址", min_length=1)
     model_path: Path = Field(
@@ -32,10 +30,6 @@ class DetectorConfig(BaseModel):
     reconnect_delay_seconds: float = Field(
         title="断线重连间隔（秒）", default=2.0, gt=0.0
     )
-    algorithm_id: str = Field(
-        title="算法 ID", default="yolo_object_detection", min_length=1
-    )
-    algorithm_version: str = Field(title="算法版本", default="0.1.0", min_length=1)
     roi: RoiConfig | None = Field(
         title="检测区域",
         description="null 表示检测整个画面。",

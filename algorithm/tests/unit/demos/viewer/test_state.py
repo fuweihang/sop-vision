@@ -5,10 +5,6 @@ from algorithm.demos.viewer.state import DetectionOverlayState
 def message(*, run_id: str = "run-1", frame_id: int = 1) -> FrameDetection:
     return FrameDetection(
         task_id="task-1",
-        camera_id="camera-1",
-        source_id="source-1",
-        algorithm_id="detector",
-        algorithm_version="1",
         run_id=run_id,
         frame_id=frame_id,
         frame_ts_ms=1000,

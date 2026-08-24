@@ -42,13 +42,9 @@ class FrameDetection(BaseModel):
 
     model_config = ConfigDict(extra="forbid", frozen=True)
 
-    schema_version: Literal[1] = 1
+    schema_version: Literal[2] = 2
     type: Literal["frame_detection"] = "frame_detection"
     task_id: str = Field(min_length=1)
-    camera_id: str = Field(min_length=1)
-    source_id: str = Field(min_length=1)
-    algorithm_id: str = Field(min_length=1)
-    algorithm_version: str = Field(min_length=1)
     run_id: str = Field(min_length=1)
     frame_id: int = Field(ge=1)
     frame_ts_ms: int = Field(ge=0)

@@ -21,8 +21,6 @@ def task_record(task_id: str = "detector-001", *, confidence: float = 0.5):
         task_id=task_id,
         worker_type="detector",
         config={
-            "camera_id": "camera-001",
-            "source_id": "source-001",
             "rtsp_url": "rtsp://camera/stream",
             "redis_url": "redis://localhost/0",
             "model_path": "model.pt",

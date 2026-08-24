@@ -13,8 +13,6 @@ from algorithm.workers.detector.config import DetectorConfig
 def detector_config(roi: RoiConfig | None = None) -> DetectorConfig:
     return DetectorConfig(
         task_id="detector-001",
-        camera_id="camera-001",
-        source_id="source-001",
         rtsp_url="rtsp://camera/stream",
         redis_url="redis://localhost/0",
         model_path=Path("model.pt"),
@@ -59,6 +57,13 @@ def test_frame_message_filters_roi_and_normalizes_bbox() -> None:
     )
 
     assert message.task_id == "detector-001"
+    assert message.schema_version == 2
+    assert not {
+        "camera_id",
+        "source_id",
+        "algorithm_id",
+        "algorithm_version",
+    } & message.model_dump().keys()
     assert message.roi_id == "main"
     assert len(message.objects) == 1
     assert message.objects[0].bbox == (0.0, 0.1, 0.3, 1.0)

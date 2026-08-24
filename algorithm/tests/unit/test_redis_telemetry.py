@@ -9,10 +9,6 @@ from algorithm.contracts.detection import DetectionMetrics, FrameDetection
 def message(frame_id: int) -> FrameDetection:
     return FrameDetection(
         task_id="task-1",
-        camera_id="camera-1",
-        source_id="source-1",
-        algorithm_id="detector",
-        algorithm_version="1",
         run_id="run-1",
         frame_id=frame_id,
         frame_ts_ms=1000,

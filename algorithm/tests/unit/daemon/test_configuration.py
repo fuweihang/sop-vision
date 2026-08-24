@@ -14,8 +14,6 @@ def record(*, confidence: float = 0.5) -> TaskParameterRecord:
         task_id="detector-001",
         worker_type="detector",
         config={
-            "camera_id": "camera-001",
-            "source_id": "source-001",
             "rtsp_url": "rtsp://user:secret@camera/stream",
             "redis_url": "redis://user:secret@localhost/0",
             "model_path": "models/model.pt",
@@ -53,5 +51,11 @@ def test_public_schema_excludes_task_id_and_contains_nested_roi() -> None:
     schema = get_worker_definition("detector").parameter_schema()
     assert "task_id" not in schema["properties"]
     assert "task_id" not in schema["required"]
+    assert not {
+        "camera_id",
+        "source_id",
+        "algorithm_id",
+        "algorithm_version",
+    } & schema["properties"].keys()
     assert schema["properties"]["confidence"]["default"] == 0.5
     assert "RoiConfig" in schema["$defs"]

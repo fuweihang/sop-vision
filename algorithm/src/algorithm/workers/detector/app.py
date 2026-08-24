@@ -138,10 +138,6 @@ def build_frame_detection(
     )
     return FrameDetection(
         task_id=config.task_id,
-        camera_id=config.camera_id,
-        source_id=config.source_id,
-        algorithm_id=config.algorithm_id,
-        algorithm_version=config.algorithm_version,
         run_id=run_id,
         frame_id=frame_id,
         frame_ts_ms=frame_ts_ms,

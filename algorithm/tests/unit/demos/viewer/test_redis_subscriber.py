@@ -17,10 +17,6 @@ def payload(
 ) -> str:
     return FrameDetection(
         task_id=task_id,
-        camera_id="camera-1",
-        source_id="source-1",
-        algorithm_id="detector",
-        algorithm_version="1",
         run_id=run_id,
         frame_id=frame_id,
         frame_ts_ms=published_at_ms - 1,

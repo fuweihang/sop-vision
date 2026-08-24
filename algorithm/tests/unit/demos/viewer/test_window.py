@@ -51,8 +51,6 @@ def test_schema_form_round_trips_detector_defaults_and_nested_roi() -> None:
     schema = get_worker_definition("detector").parameter_schema()
     form = SchemaForm()
     config = {
-        "camera_id": "camera-1",
-        "source_id": "source-1",
         "rtsp_url": "rtsp://camera/stream",
         "redis_url": "redis://localhost/0",
         "model_path": "resources/models/model.pt",
@@ -214,8 +212,6 @@ def test_reconnect_uses_cached_task_configuration(monkeypatch) -> None:
 
 def _detector_config() -> dict:
     return {
-        "camera_id": "camera-1",
-        "source_id": "source-1",
         "rtsp_url": "rtsp://camera/stream",
         "redis_url": "redis://localhost/0",
         "model_path": "resources/models/model.pt",

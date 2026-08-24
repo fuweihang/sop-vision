@@ -24,8 +24,33 @@ def test_migration_constraints_upsert_and_updated_at(monkeypatch) -> None:
     configuration = Config(str(algorithm_root / "alembic.ini"))
 
     command.downgrade(configuration, "base")
+    command.upgrade(configuration, "20260821_0001")
+    with psycopg.connect(DATABASE_URL) as connection:
+        connection.execute(
+            """
+            INSERT INTO worker_task_parameters (task_id, worker_type, config)
+            VALUES (
+                'legacy-detector',
+                'detector',
+                '{
+                    "camera_id": "camera-001",
+                    "source_id": "source-001",
+                    "algorithm_id": "yolo_object_detection",
+                    "algorithm_version": "0.1.0",
+                    "confidence": 0.5
+                }'::jsonb
+            )
+            """
+        )
     command.upgrade(configuration, "head")
     command.upgrade(configuration, "head")
+
+    with psycopg.connect(DATABASE_URL) as connection:
+        legacy_config = connection.execute(
+            "SELECT config FROM worker_task_parameters WHERE task_id = %s",
+            ("legacy-detector",),
+        ).fetchone()[0]
+    assert legacy_config == {"confidence": 0.5}
 
     repository = TaskParameterRepository(DATABASE_URL)
     try:

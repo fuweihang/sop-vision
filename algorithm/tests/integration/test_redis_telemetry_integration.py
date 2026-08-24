@@ -35,10 +35,6 @@ def test_real_redis_receives_telemetry_and_expiring_latest_snapshot() -> None:
         publisher.submit(
             FrameDetection(
                 task_id=task_id,
-                camera_id="camera-1",
-                source_id="source-1",
-                algorithm_id="integration-test",
-                algorithm_version="1",
                 run_id="run-1",
                 frame_id=1,
                 frame_ts_ms=1,
