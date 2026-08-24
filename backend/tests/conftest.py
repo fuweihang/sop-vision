@@ -35,7 +35,10 @@ def settings() -> Settings:
 
     # Pydantic 运行时能把 str 转为 SecretStr，但静态检查器只接受字段声明的 SecretStr；
     # 测试显式包装输入，既保留敏感值语义，也避免用 ignore 掩盖真正的参数类型错误。
-    return Settings(database_url=SecretStr(UNIT_TEST_DATABASE_URL))
+    return Settings(
+        database_url=SecretStr(UNIT_TEST_DATABASE_URL),
+        backend_cors_origins=["http://localhost:8000"],
+    )
 
 
 @pytest.fixture

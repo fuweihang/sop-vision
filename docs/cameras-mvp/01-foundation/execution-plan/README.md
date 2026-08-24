@@ -6,23 +6,22 @@
 
 ## 当前基线
 
-| 步骤              | 状态                   | 代码证据                                                                   |
-| ----------------- | ---------------------- | -------------------------------------------------------------------------- |
-| 1 数据库运行时    | 已完成                 | `app/core/database/`、Alembic 基线、生命周期与迁移测试                     |
-| 2 关系模型        | 已完成                 | Camera 无外键 DDL、稳定约束、巡检与 PostgreSQL 测试                        |
-| 3 领域模型        | 已完成                 | 不可变聚合、规范化、固定 ID/时钟与领域测试                                 |
-| 4 Repository/UoW  | 已完成                 | 专用端口、SQLAlchemy/Fake 实现、事务与并发测试                             |
-| 5 HTTP 公共机制   | 已实现，验收隔离待修复 | trace、Problem、严格 UUID、分页依赖及 probe 测试                           |
-| 6 OpenAPI 契约    | 未开始                 | 仍保留早期 `stream_gateway/schemas/camera.py`，无 `contracts/openapi.json` |
-| 7 前端 Client     | 未开始                 | 仍使用 `frontend/src/lib/api-client.ts`，无生成类型                        |
-| 8 前端状态与 Mock | 未开始                 | 有通用 Route State/MSW 基础，尚无 Cameras 场景集合                         |
-| 9 契约门禁        | 未开始                 | 尚无 regenerate-and-diff 和占位清理门禁                                    |
+| 步骤              | 状态   | 代码证据                                                                   |
+| ----------------- | ------ | -------------------------------------------------------------------------- |
+| 1 数据库运行时    | 已完成 | `app/core/database/`、Alembic 基线、生命周期与迁移测试                     |
+| 2 关系模型        | 已完成 | Camera 无外键 DDL、稳定约束、巡检与 PostgreSQL 测试                        |
+| 3 领域模型        | 已完成 | 不可变聚合、规范化、固定 ID/时钟与领域测试                                 |
+| 4 Repository/UoW  | 已完成 | 专用端口、SQLAlchemy/Fake 实现、事务与并发测试                             |
+| 5 HTTP 公共机制   | 已完成 | trace、Problem、严格 UUID、分页依赖及 probe 测试                           |
+| 6 OpenAPI 契约    | 未开始 | 仍保留早期 `stream_gateway/schemas/camera.py`，无 `contracts/openapi.json` |
+| 7 前端 Client     | 未开始 | 仍使用 `frontend/src/lib/api-client.ts`，无生成类型                        |
+| 8 前端状态与 Mock | 未开始 | 有通用 Route State/MSW 基础，尚无 Cameras 场景集合                         |
+| 9 契约门禁        | 未开始 | 尚无 regenerate-and-diff 和占位清理门禁                                    |
 
 代码检查结果：不加载本地数据库配置时 Backend 为 `94 passed, 13 skipped`；加载
-`.env.local` 后，PostgreSQL 迁移、约束、事务和并发测试均执行，但环境中的
-`BACKEND_CORS_ORIGINS` 会覆盖测试 fixture，使固定 `localhost` 的 CORS 用例失败。临时固定
-测试 Origin 后为 `107 passed`。进入步骤 6 前，应让测试配置不受调用者环境污染，并确保标准
-验收命令直接全绿。
+`.env.local` 后，PostgreSQL 迁移、约束、事务和并发测试全部执行，为 `107 passed`。测试
+fixture 显式固定 CORS Origin；即使进程传入冲突的 `BACKEND_CORS_ORIGINS`，HTTP Foundation
+定向测试仍为 `27 passed`。
 
 ## 架构边界
 
@@ -93,7 +92,7 @@ OpenAPI → generated frontend types → Client / MSW
 验收：Fake 与 PostgreSQL 共享契约通过；提交/回滚可见性、延迟约束、并发保存/删除、损坏数据
 和敏感错误边界由真实 PostgreSQL 测试证明。
 
-## 步骤 5｜HTTP 公共机制（已实现，待收口）
+## 步骤 5｜HTTP 公共机制（已完成）
 
 产物：
 
@@ -102,11 +101,9 @@ OpenAPI → generated frontend types → Client / MSW
 - canonical UUID v4 类型、嵌套字段路径转换、分页和搜索依赖。
 - 仅存在于测试的 probe router；无 Camera CRUD handler。
 
-收口任务：
-
-1. 修复 `Settings` 测试 fixture 被进程 `BACKEND_CORS_ORIGINS` 覆盖的问题。
-2. 使用标准 `uv run --env-file .env.local pytest` 运行全部 107 项且无失败/跳过。
-3. 保持请求原始 input、数据库错误、密码和完整 RTSP URL 不进入 Problem 或日志。
+验收：标准 `uv run --env-file .env.local pytest` 运行全部 107 项且无失败/跳过；冲突 CORS
+环境不会改变测试应用；请求原始 input、数据库错误、密码和完整 RTSP URL 不进入 Problem
+或日志。
 
 ## 步骤 6｜Schema、占位 Router 与 OpenAPI
 
