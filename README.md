@@ -2,7 +2,9 @@
 
 SOP Vision 是一个面向 IP Camera 的视觉分析平台。平台将视频接入、业务控制和视觉算法解耦：MediaMTX 负责视频路由与浏览器播放，FastAPI 负责控制面与业务 API，Detector 负责检测、Tracking 和 SOP 判断。
 
-> 项目正在按目标架构逐步实现。当前仓库已包含 PostgreSQL、Redis、MediaMTX、FastAPI 和 Web Frontend；Detector、数据库持久化、Redis 应用客户端及完整摄像头 CRUD 尚待接入。
+> 项目正在按目标架构逐步实现。当前仓库已包含 PostgreSQL、Redis、MediaMTX、FastAPI
+> 和 Web Frontend，并已建立 Cameras 数据库与领域基础；Detector、Redis 应用客户端及
+> 完整摄像头 CRUD 尚待接入。
 
 ## 架构概览
 
@@ -79,11 +81,11 @@ Detector 支持两种源模式：
 当前实现范围：
 
 - FastAPI 应用、存活/就绪检查和 MediaMTX 异步客户端。
-- 摄像头模型、路由及服务骨架；CRUD 尚未实现。
+- Cameras 无外键关系模型、领域聚合和持久化事务骨架；CRUD 尚未实现。
 - React/Vite 前端应用和生产 Nginx 镜像。
 - PostgreSQL、Redis 和 MediaMTX Compose 基础设施。
 - MediaMTX Control API 在基础 Compose 中仅供容器网络访问，在开发覆盖中只绑定宿主机回环地址。
-- PostgreSQL 已接入 Compose，但 Backend 尚未实现持久化。
+- PostgreSQL 已接入 Compose 和 Backend Cameras 持久化基础，业务 CRUD 尚未接入。
 - Redis 已接入 Compose，但 Backend 和 Detector 尚未实现 Redis 客户端。
 - 动态 MediaMTX Path 当前属于运行时状态，服务重启后不保证保留。
 

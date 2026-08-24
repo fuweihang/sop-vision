@@ -18,7 +18,9 @@ Foundation 同时包含持久化、领域、HTTP、契约和前端基础设施�
 
 ## 2. 已知仓库基线
 
-- Backend 已有 FastAPI 应用工厂和 `stream_gateway` 模块，但尚无 SQLAlchemy、Alembic 或 Camera 持久化实现。
+- Backend 已有 FastAPI 应用工厂和 `stream_gateway` 模块；步骤 1–3 已建立
+  SQLAlchemy 异步运行时、Alembic 迁移链、Camera 无外键 ORM 表、引用完整性
+  Repository 骨架和框架无关的 Camera 领域模型，完整 Repository/UoW 仍由步骤 4 交付。
 - 现有 `stream_gateway/schemas/camera.py` 是早期单流占位契约，与 Cameras MVP 聚合模型不一致，不能继续作为事实源。
 - Frontend 已有 Axios、TanStack Query、MSW、Camera 路由骨架和通用 Route State 组件，但尚无 OpenAPI 生成链路或 Cameras Query Key。
 - Compose 已提供 PostgreSQL 17；数据库集成测试应使用 PostgreSQL，不用 SQLite 模拟 UUID、延迟唯一约束、行锁或排序约束。
@@ -57,7 +59,7 @@ OpenAPI artifact → generated frontend types → API client / MSW
 | 顺序 | 步骤 | 独立交付结果 | 主要后续消费者 |
 | --- | --- | --- | --- |
 | 1 | [数据库运行时与迁移骨架](./01-database-runtime.md) | 可配置、可释放、可迁移的 PostgreSQL 接线 | 步骤 2、4 |
-| 2 | [关系模型与约束迁移](./02-relational-schema.md) | `cameras/camera_sources` 表、约束、升级与回滚测试 | 步骤 4 |
+| 2 | [关系模型与无外键约束迁移](./02-relational-schema.md) | `cameras/camera_sources` 表、约束、升级与回滚测试 | 步骤 4 |
 | 3 | [领域模型与规范化规则](./03-domain-model.md) | 与框架无关的 Camera 聚合和值规则 | 步骤 4、6 |
 | 4 | [Repository 与事务边界](./04-repository-uow.md) | 可原子保存和读取聚合的持久化端口及实现 | 功能切片 02–09 |
 | 5 | [HTTP 公共机制](./05-http-foundation.md) | trace ID、Problem Details、严格 UUID、分页查询 | 步骤 6、功能路由 |

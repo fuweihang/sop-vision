@@ -9,15 +9,15 @@ MediaMTX Control API。
 - FastAPI 应用工厂与 lifespan 资源管理。
 - SQLAlchemy async Engine/Session factory 与 Alembic 迁移骨架。
 - 无外键 `cameras`/`camera_sources` 关系模型、事务 Repository 与完整性巡检。
+- 框架无关、不可变的 Camera 聚合、规范化规则、固定 ID/时钟和领域 Fixture。
 - `/api/v1/health/live` 存活检查。
 - `/api/v1/health/ready` MediaMTX Control API 就绪检查。
 - 摄像头请求/响应模型和路由骨架。
 - 共享异步 MediaMTX 客户端。
 - uv、Ruff、pytest 和 Docker 构建配置。
 
-摄像头 CRUD 尚未实现。后续实现位于
-`app/modules/stream_gateway/api/cameras.py` 和
-`app/modules/stream_gateway/services/mediamtx.py`。
+摄像头 CRUD 尚未实现。后续 Camera 配置 API、应用服务和持久化端口归属
+`app/modules/cameras/`；`app/modules/stream_gateway/` 继续只负责 MediaMTX 适配。
 
 ## 环境要求
 
@@ -127,6 +127,7 @@ backend/
 │       │   └── database/
 │       └── modules/
 │           ├── cameras/
+│           │   ├── domain/
 │           │   └── persistence/
 │           └── stream_gateway/
 │               ├── api/
@@ -136,8 +137,8 @@ backend/
     ├── conftest.py
     ├── test_config.py
     └── modules/
+        ├── cameras/
         └── stream_gateway/
-            └── test_health.py
 ```
 
 `app.main` 只负责应用组装和共享生命周期；`stream_gateway` 模块封装自己的路由、
@@ -148,6 +149,8 @@ backend/
 
 ```bash
 uv run --env-file .env.local pytest
+uv run pytest tests/modules/cameras/test_domain_values.py \
+  tests/modules/cameras/test_domain_aggregate.py
 uv run --env-file .env.local pytest --cov=app --cov-report=term-missing
 uv run ruff check .
 uv run ruff format --check .
