@@ -10,7 +10,7 @@ Foundation 同时包含持久化、领域、HTTP、契约和前端基础设施�
 
 - 只有一个主要架构关注点。
 - 明确消费的前置产物和向后续提供的接口。
-- 不依赖尚未实现的 Camera 业务路由即可测试。
+- 不依赖尚未实现的 Camera 业务 Service 即可测试；步骤 6 的占位 Router 只验证 HTTP 契约。
 - 通过自动化验收后即可合并，不以“后续再补测试”为完成条件。
 - 失败时可以回滚当前步骤，而不推翻之前已经冻结的契约。
 
@@ -24,7 +24,8 @@ Foundation 同时包含持久化、领域、HTTP、契约和前端基础设施�
 - 现有 `stream_gateway/schemas/camera.py` 是早期单流占位契约，与 Cameras MVP 聚合模型不一致，不能继续作为事实源。
 - Frontend 已有 Axios、TanStack Query、MSW、Camera 路由骨架和通用 Route State 组件，但尚无 OpenAPI 生成链路或 Cameras Query Key。
 - Compose 已提供 PostgreSQL 17；数据库集成测试应使用 PostgreSQL，不用 SQLite 模拟 UUID、延迟唯一约束、行锁或排序约束。
-- Foundation 期间不新增 `POST/GET/PUT/PATCH/DELETE` Camera 业务路由。
+- Foundation 在步骤 6 注册全部 Cameras MVP 路径；业务未实现期间，占位 handler 直接抛出
+  `NotImplementedError`，其运行结果不属于公共契约。
 
 ## 3. 架构边界
 
@@ -37,6 +38,11 @@ Foundation 同时包含持久化、领域、HTTP、契约和前端基础设施�
 - `contracts/`：可复现生成的 OpenAPI 跨端契约。
 
 不要建立跨所有业务的 Generic Repository 或全能 Base Service。Foundation 只定义 Cameras MVP 已确认消费者需要的端口。
+
+占位 Router 也不得成为架构扩张理由：禁止为尚未实现的功能新增专用异常层、占位 Service、
+占位 Port、依赖装配、contract-only FastAPI 应用、component registry、通用 handler 工厂或
+其他只服务于占位阶段的抽象。每个占位 operation 只声明真实契约元数据，并以一行
+`raise NotImplementedError` 结束。
 
 ### 3.2 依赖方向
 
@@ -63,7 +69,7 @@ OpenAPI artifact → generated frontend types → API client / MSW
 | 3 | [领域模型与规范化规则](./03-domain-model.md) | 与框架无关的 Camera 聚合和值规则 | 步骤 4、6 |
 | 4 | [Repository 与事务边界](./04-repository-uow.md) | 可原子保存和读取聚合的持久化端口及实现 | 功能切片 02–09 |
 | 5 | [HTTP 公共机制](./05-http-foundation.md) | trace ID、Problem Details、严格 UUID、分页查询 | 步骤 6、功能路由 |
-| 6 | [公共 Schema 与 OpenAPI](./06-openapi-contract.md) | 可复现的 Cameras 契约文件和后端 Schema 测试 | 步骤 7、8 |
+| 6 | [公共 Schema、占位 Router 与 OpenAPI](./06-openapi-contract.md) | 可复现的路径级契约、最小占位 Router 和后端 Schema 测试 | 步骤 7、8、功能切片 |
 | 7 | [前端类型、Client 与错误映射](./07-frontend-client.md) | 唯一类型来源、API 错误解析和 Query Key | 功能页面、步骤 8 |
 | 8 | [前端状态基元与 Mock Server](./08-frontend-mocks.md) | 可切换的成功/失败场景与共享页面状态 | 功能切片 02–09 |
 | 9 | [契约门禁与 Foundation 收口](./09-contract-gates.md) | CI 漂移检测、安全回归和交接说明 | 所有后续切片 |
@@ -78,16 +84,19 @@ OpenAPI artifact → generated frontend types → API client / MSW
 2. 与风险匹配的单元测试或 PostgreSQL 集成测试。
 3. 受影响的启动、生成或测试命令说明。
 4. 对已冻结公共接口的变更说明；无变更也要明确写“无”。
-5. 不包含后续步骤或业务切片的占位实现。
+5. 不包含后续步骤的业务实现；步骤 6 明确声明、直接抛出 `NotImplementedError` 的最小 Router
+   是唯一允许的开发期占位。
 
 每步验收先运行该步骤列出的定向测试，再运行受影响工程的完整 lint/test。只要本步骤的退出条件未满足，就不进入下一步。
 
 ## 6. 全局非目标
 
-- 不实现 Camera 创建、列表、详情、更新、默认源切换、播放或删除路由。
+- 不实现 Camera 创建、列表、详情、更新、默认源切换、播放或删除的业务行为；这些路径仅以
+  直接抛出 `NotImplementedError` 且不保证可调用的最小占位 Router 存在。
 - 不访问真实摄像头，不要求 MediaMTX 在线。
 - 不引入鉴权、RBAC、WebSocket、Redis、审计或可靠异步清理。
-- 不把密码、完整 RTSP URL 或敏感响应写入日志、快照、生成产物或浏览器持久化存储。
+- 不把真实密码、真实完整 RTSP URL 或敏感响应写入日志、快照、生成产物或浏览器持久化
+  存储；唯一例外是 CameraDetail 契约和 Fixture 中明确标记的固定测试凭据。
 - 不修改生成的 `frontend/src/routeTree.gen.ts`。
 
 ## 7. Foundation 完成判定
@@ -101,4 +110,6 @@ OpenAPI artifact → generated frontend types → API client / MSW
 - MSW 场景入口和加载/刷新/空/失败状态基元。
 - CI 中的迁移、契约漂移与敏感数据回归门禁。
 
-此时仍然没有 Camera 业务 API 或完成态页面；第一个业务能力由 `02-camera-create` 负责。
+此时 Cameras 路径已经注册并进入 OpenAPI，但 handler 仍直接抛出 `NotImplementedError`，不
+代表任何业务能力完成，也没有完成态页面。`02-camera-create` 首先在原 Router 中替换自己拥有
+的 `NotImplementedError` 并实现创建业务能力。

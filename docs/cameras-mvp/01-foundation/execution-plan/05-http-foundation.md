@@ -34,7 +34,7 @@
 - 未知字段映射为 `UNKNOWN_FIELD`，缺失、长度、范围、UUID 等使用 Foundation 稳定 code。
 - 路径 UUID、请求体 UUID 和查询字段错误统一返回 `422 VALIDATION_ERROR`。
 - 处理器不得把 Pydantic 原始 input、数据库异常文本、密码或完整 RTSP URL放入 `detail/context/errors`。
-- 已知 404/409/502/503 只建立公共映射能力；Foundation 不创建触发这些业务错误的 Camera 路由。
+- 已知 404/409/502/503 只建立公共映射能力；本步骤不创建触发这些业务错误的 Camera 路由。
 
 ## 5. 分页与搜索
 
@@ -74,4 +74,6 @@
 
 ## 9. 后续交接
 
-步骤 6 使用这些 Pydantic 公共模型生成 OpenAPI。后续功能路由必须显式声明稳定 `operation_id` 和可能响应，不能依赖未记录的框架默认响应。
+步骤 6 使用这些 Pydantic 公共模型注册全部 Cameras MVP 占位 Router 并生成 OpenAPI；占位
+handler 直接抛出 `NotImplementedError`，不扩展本步骤的公共错误协议。后续功能切片必须保留
+步骤 6 冻结的 `operation_id` 和响应声明，不能重新创建路径或依赖未记录的框架默认响应。

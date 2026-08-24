@@ -76,7 +76,7 @@ Camera.default_preview_source_id ─── 1 CameraSource
 
 | 顺序 | 文档 | 独立可演示结果 |
 | --- | --- | --- |
-| 1 | [基础契约](./01-foundation/README.md) | 数据库迁移、公共 Schema、API Client 和契约测试 |
+| 1 | [基础契约](./01-foundation/README.md) | 数据库迁移、占位 Router、公共 Schema、API Client 和契约测试 |
 | 2 | [创建 Camera](./02-camera-create/README.md) | 从表单创建包含多路 Source 的 Camera |
 | 3 | [Camera 列表](./03-camera-list/README.md) | 搜索、分页并展示 Camera 卡片 |
 | 4 | [Camera 详情](./04-camera-detail/README.md) | 通过独立路由查看 Camera 和 Source 信息 |
@@ -92,17 +92,30 @@ Camera.default_preview_source_id ─── 1 CameraSource
 
 以下路径省略公共前缀 `/api/v1`。
 
-| 方法 | 路径 | 所有者 | 成功响应 |
-| --- | --- | --- | --- |
-| `GET` | `/cameras` | Camera 列表 | `200` 分页摘要 |
-| `POST` | `/cameras` | 创建 Camera | `201` Camera 详情 |
-| `GET` | `/cameras/{camera_id}` | Camera 详情 | `200` Camera 详情 |
-| `PUT` | `/cameras/{camera_id}` | 更新 Camera | `200` Camera 详情 |
-| `PATCH` | `/cameras/{camera_id}/default-preview-source` | 默认预览源 | `200` 更新结果 |
-| `DELETE` | `/cameras/{camera_id}` | 删除 Camera | `204` |
-| `GET` | `/camera-sources/{source_id}/playback` | Source 预览 | `200` PlaybackInfo |
+| 方法 | 路径 | `operation_id` | 所有者 | 目标成功响应 |
+| --- | --- | --- | --- | --- |
+| `GET` | `/cameras` | `listCameras` | Camera 列表 | `200` 分页摘要 |
+| `POST` | `/cameras` | `createCamera` | 创建 Camera | `201` Camera 详情 |
+| `GET` | `/cameras/{camera_id}` | `getCamera` | Camera 详情 | `200` Camera 详情 |
+| `PUT` | `/cameras/{camera_id}` | `updateCamera` | 更新 Camera | `200` Camera 详情 |
+| `PATCH` | `/cameras/{camera_id}/default-preview-source` | `setDefaultPreviewSource` | 默认预览源 | `200` 更新结果 |
+| `DELETE` | `/cameras/{camera_id}` | `deleteCamera` | 删除 Camera | `204` |
+| `GET` | `/camera-sources/{source_id}/playback` | `getCameraSourcePlayback` | Source 预览 | `200` PlaybackInfo |
 
 本阶段不增加仅供未来消费者使用的 CameraSource 选择列表接口。Camera 页面所需 Source 信息由 Camera 详情返回。
+
+### 6.1 开发期路由生命周期
+
+- Foundation 把上表全部路径注册到正常 FastAPI 应用，并在 OpenAPI 中声明目标成功响应和业务
+  错误；此时 handler 只直接抛出 `NotImplementedError`，接口不保证可调用。
+- 路径出现在 `/openapi.json` 中只表示目标契约已声明，不表示业务已经可用。
+- 功能切片必须复用原路径和 operation ID，用真实实现替换 `NotImplementedError`，并同步重新
+  生成 OpenAPI、前端类型和 Fixture。
+- 不增加功能完成度字段或登记表；只以原 handler 是否仍包含占位 `raise NotImplementedError`
+  判断该 Router 是否尚未实现。
+- `NotImplementedError` 只是未发布代码中的最小占位实现，不属于正式 HTTP 协议；不得为它
+  新增专用状态码、异常层、Service/Port、依赖装配或其他临时抽象。
+- Cameras MVP 是首个上线版本；发布前 Router 中不得残留占位 `NotImplementedError`。
 
 ## 7. 前端路由和缓存
 
@@ -148,6 +161,8 @@ Query Key：
 13. 页面预览启停只影响浏览器播放器，不改变持久化配置。
 14. Camera 列表固定按 `created_at ASC, camera_id ASC` 返回，不提供客户端排序参数；额外
     查询参数（包括旧的 `sort`）被忽略。
+15. Foundation 允许注册暂不可用的 Cameras 路径；开发期只用 `NotImplementedError` 占位，
+    不为未实现功能增加额外协议或架构。
 
 ## 9. Cameras MVP 总验收
 
@@ -170,6 +185,11 @@ Query Key：
 - 前端覆盖加载、成功、空状态、字段错误和可恢复失败状态。
 - 提供不依赖真实摄像头或 MediaMTX 的 Fixture/Fake。
 - OpenAPI 与前端类型由同一契约来源生成或校验。
+- 自己拥有的 Router 已用真实实现替换 `NotImplementedError`；目标成功与业务错误契约不得
+  借实现过程发生未审阅漂移。
 - 日志包含 `trace_id`，且不包含密码或完整带凭据 RTSP URL。
 - 对应功能可以独立启动、演示和验收。
 - 实现目录 README 记录启动方式、测试命令和已知 MVP 限制。
+
+Cameras MVP 总验收还要求 API 总表中的全部 Router 均已实现，不存在仍会抛出
+`NotImplementedError` 的占位 handler。

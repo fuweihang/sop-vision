@@ -32,6 +32,9 @@
 
 ## 3. API
 
+Foundation 已以 `operation_id=deleteCamera` 注册该路径。进入本切片时必须复用原 Router 和 DTO，
+不得新建平行端点。
+
 ```http
 DELETE /api/v1/cameras/6f9619ff-8b86-4e4f-9f68-bb3f8f6f4f21
 ```
@@ -113,6 +116,7 @@ HTTP/1.1 204 No Content
 ## 11. Definition of Done
 
 - DELETE 路由、事务删除和提交后尽力清理已实现。
+- `deleteCamera` 的占位 `NotImplementedError` 已由真实 Service 调用替换。
 - 危险操作区、确认对话框、缓存清理和导航已实现。
 - 数据库原子性、依赖故障和播放器关闭均有自动化测试。
 - 文档明确记录直接删除语义和无可靠异步清理的 MVP 限制。

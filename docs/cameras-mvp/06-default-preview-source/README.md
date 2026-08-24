@@ -31,6 +31,9 @@
 
 ## 3. API
 
+Foundation 已以 `operation_id=setDefaultPreviewSource` 注册该路径。进入本切片时必须复用原
+Router 和 DTO，不得新建平行端点。
+
 ```http
 PATCH /api/v1/cameras/6f9619ff-8b86-4e4f-9f68-bb3f8f6f4f21/default-preview-source
 Content-Type: application/json
@@ -113,5 +116,6 @@ HTTP/1.1 200 OK
 ## 10. Definition of Done
 
 - PATCH 路由、所有权校验和原子更新已实现并测试。
+- `setDefaultPreviewSource` 的占位 `NotImplementedError` 已由真实 Service 调用替换。
 - 详情页默认源单选、提交反馈和失败回滚已实现。
 - 可使用 Fixture 独立演示成功和全部错误路径。

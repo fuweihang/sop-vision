@@ -35,6 +35,9 @@
 
 MVP 阶段允许有意的破坏性变更，但必须同时更新事实源文档、后端 Schema、OpenAPI、前端生成类型和 Fixture，并在 PR 中显式说明；不能靠跳过门禁合并。
 
+功能切片在保持方法、路径、operation ID、请求、目标成功响应和业务错误不变的前提下，直接
+在原 handler 中用真实实现替换 `NotImplementedError`，并添加该功能的运行时行为测试。
+
 ## 4. 安全回归
 
 使用唯一测试秘密，例如 `foundation-leak-sentinel`，覆盖：
@@ -58,7 +61,7 @@ MVP 阶段允许有意的破坏性变更，但必须同时更新事实源文档�
 - MSW 场景选择方式。
 - Backend/Frontend 定向和完整测试命令。
 - 当前 MVP 明文凭据语义、`no-store` 要求与禁止日志边界。
-- Foundation 尚未实现任何 Camera 业务路由的事实。
+- Foundation 已注册全部 Cameras MVP 路径、但 handler 仍直接抛出 `NotImplementedError` 的事实。
 
 ## 6. 最终验收矩阵
 
@@ -70,6 +73,8 @@ MVP 阶段允许有意的破坏性变更，但必须同时更新事实源文档�
 | 原子保存与回滚 | Repository contract tests |
 | 嵌套字段错误准确 | Backend + Frontend parser tests |
 | OpenAPI/TS 同源 | regenerate-and-diff job |
+| 七个路径及目标契约已声明 | OpenAPI structure + route registration tests |
+| MVP 发布代码无占位 handler | Cameras Router 源码中不存在 `raise NotImplementedError` |
 | Mock 覆盖成功及 404/409/422/502/503 | MSW scenario tests |
 | 密码/RTSP URL 不泄漏 | leak sentinel tests |
 | 后续切片可替换依赖 | Fake UoW、固定 Clock/ID、MSW harness tests |
@@ -78,10 +83,15 @@ MVP 阶段允许有意的破坏性变更，但必须同时更新事实源文档�
 
 - 全部门禁在干净 checkout 上一次通过，不依赖人工准备数据库数据。
 - 修改后端 Schema 而未重新生成 OpenAPI/TypeScript 时，CI 会稳定失败。
-- Foundation 原始 README 的 7 项独立验收均有明确自动化证据。
+- Foundation 收口时七个 Cameras 占位 handler 保持一行 `raise NotImplementedError`，不得
+  出现半成品实现或占位专用架构层。
+- Foundation 原始 README 的 8 项独立验收均有明确自动化证据。
 - 后续切片可以只关注自己的 Application Service、route 和页面行为。
 - 没有临时跳过、`xfail`、忽略未处理 MSW 请求或待补迁移测试。
 
 ## 8. 交付边界
 
-本步骤完成即表示 Foundation 可以关闭。下一提交应从 `02-camera-create` 开始，不在 Foundation PR 中顺带实现创建 API 或表单。
+本步骤完成即表示 Foundation 可以关闭。下一提交应从 `02-camera-create` 开始，把
+`createCamera` 的 `NotImplementedError` 替换为真实实现；Foundation PR 不顺带实现创建业务或
+表单。Cameras MVP 是首个上线版本，发布门禁必须确认 Cameras Router 中不再残留占位
+`raise NotImplementedError`。

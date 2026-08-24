@@ -35,6 +35,9 @@
 
 ## 3. API
 
+Foundation 已以 `operation_id=createCamera` 注册该路径。进入本切片时必须复用原 Router 和 DTO，
+不得新建平行端点。
+
 ```http
 POST /api/v1/cameras
 Content-Type: application/json
@@ -192,6 +195,7 @@ Source 状态和 `whep_url` 在本模块 Fixture 中固定为 `OFFLINE/null`。
 ## 10. Definition of Done
 
 - 创建 API、领域服务和仓储事务已实现。
+- `createCamera` 的占位 `NotImplementedError` 已由真实 Service 调用替换。
 - 新增表单、动态 Source 行、默认源选择和错误映射已实现。
 - OpenAPI、前端类型、后端测试、前端测试和端到端创建场景通过。
 - 可在无真实摄像头、无状态服务和无 MediaMTX 时独立演示。

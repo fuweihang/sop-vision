@@ -148,6 +148,9 @@ project_source_statuses(source_ids[], snapshot) -> map[source_id, SourceStatusSu
 aggregate_camera_status(source_statuses[]) -> CameraStatusSummary
 ```
 
+Foundation 虽已注册 Cameras 路径，但本模块不拥有新的 operation。状态投影接入已有真实
+handler，不得把相关 operation 重新改回 `NotImplementedError` 占位。
+
 端口规则：
 
 - 同一个业务请求共享同一个不可变 Path 快照。
@@ -225,4 +228,6 @@ aggregate_camera_status(source_statuses[]) -> CameraStatusSummary
 - Source 二态映射、Camera 三态聚合和列表/详情投影已接入。
 - Control API Stub 覆盖状态组合、分页和所有依赖故障。
 - 前端三态展示、轮询和 OFFLINE 原因映射完成。
+- 接入状态投影后既有 operation ID 保持不变，真实 handler 未重新退回 `NotImplementedError`
+  占位。
 - 版本门禁、指标和脱敏日志已实现并记录。

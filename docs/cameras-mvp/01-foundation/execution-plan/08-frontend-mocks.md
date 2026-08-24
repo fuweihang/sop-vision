@@ -34,7 +34,8 @@ frontend/src/test/mocks/cameras/
 - Fixture 使用步骤 7 的生成类型，并通过 `satisfies` 保持编译期校验。
 - 使用固定 UUID v4、UTC 时间，并按 `created_at ASC, camera_id ASC` 固定排序，使快照可复现。
 - 场景切换以测试/Story 入口显式选择，禁止通过全局随机数或执行顺序改变结果。
-- handlers 模拟业务文档已声明的路径和媒体类型，但不把 Mock 当成 Backend 已实现的证明。
+- handlers 模拟业务文档的目标成功契约和媒体类型，但 Mock 成功不证明 Backend handler 已经
+  替换 `NotImplementedError`。
 
 ## 4. 最小场景集合
 
@@ -76,4 +77,6 @@ frontend/src/test/mocks/cameras/
 
 ## 8. 后续交接
 
-业务切片可以扩展自己拥有的场景，但公共 Problem、ID、时间和 Camera Fixture 必须复用本步骤 Builder；修改公共形状时先更新 OpenAPI 和生成类型。
+业务切片可以扩展自己拥有的场景，但公共 Problem、ID、时间和 Camera Fixture 必须复用本步骤
+Builder；修改公共形状时先更新 OpenAPI 和生成类型。MSW 只模拟目标业务契约，不模拟或
+稳定化 Backend 占位 handler 的 `NotImplementedError` 临时结果。

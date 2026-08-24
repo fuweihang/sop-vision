@@ -33,6 +33,9 @@
 
 ## 3. API
 
+Foundation 已以 `operation_id=updateCamera` 注册该路径。进入本切片时必须复用原 Router 和 DTO，
+不得新建平行端点。
+
 ```http
 PUT /api/v1/cameras/6f9619ff-8b86-4e4f-9f68-bb3f8f6f4f21
 Content-Type: application/json
@@ -159,6 +162,7 @@ Content-Type: application/json
 ## 11. Definition of Done
 
 - 完整聚合更新、Source 差异逻辑和事务已实现。
+- `updateCamera` 的占位 `NotImplementedError` 已由真实 Service 调用替换。
 - 编辑表单、动态 Source、默认源和未保存提醒已实现。
 - 状态/播放失效边界有测试且不会回滚配置更新。
 - 可用 Fixture 独立演示所有更新路径。

@@ -33,6 +33,9 @@
 
 ## 3. API
 
+Foundation 已以 `operation_id=getCamera` 注册该路径。进入本切片时必须复用原 Router 和 DTO，
+不得新建平行端点。
+
 ```http
 GET /api/v1/cameras/6f9619ff-8b86-4e4f-9f68-bb3f8f6f4f21
 ```
@@ -177,6 +180,7 @@ Query Key：
 ## 11. Definition of Done
 
 - 详情查询、聚合验证、投影合并、响应头和超时降级已实现。
+- `getCamera` 的占位 `NotImplementedError` 已由真实 Service 调用替换。
 - 详情路由、Source 展示、返回操作和错误状态已实现。
 - 敏感数据边界有自动化测试。
 - 可使用状态和播放 Fake 独立演示。

@@ -34,6 +34,9 @@
 
 ## 3. Playback API
 
+Foundation 已以 `operation_id=getCameraSourcePlayback` 注册该路径。进入本切片时必须复用原
+Router 和 DTO，不得新建平行端点。
+
 ```http
 GET /api/v1/camera-sources/8f14e45f-ea9d-4a7d-9b6d-8c9f0a1b2c3d/playback
 ```
@@ -154,6 +157,7 @@ Query Key：
 ## 12. Definition of Done
 
 - Playback API、MediaMTX Adapter、投影端口和错误映射已实现。
+- `getCameraSourcePlayback` 的占位 `NotImplementedError` 已由真实 Service 调用替换。
 - 列表懒加载与详情显式播放器已实现并能彻底释放资源。
 - 后端 Stub、前端播放器 Fake 和依赖故障测试齐全。
 - 尽力释放的 MVP 限制在实现说明中记录。

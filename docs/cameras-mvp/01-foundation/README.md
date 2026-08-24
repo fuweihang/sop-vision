@@ -9,7 +9,9 @@
 
 建立 Cameras 所需的最小数据和 HTTP 基础，使后续功能切片只定义自己的业务行为，不重复设计 ID、错误和分页。
 
-本模块完成时不要求存在可操作页面，但数据库迁移、公共 Schema、API Client 和 Mock Server 必须能够独立测试。
+本模块完成时不要求存在可操作页面或真实 Camera 业务行为，但全部 Cameras MVP 路径必须已
+注册到 FastAPI；占位 handler 直接抛出 `NotImplementedError`，不承诺可调用性。数据库迁移、
+公共 Schema、API Client 和 Mock Server 必须能够独立测试。
 
 ## 2. 范围
 
@@ -18,18 +20,20 @@
 - 建立 `cameras` 和 `camera_sources` 表及仓储接口。
 - 定义全局唯一、服务端生成的 UUID v4 `camera_id/source_id`。
 - 实现统一 Problem Details、字段错误、分页参数和搜索规范化。
-- 导出 OpenAPI，并把框架默认字段错误转换为统一 Problem 模型。
+- 注册全部 Cameras MVP 占位 Router，并把目标 HTTP 契约导出到 OpenAPI。
+- 把框架默认字段错误转换为统一 Problem 模型。
 
 ### 前端
 
 - 提供类型化 API Client、Problem Details 解析和字段错误映射。
 - 提供 Cameras Query Key 工厂。
 - 提供首次加载、后台刷新、空数据、搜索无结果和错误状态基元。
-- 使用 OpenAPI 生成类型，或用契约测试校验唯一的手写类型来源。
+- 只使用 OpenAPI 生成 Cameras HTTP 类型，并用契约测试阻止手写 DTO 漂移。
 
 ### 不属于本模块
 
-- Camera 业务路由及页面。
+- Camera 路由的真实业务行为及页面；Foundation 只交付直接抛出 `NotImplementedError` 的最小
+  占位 handler。
 - MediaMTX Path 状态映射和 WHEP 播放。
 - 通用登录、权限、WebSocket 或全平台基础设施。
 
@@ -185,6 +189,11 @@ Camera 列表固定按 `created_at ASC, camera_id ASC` 返回，即先创建的 
 
 - OpenAPI 标签仅使用 `cameras` 和 `camera-sources`。
 - 请求、成功响应及所有已声明错误都使用显式 Schema。
+- Foundation 注册 API 总表中的全部路径；未实现 handler 直接抛出 `NotImplementedError`。
+- 占位路由注册到正常应用，但不保证运行时状态码或错误正文，也不把临时失败写入正式
+  OpenAPI 响应。
+- 禁止为占位阶段新增专用异常、状态码、Service/Port、依赖装配、独立契约应用或通用占位
+  抽象；Router 只声明契约并直接抛出 `NotImplementedError`。
 - Pydantic 请求模型包含与各功能文档一致的 Example。
 - 前端 Query Key 工厂只暴露：`cameras({q, page, page_size})`、`camera(cameraId)`、
   `playback(sourceId)`。
@@ -209,12 +218,16 @@ Camera 列表固定按 `created_at ASC, camera_id ASC` 返回，即先创建的 
 3. Camera 删除时所属 Source 由 Repository 在同一数据库事务显式删除，失败时完整回滚。
 4. 同一 Camera 内重复规范化后缀被数据库和领域层共同阻止。
 5. 嵌套字段错误能映射到准确前端表单项。
-6. OpenAPI 类型生成和契约检查可在 CI 中运行。
-7. 日志与错误体不包含测试密码或完整 RTSP URL。
+6. OpenAPI 类型生成和契约检查可在 CI 中运行，全部占位 operation 的路径、operation ID 和
+   目标响应均可结构化校验。
+7. 占位 Router 没有引入任何只为未实现功能服务的额外架构层。
+8. 日志与错误体不包含测试密码或完整 RTSP URL。
 
 ## 11. Definition of Done
 
 - 数据库迁移、领域模型、仓储接口和公共 HTTP 组件已实现并测试。
 - 前端 API Client、Query Key、Problem 解析和 Mock Server 可供后续切片使用。
 - 所有公共 Schema 有固定示例和契约测试。
+- 全部 Cameras MVP 路径已注册；未实现 handler 只抛出 `NotImplementedError`，文档不得把它们
+  描述为已完成业务 API，也不得为其临时失败建立正式客户端契约。
 - 实现说明记录迁移、类型生成、Mock 启动和测试命令。

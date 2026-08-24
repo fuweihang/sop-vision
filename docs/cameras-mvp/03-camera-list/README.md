@@ -31,6 +31,9 @@
 
 ## 3. API
 
+Foundation 已以 `operation_id=listCameras` 注册该路径。进入本切片时必须复用原 Router 和 DTO，
+不得新建平行端点。
+
 ```http
 GET /api/v1/cameras?q=洗手&page=1&page_size=20
 ```
@@ -159,6 +162,7 @@ Source 状态和播放器在本模块使用 Fake 组件，不要求真实 RTSP �
 ## 11. Definition of Done
 
 - 列表 API 的查询、分页、固定顺序和批量投影已实现并测试。
+- `listCameras` 的占位 `NotImplementedError` 已由真实 Service 调用替换。
 - 卡片网格、搜索、分页、空状态、加载和刷新体验已完成。
 - 可使用 Mock 数据独立演示所有状态。
 - OpenAPI 与前端列表类型契约一致。

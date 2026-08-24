@@ -21,8 +21,12 @@ frontend/src/lib/api/
 
 - 增加固定版本的 OpenAPI TypeScript 生成器和 `api:generate` 脚本。
 - 生成类型只能来自 `contracts/openapi.json`。
+- 生成结果必须包含步骤 6 冻结的七个 operation，而不只是 `components.schemas`；客户端以
+  `operation_id` 关联请求、成功响应和 Problem 响应。
 - 现有 `api-client.ts` 迁移到单一 Client 入口，不能保留两个配置不同的 Axios 实例。
 - 非 Problem 网络错误转换为明确的 transport error；不得伪造业务 code。
+- 占位 handler 的 `NotImplementedError` 运行结果不属于生成客户端契约；本步骤不为其增加
+  专用错误类型、拦截器或 UI 分支。
 - 响应日志、错误上报和开发工具不得自动序列化含密码的 CameraDetail。
 
 ## 3. Problem 解析
@@ -57,7 +61,7 @@ playback(sourceId) → ["playback", sourceId]
 3. 实现 Problem 运行时解析和安全 transport error。
 4. 实现嵌套字段映射。
 5. 实现 Query Key 工厂和 filters 规范化。
-6. 用生成类型编写编译期契约测试，删除重复手写 DTO。
+6. 用生成的 operation/request/response 类型编写编译期契约测试，删除重复手写 DTO。
 
 ## 6. 必测场景
 
@@ -71,6 +75,7 @@ playback(sourceId) → ["playback", sourceId]
 ## 7. 退出条件
 
 - Cameras HTTP DTO 没有第二份手写 TypeScript 定义。
+- 七个 Cameras operation 的请求和响应类型都能通过冻结的 `operation_id` 获取。
 - 生成文件可被脚本完整覆盖，lint/format 不要求人工修改生成代码。
 - Client、Problem parser 和 Query Key 可在没有 Camera 业务页面时独立测试。
 - Frontend build、lint 和定向测试通过。
