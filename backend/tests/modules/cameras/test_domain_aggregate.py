@@ -15,10 +15,11 @@ from app.modules.cameras.domain import (
     CameraValidationError,
     NewCameraSource,
 )
-from app.modules.cameras.domain.testing import FixedClock, FixedIdGenerator
 from tests.modules.cameras.builders import (
     FIXED_TIME,
     CameraBuilder,
+    FixedClock,
+    FixedIdGenerator,
     uuid4_from_index,
 )
 

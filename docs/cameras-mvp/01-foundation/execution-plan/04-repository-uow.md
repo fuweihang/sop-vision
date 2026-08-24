@@ -45,10 +45,10 @@ CameraUnitOfWork
 - `page/page_size` 由步骤 5 保证合法；Repository 仍不得接受负 offset，也不得绕过
   `page_size <= 100` 的公共上限。
 
-建议把 Protocol 和查询值对象放在 Cameras application 边界，把 SQLAlchemy 实现、Mapper、
-约束转换器和 UoW 放在 `persistence/`，把 Fake 与 Store 放在 Cameras 测试支持模块。现有
-`CameraPersistenceRepository` 只作为适配器内部的行锁与无外键引用完整性能力复用，不再向
-Application Service 暴露 ORM Row。
+建议把 Protocol 和查询值对象放在 Cameras application 边界，把唯一生产实现
+`SQLAlchemyCameraRepository`、Mapper、约束转换器和 UoW 放在 `persistence/`，把 Fake 与
+Store 放在 Cameras 测试支持模块。步骤 2 曾使用的 Row 级写入和加锁能力收敛为该实现的私有
+辅助方法，不再保留第二个 Repository，也不向 Application Service 暴露 ORM Row。
 
 ## 3. 查询、搜索与固定排序
 

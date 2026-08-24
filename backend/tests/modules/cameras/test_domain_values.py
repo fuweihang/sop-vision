@@ -14,8 +14,7 @@ from app.modules.cameras.domain import (
     validate_ipv4,
     validate_rtsp_port,
 )
-from app.modules.cameras.domain.testing import FixedClock, FixedIdGenerator
-from tests.modules.cameras.builders import uuid4_from_index
+from tests.modules.cameras.builders import FixedClock, FixedIdGenerator, uuid4_from_index
 
 
 def assert_single_error(error: CameraValidationError, field: str, code: str) -> None:

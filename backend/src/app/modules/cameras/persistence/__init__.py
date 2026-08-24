@@ -1,20 +1,6 @@
-"""Camera 的 SQLAlchemy 映射、Repository 与引用完整性巡检。"""
+"""Camera 数据库存取代码所在的包。
 
-from app.modules.cameras.persistence.integrity import (
-    ReferenceIntegrityIssue,
-    ReferenceIntegrityIssueKind,
-    report_reference_integrity_issues,
-    scan_reference_integrity,
-)
-from app.modules.cameras.persistence.models import CameraRow, CameraSourceRow
-from app.modules.cameras.persistence.repository import CameraPersistenceRepository
-
-__all__ = [
-    "CameraPersistenceRepository",
-    "CameraRow",
-    "CameraSourceRow",
-    "ReferenceIntegrityIssue",
-    "ReferenceIntegrityIssueKind",
-    "report_reference_integrity_issues",
-    "scan_reference_integrity",
-]
+这里故意不从包根目录重新导出 Repository、ORM 模型或巡检函数。调用方应从具体子模块
+导入所需对象，例如从 ``persistence.models`` 导入 ORM 模型。这样 Alembic 只为读取表定义
+而导入模型时，不会顺带加载 Repository、Unit of Work 和 FastAPI 依赖。
+"""
