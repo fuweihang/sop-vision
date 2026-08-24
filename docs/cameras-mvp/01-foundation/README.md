@@ -145,7 +145,7 @@ Camera 列表固定按 `created_at ASC, camera_id ASC` 返回，即先创建的 
 
 ```json
 {
-  "type": "https://sop-vision.local/problems/validation-error",
+  "type": "urn:sop-vision:problem:validation-error",
   "title": "请求字段验证失败",
   "status": 422,
   "code": "VALIDATION_ERROR",
@@ -164,6 +164,11 @@ Camera 列表固定按 `created_at ASC, camera_id ASC` 返回，即先创建的 
 ```
 
 稳定字段为 `status/code/errors[].field/errors[].code/context`。前端不得依赖 `title/detail` 编写业务分支。
+
+`type` 使用 `urn:sop-vision:problem:<kebab-case-code>` 形式，例如
+`urn:sop-vision:problem:camera-not-found`。该 URN 是跨环境稳定的问题类型标识，不依赖可用
+域名、服务 IP 或部署地址，也不要求客户端尝试访问。开发、测试和生产环境不得为同一错误
+生成不同 `type`；客户端业务分支仍以稳定的 `code` 为准。
 
 | HTTP | 使用场景 |
 | --- | --- |

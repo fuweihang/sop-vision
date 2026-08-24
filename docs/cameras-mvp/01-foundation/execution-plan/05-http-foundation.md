@@ -28,6 +28,8 @@
 ## 4. 错误转换规则
 
 - 所有结构化错误使用 `application/problem+json`。
+- Problem `type` 固定为 `urn:sop-vision:problem:<kebab-case-code>`，由稳定错误 code 推导；
+  不使用服务 IP、虚构域名或随环境变化的 Base URL，也不要求客户端解析或访问该 URN。
 - 前端分支只依赖 `status/code/errors[].field/errors[].code/context`。
 - 未知字段映射为 `UNKNOWN_FIELD`，缺失、长度、范围、UUID 等使用 Foundation 稳定 code。
 - 路径 UUID、请求体 UUID 和查询字段错误统一返回 `422 VALIDATION_ERROR`。

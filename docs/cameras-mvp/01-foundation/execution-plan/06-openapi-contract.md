@@ -28,6 +28,8 @@
 - 契约产物固定写入 `contracts/openapi.json`，由代码生成，不手工编辑。
 - 输出排序和序列化必须确定，连续生成内容一致。
 - UUID 是 `type: string, format: uuid`；枚举为冻结的大写英文值。
+- Problem Details 的 `type` 示例和运行时响应使用步骤 5 冻结的
+  `urn:sop-vision:problem:<kebab-case-code>`，所有部署环境保持相同值。
 - 每个 Schema 包含与功能文档一致且经过模型校验的 example。
 - Cameras 路由未来只使用 `cameras` 与 `camera-sources` tags；现有非 Cameras 路由可保留自己的 tag。
 - 每个实际路由必须显式设置稳定唯一 `operation_id`。
