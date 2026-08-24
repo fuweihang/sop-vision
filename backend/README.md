@@ -8,6 +8,7 @@ MediaMTX Control API。
 
 - FastAPI 应用工厂与 lifespan 资源管理。
 - SQLAlchemy async Engine/Session factory 与 Alembic 迁移骨架。
+- 无外键 `cameras`/`camera_sources` 关系模型、事务 Repository 与完整性巡检。
 - `/api/v1/health/live` 存活检查。
 - `/api/v1/health/ready` MediaMTX Control API 就绪检查。
 - 摄像头请求/响应模型和路由骨架。
@@ -78,7 +79,9 @@ Backend 在 Compose 网络中通过 `http://mediamtx:9997` 访问 MediaMTX，并
 | `BACKEND_LOG_LEVEL` | `info` | Uvicorn 日志级别 |
 | `BACKEND_CORS_ORIGINS` | `http://localhost:8000` | 允许的前端 Origin，多个值用逗号分隔 |
 
-应用尚未读写摄像头数据库。MediaMTX 当前 path 配置仍作为首期运行时状态来源。
+Camera 持久化底层已经可用，但业务 CRUD 路由尚未接入。跨表引用由 Repository 通过
+Camera 行锁、同事务校验和显式 Source 清理维护；数据库不会用外键兜底。MediaMTX 当前
+path 配置仍作为首期运行时状态来源。
 
 `DATABASE_URL` 的密码在 Settings 表示和校验异常文本中脱敏。`TEST_DATABASE_URL`
 不是应用配置，只供数据库集成测试使用；测试绝不回退到应用数据库。
@@ -98,11 +101,12 @@ uv run --env-file .env.local alembic upgrade head
 ```bash
 uv run --env-file .env.local pytest \
   tests/core/database/test_migrations.py \
+  tests/modules/cameras/test_repository.py \
   -q
 ```
 
-测试会创建该数据库，执行 `upgrade head → downgrade base → upgrade head`，核对每一步
-revision，并在结束时删除本次创建的数据库。它拒绝接管或删除预先存在的同名数据库。
+测试会创建独立数据库，执行迁移升级、回滚、约束、引用巡检和并发锁验收，并在结束时
+删除本次创建的数据库。它拒绝接管或删除预先存在的同名数据库。
 
 ## 项目结构
 
@@ -122,6 +126,8 @@ backend/
 │       │   ├── config.py
 │       │   └── database/
 │       └── modules/
+│           ├── cameras/
+│           │   └── persistence/
 │           └── stream_gateway/
 │               ├── api/
 │               ├── schemas/

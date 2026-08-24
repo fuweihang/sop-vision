@@ -10,6 +10,7 @@ from sqlalchemy.pool import NullPool
 
 from app.core.config import get_settings
 from app.core.database import Base
+from app.modules.cameras.persistence import models as camera_models  # noqa: F401
 
 config = context.config
 

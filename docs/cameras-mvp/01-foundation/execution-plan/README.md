@@ -21,7 +21,7 @@ Foundation 同时包含持久化、领域、HTTP、契约和前端基础设施�
 - Backend 已有 FastAPI 应用工厂和 `stream_gateway` 模块，但尚无 SQLAlchemy、Alembic 或 Camera 持久化实现。
 - 现有 `stream_gateway/schemas/camera.py` 是早期单流占位契约，与 Cameras MVP 聚合模型不一致，不能继续作为事实源。
 - Frontend 已有 Axios、TanStack Query、MSW、Camera 路由骨架和通用 Route State 组件，但尚无 OpenAPI 生成链路或 Cameras Query Key。
-- Compose 已提供 PostgreSQL 17；数据库集成测试应使用 PostgreSQL，不用 SQLite 模拟 UUID、延迟外键或排序约束。
+- Compose 已提供 PostgreSQL 17；数据库集成测试应使用 PostgreSQL，不用 SQLite 模拟 UUID、延迟唯一约束、行锁或排序约束。
 - Foundation 期间不新增 `POST/GET/PUT/PATCH/DELETE` Camera 业务路由。
 
 ## 3. 架构边界

@@ -125,6 +125,54 @@ def current_revision(database_url: URL) -> str | None:
     return None if row is None else str(row[0])
 
 
+def camera_tables_exist(database_url: URL) -> bool:
+    """确认两张 Camera 表是否同时存在。"""
+
+    with postgres_connection(database_url) as connection:
+        rows = connection.execute(
+            "SELECT table_name FROM information_schema.tables "
+            "WHERE table_schema = 'public' AND table_name IN ('cameras', 'camera_sources')"
+        ).fetchall()
+    return {str(row[0]) for row in rows} == {"cameras", "camera_sources"}
+
+
+def assert_camera_schema(database_url: URL) -> None:
+    """从 PostgreSQL 系统目录验收无外键表、稳定约束和索引。"""
+
+    with postgres_connection(database_url) as connection:
+        constraints = connection.execute(
+            "SELECT conname, contype, condeferrable, condeferred "
+            "FROM pg_constraint "
+            "WHERE conrelid IN ('cameras'::regclass, 'camera_sources'::regclass)"
+        ).fetchall()
+        indexes = connection.execute(
+            "SELECT indexname FROM pg_indexes "
+            "WHERE schemaname = 'public' AND tablename = 'camera_sources'"
+        ).fetchall()
+        url_suffix_collation = connection.execute(
+            "SELECT collation_name FROM information_schema.columns "
+            "WHERE table_schema = 'public' AND table_name = 'camera_sources' "
+            "AND column_name = 'url_suffix'"
+        ).fetchone()
+
+    constraint_by_name = {
+        str(name): (str(kind), bool(deferrable), bool(deferred))
+        for name, kind, deferrable, deferred in constraints
+    }
+    assert all(kind != "f" for kind, _, _ in constraint_by_name.values())
+    assert constraint_by_name == {
+        "ck_camera_sources_sort_order_non_negative": ("c", False, False),
+        "ck_cameras_ip_address_ipv4": ("c", False, False),
+        "ck_cameras_rtsp_port_range": ("c", False, False),
+        "pk_camera_sources": ("p", False, False),
+        "pk_cameras": ("p", False, False),
+        "uq_camera_sources_camera_id_sort_order": ("u", True, True),
+        "uq_camera_sources_camera_id_url_suffix": ("u", True, True),
+    }
+    assert "ix_camera_sources_camera_id" in {str(row[0]) for row in indexes}
+    assert url_suffix_collation == ("C",)
+
+
 def test_test_database_url_rejects_the_application_database() -> None:
     """即使名称带 _test，也不能让测试 URL 与应用库相同。"""
 
@@ -164,7 +212,7 @@ def test_postgres_connection_error_does_not_expose_password(monkeypatch) -> None
 
 
 def test_empty_postgresql_database_upgrade_downgrade_upgrade_chain() -> None:
-    """在真实空 PostgreSQL 库逐步断言 head → base → head revision。
+    """在真实空 PostgreSQL 库逐步断言基线 → head → base → head revision。
 
     未配置测试 URL 时普通单元测试可以跳过本例；CI/验收显式提供该变量后，会自动创建、
     验证并清理测试库。应用 URL 仍是必需的，因为它是隔离校验的比较基准。
@@ -184,12 +232,25 @@ def test_empty_postgresql_database_upgrade_downgrade_upgrade_chain() -> None:
     head_revision = ScriptDirectory.from_config(alembic_config).get_current_head()
 
     with temporary_database(test_url):
-        # 每一步都读取 version table，避免迁移命令无异常但 revision 状态错误的假阳性。
+        # 先停在上一版本，显式覆盖从既有基线升级的路径。
+        command.upgrade(alembic_config, "0001_database_runtime")
+        assert current_revision(test_url) == "0001_database_runtime"
+        assert not camera_tables_exist(test_url)
+
         command.upgrade(alembic_config, "head")
         assert current_revision(test_url) == head_revision
+        assert camera_tables_exist(test_url)
+        assert_camera_schema(test_url)
+        command.check(alembic_config)
+
+        command.downgrade(alembic_config, "0001_database_runtime")
+        assert current_revision(test_url) == "0001_database_runtime"
+        assert not camera_tables_exist(test_url)
 
         command.downgrade(alembic_config, "base")
         assert current_revision(test_url) is None
 
         command.upgrade(alembic_config, "head")
         assert current_revision(test_url) == head_revision
+        assert_camera_schema(test_url)
+        command.check(alembic_config)

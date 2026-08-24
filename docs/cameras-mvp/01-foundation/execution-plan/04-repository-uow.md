@@ -31,7 +31,7 @@ CameraUnitOfWork
 
 - ORM 模型是基础设施对象，领域实体不继承 SQLAlchemy Base。
 - Repository 读取时一次重建完整聚合，Source 始终按 `sort_order` 排序。
-- 新建聚合在同一事务写 Camera 和 Source，并利用延迟复合外键设置默认源。
+- 新建聚合在同一事务写 Camera 和 Source，flush 后显式确认默认源存在且属于当前 Camera。
 - 完整更新由后续业务 Service 计算意图；Repository 负责持久化新增、保留、删除和排序结果。
 - `flush` 可用于尽早发现约束冲突，但只有 Unit of Work 可以 commit。
 - `get(..., for_update=true)` 为更新/删除切片提供行锁；普通查询不加锁。
@@ -58,7 +58,7 @@ CameraUnitOfWork
 
 - 单 Source/多 Source round-trip 后 ID、时间、默认源和顺序不变。
 - add 后不 commit 则其他事务不可见；rollback 后无残留。
-- Camera 删除依赖数据库级联，Source 无残留。
+- Camera 删除先锁定 Camera，再显式删除全部 Source 和 Camera，失败时完整回滚且成功后无 Source 残留。
 - 同一 Camera 规范化后缀竞态最终由数据库约束阻止，并映射为稳定持久化错误。
 - list 先搜索、再计数、再稳定排序分页；相同主排序值使用 `camera_id` 升序。
 - `for_update` 能串行化同一 Camera 的并发写意图。

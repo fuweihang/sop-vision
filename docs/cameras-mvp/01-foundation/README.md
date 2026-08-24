@@ -56,7 +56,7 @@ MVP 不为名称或 IP 建立唯一索引。
 | 字段 | 类型 | 规则 |
 | --- | --- | --- |
 | `source_id` | UUID | 服务端生成 UUID v4；主键，全局唯一且创建后不可改变 |
-| `camera_id` | UUID | 所属聚合；删除 Camera 时级联删除 |
+| `camera_id` | UUID | 所属聚合的逻辑引用；删除 Camera 时由 Repository 在同一事务显式删除 |
 | `name` | string | trim 后 `1-128` 字符 |
 | `url_suffix` | string | 规范化后 `1-1024` 字符 |
 | `sort_order` | integer | 从 `0` 开始，同 Camera 内连续排序 |
@@ -196,9 +196,9 @@ Camera 列表统一支持：
 
 ## 10. 独立验收
 
-1. 空数据库可完成迁移和回滚，外键及唯一约束生效。
+1. 空数据库可完成迁移和回滚，DDL 不包含外键且主键、唯一和 CHECK 约束生效。
 2. 连续生成的 Camera/Source ID 均为合法 UUID v4，数据库主键拒绝重复 UUID。
-3. Camera 删除时所属 Source 由数据库级联删除。
+3. Camera 删除时所属 Source 由 Repository 在同一数据库事务显式删除，失败时完整回滚。
 4. 同一 Camera 内重复规范化后缀被数据库和领域层共同阻止。
 5. 嵌套字段错误能映射到准确前端表单项。
 6. OpenAPI 类型生成和契约检查可在 CI 中运行。

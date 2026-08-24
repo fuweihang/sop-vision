@@ -65,7 +65,7 @@ MVP 阶段允许有意的破坏性变更，但必须同时更新事实源文档�
 | Foundation 事实 | 自动化证据 |
 | --- | --- |
 | 迁移可升级/回滚 | PostgreSQL migration job |
-| UUID/外键/唯一/级联生效 | DDL integration tests |
+| UUID/无外键/唯一/显式关联清理生效 | DDL 与 Repository integration tests |
 | 聚合规范化与连续排序 | pure domain tests |
 | 原子保存与回滚 | Repository contract tests |
 | 嵌套字段错误准确 | Backend + Frontend parser tests |

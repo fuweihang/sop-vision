@@ -59,7 +59,7 @@ HTTP/1.1 204 No Content
 
 1. 读取并锁定 Camera，同时记录所属 `source_id` 列表。
 2. 不存在返回 `404 CAMERA_NOT_FOUND`。
-3. 在一个事务删除 Camera；数据库外键级联删除 CameraSource。
+3. 在同一事务显式删除全部 CameraSource，再删除 Camera；任一步骤失败则整体回滚。
 4. 提交成功后尽力释放播放映射。
 5. 返回 `204`。
 

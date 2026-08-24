@@ -14,6 +14,6 @@ NAMING_CONVENTION = {
 
 
 class Base(DeclarativeBase):
-    """所有业务 ORM Row 的共同基类；当前基线尚不声明任何业务表。"""
+    """所有业务 ORM Row 的共同基类。"""
 
     metadata = MetaData(naming_convention=NAMING_CONVENTION)
