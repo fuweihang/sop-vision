@@ -39,12 +39,13 @@ frontend/src/lib/api/
 公共 API 只暴露 Foundation 冻结的三个函数：
 
 ```text
-cameras(filters)  → ["cameras", normalizedFilters]
+cameras({q, page, page_size}) → ["cameras", {q, page, page_size}]
 camera(cameraId)  → ["camera", cameraId]
 playback(sourceId) → ["playback", sourceId]
 ```
 
-- `filters` 在进入 key 前规范化：空 q 等于未提供，默认分页/排序有唯一表示。
+- `filters` 只包含 `q/page/page_size`；进入 key 前规范化空 q，并让默认分页有唯一表示。
+- 列表没有排序 filter；旧 `sort` 不得进入 OpenAPI 生成类型或 Query Key。
 - 对象键顺序不能制造不同缓存项。
 - Query 数据只使用内存缓存，不配置 localStorage/IndexedDB 持久化。
 - 含密码的 CameraDetail 不进入持久化 Query cache、错误上报或离线缓存。

@@ -115,7 +115,7 @@ rtsp://{username}:{password}@{ip_address}:{rtsp_port}/{url_suffix}
 - UUID 只用于相等比较和路由，不允许客户端从中推导创建时间或业务含义。
 - 每个路由必须有稳定且唯一的 `operation_id`。
 
-## 6. 分页、搜索和排序
+## 6. 分页、搜索和固定顺序
 
 Camera 列表统一支持：
 
@@ -124,7 +124,6 @@ Camera 列表统一支持：
 | `page` | integer | `1` | `>= 1` |
 | `page_size` | integer | `20` | `1-100` |
 | `q` | string | 无 | trim，最长 100；空字符串等同未提供 |
-| `sort` | string | `name` | `name/-name/created_at/-created_at` |
 
 分页响应结构：
 
@@ -137,7 +136,10 @@ Camera 列表统一支持：
 }
 ```
 
-非白名单排序、非法页码和非法 page size 返回 `422 VALIDATION_ERROR`，并指向对应查询字段。
+Camera 列表固定按 `created_at ASC, camera_id ASC` 返回，即先创建的 Camera 在前，相同创建
+时间使用 `camera_id` 升序保证稳定分页。API 不声明排序参数；额外查询参数（包括旧的
+`sort`）被忽略，不报错也不改变固定顺序。非法页码和非法 page size 返回
+`422 VALIDATION_ERROR`，并指向对应查询字段。
 
 ## 7. 错误模型
 
@@ -179,7 +181,8 @@ Camera 列表统一支持：
 - OpenAPI 标签仅使用 `cameras` 和 `camera-sources`。
 - 请求、成功响应及所有已声明错误都使用显式 Schema。
 - Pydantic 请求模型包含与各功能文档一致的 Example。
-- 前端 Query Key 工厂只暴露：`cameras(filters)`、`camera(cameraId)`、`playback(sourceId)`。
+- 前端 Query Key 工厂只暴露：`cameras({q, page, page_size})`、`camera(cameraId)`、
+  `playback(sourceId)`。
 - Problem 解析器必须将 `sources[1].name` 等嵌套路径映射到动态表单行。
 - Mock Server 至少支持成功、字段错误、404、409、502 和 503。
 - CI 比较 OpenAPI 与前端类型，检测字段删除、类型变化和枚举破坏性变更。

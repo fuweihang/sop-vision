@@ -15,7 +15,7 @@
 - `ProblemDetails`、`FieldError` 及 `application/problem+json` 响应工厂。
 - `RequestValidationError`、Starlette HTTP error、领域错误和已知依赖错误的异常处理器。
 - 严格 canonical UUID v4 参数类型：仅接受小写、带连字符标准文本。
-- Camera 列表参数依赖：`page/page_size/q/sort` 的默认值、白名单和规范化。
+- Camera 列表参数依赖：`page/page_size/q` 的默认值和规范化。
 - Pydantic/FastAPI location 到 `sources[1].url_suffix` 形式的字段路径转换器。
 
 ## 3. trace ID 规则
@@ -38,9 +38,10 @@
 
 - `page >= 1`，`1 <= page_size <= 100`。
 - `q` trim，空白转 `None`，非空最长 100。
-- `sort` 仅允许 `name/-name/created_at/-created_at`。
 - 参数对象是不可变值，既供 Repository criteria 使用，也供前端 Query Key 契约使用。
-- 非法字段错误准确指向 `page`、`page_size`、`q` 或 `sort`。
+- Camera 列表固定按 `created_at ASC, camera_id ASC`，参数对象不包含排序字段。
+- 额外查询参数（包括旧的 `sort`）按 FastAPI 默认行为忽略；它们不进入 OpenAPI、参数对象或
+  Query Key，也不改变固定顺序。非法字段错误准确指向 `page`、`page_size` 或 `q`。
 
 ## 6. 实施顺序
 
@@ -48,7 +49,7 @@
 2. 实现 trace middleware 及日志上下文。
 3. 实现框架异常转换和字段路径转换。
 4. 实现 canonical UUID v4 类型。
-5. 实现分页、搜索和排序依赖。
+5. 实现分页和搜索依赖。
 6. 用仅存在于测试中的 probe router 覆盖所有行为；不添加 Camera 业务路由。
 7. 将现有 FastAPI 默认 422 和已声明 HTTP 错误纳入统一 Problem 行为。
 
@@ -57,7 +58,7 @@
 - 成功与错误响应的 trace header/body 一致；恶意或超长入口 ID 被替换。
 - 大写、无连字符、花括号、非 v4 UUID 均返回 `INVALID_UUID`。
 - `sources[1].name` 等嵌套数组路径精确转换。
-- 非法 page/page_size/sort 和超长 q 返回精确字段错误。
+- 非法 page/page_size 和超长 q 返回精确字段错误；额外查询参数被忽略。
 - 仅空白 q 规范化为未提供。
 - 未知 JSON 字段返回 `UNKNOWN_FIELD`。
 - 测试密码和完整 RTSP URL 不出现在响应与捕获日志。

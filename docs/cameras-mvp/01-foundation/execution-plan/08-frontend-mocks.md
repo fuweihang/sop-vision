@@ -32,7 +32,7 @@ frontend/src/test/mocks/cameras/
 ```
 
 - Fixture 使用步骤 7 的生成类型，并通过 `satisfies` 保持编译期校验。
-- 使用固定 UUID v4、UTC 时间和稳定排序，快照可复现。
+- 使用固定 UUID v4、UTC 时间，并按 `created_at ASC, camera_id ASC` 固定排序，使快照可复现。
 - 场景切换以测试/Story 入口显式选择，禁止通过全局随机数或执行顺序改变结果。
 - handlers 模拟业务文档已声明的路径和媒体类型，但不把 Mock 当成 Backend 已实现的证明。
 

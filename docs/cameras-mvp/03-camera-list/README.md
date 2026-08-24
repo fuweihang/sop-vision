@@ -12,7 +12,7 @@
 ### 后端
 
 - 分页读取 Camera 摘要和 Source 数量。
-- 按名称或 IP 搜索，按白名单字段排序。
+- 按名称或 IP 搜索，并按 Camera 创建先后固定排序。
 - 通过一次 MediaMTX `/paths/list` 快照批量合并 Source 状态和默认源播放投影。
 - 对状态或播放依赖执行可读性降级，避免逐行外部调用。
 
@@ -32,7 +32,7 @@
 ## 3. API
 
 ```http
-GET /api/v1/cameras?q=洗手&page=1&page_size=20&sort=name
+GET /api/v1/cameras?q=洗手&page=1&page_size=20
 ```
 
 成功：
@@ -71,10 +71,10 @@ GET /api/v1/cameras?q=洗手&page=1&page_size=20&sort=name
 
 - `q` trim 后对 Camera `name` 和规范化 IPv4 文本执行不区分大小写的包含匹配。
 - `q` 为空或仅空白时等同未提供。
-- 先应用搜索，再计算 `total`，最后排序和分页。
-- 相同排序值使用 `camera_id` 升序作为稳定次排序。
+- 先应用搜索，再计算 `total`，最后按 `created_at ASC, camera_id ASC` 固定排序并分页。
+- 先创建的 Camera 在前；创建时间相同时使用 `camera_id` 升序作为稳定次排序。
 - 请求页码超过最后一页时返回空 `items` 和真实 `total`，不自动修改页码。
-- 排序白名单为 `name/-name/created_at/-created_at`。
+- API 不声明排序参数。额外查询参数（包括旧的 `sort`）被忽略，不报错也不改变固定顺序。
 
 ## 5. 状态和播放降级
 
@@ -102,7 +102,7 @@ GET /api/v1/cameras?q=洗手&page=1&page_size=20&sort=name
 
 - 页面操作栏包含占满剩余宽度的搜索框和“添加摄像头”按钮。
 - 搜索输入防抖 `300ms`；改变搜索条件后页码重置为 `1`。
-- URL 查询参数保存 `q/page/page_size/sort`，刷新和前进后退可以恢复。
+- URL 查询参数保存 `q/page/page_size`，刷新和前进后退可以恢复。
 - `total=0` 且无 `q` 时展示“暂无摄像头”和创建入口。
 - `total=0` 且存在 `q` 时展示“未找到匹配结果”和清除搜索操作。
 - 首次加载使用骨架；后台刷新保留旧卡片并显示非阻塞刷新状态。
@@ -114,7 +114,7 @@ GET /api/v1/cameras?q=洗手&page=1&page_size=20&sort=name
 Query Key：
 
 ```text
-["cameras", {q, page, page_size, sort}]
+["cameras", {q, page, page_size}]
 ```
 
 - 参数必须先规范化再生成 Query Key，避免空字符串和未提供形成两个缓存项。
@@ -126,7 +126,8 @@ Query Key：
 
 | 场景 | 响应/前端行为 |
 | --- | --- |
-| 非法页码、page size 或 sort | `422 VALIDATION_ERROR`；保留当前可见列表 |
+| 非法页码或 page size | `422 VALIDATION_ERROR`；保留当前可见列表 |
+| 包含额外查询参数（包括旧 `sort`） | 忽略额外参数，仍按固定顺序返回 `200` |
 | PostgreSQL 不可用 | `503 DATABASE_UNAVAILABLE`；显示整页重试 |
 | MediaMTX Control API 不可用 | `200`，当前页 Source 均为 `OFFLINE` |
 | MediaMTX 不可用 | `200`，`whep_url=null` |
@@ -140,24 +141,24 @@ Query Key：
 - 三种 Camera 聚合状态。
 - 默认源在线、离线、未知和 `whep_url=null`。
 - 首次加载失败、后台刷新失败和非法查询参数。
-- 固定 25 条 Camera 数据用于分页与稳定排序测试。
+- 固定 25 条 Camera 数据用于 `created_at ASC, camera_id ASC` 分页与稳定顺序测试。
 
 Source 状态和播放器在本模块使用 Fake 组件，不要求真实 RTSP 或 MediaMTX。
 
 ## 10. 独立验收
 
-1. 默认参数返回第一页 20 条并按名称稳定排序。
+1. 默认参数返回第一页 20 条并按 `created_at ASC, camera_id ASC` 稳定排序。
 2. 名称和 IP 搜索正确，空搜索等同未提供。
 3. 无数据和搜索无结果使用不同界面与操作。
-4. 非法分页和排序返回准确字段错误。
+4. 非法分页返回准确字段错误；额外查询参数（包括旧 `sort`）被忽略。
 5. MediaMTX Control API 不可用时，配置列表仍返回 `200` 且 Source 均为 `OFFLINE`。
 6. 卡片不泄露用户名、密码、URL 后缀或 RTSP URL。
-7. 搜索、分页和排序可由 URL 恢复。
+7. 搜索和分页可由 URL 恢复。
 8. 不可见卡片不保留播放器会话。
 
 ## 11. Definition of Done
 
-- 列表 API 的查询、分页、稳定排序和批量投影已实现并测试。
+- 列表 API 的查询、分页、固定顺序和批量投影已实现并测试。
 - 卡片网格、搜索、分页、空状态、加载和刷新体验已完成。
 - 可使用 Mock 数据独立演示所有状态。
 - OpenAPI 与前端列表类型契约一致。

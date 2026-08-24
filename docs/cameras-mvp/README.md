@@ -2,7 +2,7 @@
 
 > 文档状态：实施基线  
 > REST API 前缀：`/api/v1`  
-> 更新日期：2026-08-19
+> 更新日期：2026-08-24
 
 本目录是 Cameras 第一阶段 MVP 的前后端契约、开发边界和验收事实源。每份功能文档都能形成一个可单独指派、实现和验收的交付单元；除本目录内明确列出的依赖外，不依赖其他业务模块。
 
@@ -116,7 +116,7 @@ Camera.default_preview_source_id ─── 1 CameraSource
 Query Key：
 
 ```text
-["cameras", filters]
+["cameras", {q, page, page_size}]
 ["camera", cameraId]
 ["playback", sourceId]
 ```
@@ -146,11 +146,13 @@ Query Key：
 11. 删除 Camera 时只校验资源存在性，随后直接删除聚合。
 12. 删除提交后仅进行播放映射的尽力释放，不引入可靠异步清理。
 13. 页面预览启停只影响浏览器播放器，不改变持久化配置。
+14. Camera 列表固定按 `created_at ASC, camera_id ASC` 返回，不提供客户端排序参数；额外
+    查询参数（包括旧的 `sort`）被忽略。
 
 ## 9. Cameras MVP 总验收
 
 1. 创建包含两路 Source 的 Camera，服务端生成全局唯一的 UUID v4 Camera/Source ID，并规范化 URL 后缀。
-2. 列表区分无数据和搜索无结果，可按名称或 IP 搜索并分页。
+2. 列表区分无数据和搜索无结果，可按名称或 IP 搜索，并按创建先后稳定分页。
 3. 详情展示基础字段、默认源和完整 Source 集合，敏感响应不进入 HTTP 缓存或日志。
 4. 编辑时可保留、增加、修改和删除 Source，已有 Source ID 不改变。
 5. 无 Source、重复 Source 后缀、零个或多个默认源均被精确校验。
