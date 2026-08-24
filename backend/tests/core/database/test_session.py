@@ -56,10 +56,9 @@ async def test_each_context_gets_an_independent_session() -> None:
     assert yielded_first is not yielded_second
 
 
-async def test_runtime_factory_disables_implicit_flush() -> None:
+async def test_runtime_factory_disables_implicit_flush(settings: Settings) -> None:
     """factory 禁用 autoflush，并避免 commit 后 ORM 属性被隐式过期。"""
 
-    settings = Settings()
     engine = AsyncMock()
 
     with pytest.MonkeyPatch.context() as monkeypatch:

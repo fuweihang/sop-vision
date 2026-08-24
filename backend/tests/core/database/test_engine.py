@@ -2,6 +2,8 @@
 
 from unittest.mock import patch
 
+from pydantic import SecretStr
+
 from app.core.config import Settings
 from app.core.database.engine import create_database_engine
 
@@ -10,7 +12,10 @@ def test_create_database_engine_uses_configured_pool_and_safe_logging() -> None:
     """连接池配置应完整透传，同时不能允许 echo 绕过参数隐藏。"""
 
     settings = Settings(
-        database_url=("postgresql+psycopg://sop_vision:engine-password@localhost/sop_vision"),
+        # Settings 的字段类型是 SecretStr；显式包装可让静态类型与运行时脱敏语义一致。
+        database_url=SecretStr(
+            "postgresql+psycopg://sop_vision:engine-password@localhost/sop_vision"
+        ),
         database_pool_size=7,
         database_max_overflow=3,
         database_pool_timeout=12.5,
