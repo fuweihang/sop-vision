@@ -7,6 +7,12 @@
 
 from app.core.http.errors import add_http_exception_handler, install_http_exception_handlers
 from app.core.http.middleware import TraceIdMiddleware
+from app.core.http.openapi import (
+    install_problem_openapi_media_type,
+    no_content_response,
+    problem_responses,
+    success_response,
+)
 from app.core.http.problems import FieldError, ProblemDetails, problem_response
 from app.core.http.trace import TraceIdLogFilter, get_trace_id
 from app.core.http.types import CanonicalUUID4
@@ -20,5 +26,9 @@ __all__ = [
     "add_http_exception_handler",
     "get_trace_id",
     "install_http_exception_handlers",
+    "install_problem_openapi_media_type",
+    "no_content_response",
+    "problem_responses",
     "problem_response",
+    "success_response",
 ]

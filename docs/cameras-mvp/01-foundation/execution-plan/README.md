@@ -13,13 +13,13 @@
 | 3 领域模型        | 已完成 | 不可变聚合、规范化、固定 ID/时钟与领域测试                                 |
 | 4 Repository/UoW  | 已完成 | 专用端口、SQLAlchemy/Fake 实现、事务与并发测试                             |
 | 5 HTTP 公共机制   | 已完成 | trace、Problem、严格 UUID、分页依赖及 probe 测试                           |
-| 6 OpenAPI 契约    | 未开始 | 仍保留早期 `stream_gateway/schemas/camera.py`，无 `contracts/openapi.json` |
+| 6 OpenAPI 契约    | 已完成 | Cameras Schema/占位 Router、确定性导出脚本与 `contracts/openapi.json`     |
 | 7 前端 Client     | 未开始 | 仍使用 `frontend/src/lib/api-client.ts`，无生成类型                        |
 | 8 前端状态与 Mock | 未开始 | 有通用 Route State/MSW 基础，尚无 Cameras 场景集合                         |
 | 9 契约门禁        | 未开始 | 尚无 regenerate-and-diff 和占位清理门禁                                    |
 
-代码检查结果：不加载本地数据库配置时 Backend 为 `94 passed, 13 skipped`；加载
-`.env.local` 后，PostgreSQL 迁移、约束、事务和并发测试全部执行，为 `107 passed`。测试
+代码检查结果：不加载本地数据库配置时 Backend 为 `110 passed, 13 skipped`；加载
+`.env.local` 后，PostgreSQL 迁移、约束、事务和并发测试全部执行，为 `123 passed`。测试
 fixture 显式固定 CORS Origin；即使进程传入冲突的 `BACKEND_CORS_ORIGINS`，HTTP Foundation
 定向测试仍为 `27 passed`。
 
@@ -105,7 +105,7 @@ OpenAPI → generated frontend types → Client / MSW
 环境不会改变测试应用；请求原始 input、数据库错误、密码和完整 RTSP URL 不进入 Problem
 或日志。
 
-## 步骤 6｜Schema、占位 Router 与 OpenAPI
+## 步骤 6｜Schema、占位 Router 与 OpenAPI（已完成）
 
 建立唯一的后端 HTTP Schema 来源：
 
@@ -175,6 +175,7 @@ Foundation 收口时允许七个 handler 仍是一行 `raise NotImplementedError
 
 ```bash
 cd backend
+uv run python scripts/export_openapi.py
 uv run --env-file .env.local pytest
 uv run ruff check .
 uv run ruff format --check .

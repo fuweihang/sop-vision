@@ -12,12 +12,13 @@ MediaMTX Control API。
 - 框架无关、不可变的 Camera 聚合、规范化规则、固定 ID/时钟和领域 Fixture。
 - `/api/v1/health/live` 存活检查。
 - `/api/v1/health/ready` MediaMTX Control API 就绪检查。
-- 摄像头请求/响应模型和路由骨架。
+- Cameras 完整请求/响应 Schema、七条目标占位路由和确定性 OpenAPI 契约。
 - 共享异步 MediaMTX 客户端。
 - uv、Ruff、pytest 和 Docker 构建配置。
 
-摄像头 CRUD 尚未实现。后续 Camera 配置 API、应用服务和持久化端口归属
-`app/modules/cameras/`；`app/modules/stream_gateway/` 继续只负责 MediaMTX 适配。
+摄像头 CRUD 尚未实现；当前七个 handler 仅用于冻结 OpenAPI，调用时返回占位错误。后续
+Camera 配置 API、应用服务和持久化端口归属 `app/modules/cameras/`；
+`app/modules/stream_gateway/` 继续只负责 MediaMTX 适配。
 
 ## 环境要求
 
@@ -79,12 +80,24 @@ Backend 在 Compose 网络中通过 `http://mediamtx:9997` 访问 MediaMTX，并
 | `BACKEND_LOG_LEVEL` | `info` | Uvicorn 日志级别 |
 | `BACKEND_CORS_ORIGINS` | `http://localhost:8000` | 允许的前端 Origin，多个值用逗号分隔 |
 
-Camera 持久化底层已经可用，但业务 CRUD 路由尚未接入。跨表引用由 Repository 通过
+Camera 持久化底层已经可用，但业务 CRUD handler 尚未实现。跨表引用由 Repository 通过
 Camera 行锁、同事务校验和显式 Source 清理维护；数据库不会用外键兜底。MediaMTX 当前
 path 配置仍作为首期运行时状态来源。
 
 `DATABASE_URL` 的密码在 Settings 表示和校验异常文本中脱敏。`TEST_DATABASE_URL`
 不是应用配置，只供数据库集成测试使用；测试绝不回退到应用数据库。
+
+## OpenAPI 契约
+
+在 `backend/` 目录生成跨端契约：
+
+```bash
+uv run python scripts/export_openapi.py
+```
+
+脚本使用真实应用工厂和固定元数据写入 `../contracts/openapi.json`，但不会读取本地数据库
+配置、进入 lifespan 或连接 PostgreSQL/MediaMTX。输出固定按键排序、两空格缩进和尾换行，
+连续生成保持字节一致。路径已经存在只代表目标契约冻结，不代表占位业务 handler 可调用。
 
 ## 数据库迁移
 
@@ -122,11 +135,13 @@ backend/
 ├── src/
 │   └── app/
 │       ├── main.py
+│       ├── factory.py
 │       ├── core/
 │       │   ├── config.py
 │       │   └── database/
 │       └── modules/
 │           ├── cameras/
+│           │   ├── api/
 │           │   ├── domain/
 │           │   └── persistence/
 │           └── stream_gateway/
@@ -149,6 +164,7 @@ backend/
 
 ```bash
 uv run --env-file .env.local pytest
+uv run python scripts/export_openapi.py
 uv run pytest tests/modules/cameras/test_domain_values.py \
   tests/modules/cameras/test_domain_aggregate.py
 uv run --env-file .env.local pytest --cov=app --cov-report=term-missing
