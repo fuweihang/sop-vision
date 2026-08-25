@@ -1,2 +1,8 @@
 allowBuilds:
   msw: true
+
+peerDependencyRules:
+  allowedVersions:
+    # openapi-typescript 7.13 的 CLI 已在本项目 TypeScript 6 构建中完成生成与编译验证，但其
+    # peer 范围仍停留在 ^5.x。只为该生成器放宽版本，不掩盖其他依赖的 peer 冲突。
+    "openapi-typescript>typescript": "6"

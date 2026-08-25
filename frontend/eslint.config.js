@@ -10,7 +10,12 @@ import tseslint from "typescript-eslint";
 const sourceFiles = ["src/**/*.{ts,tsx}"];
 
 export default defineConfig(
-  globalIgnores(["coverage/**", "dist/**", "src/routeTree.gen.ts"]),
+  globalIgnores([
+    "coverage/**",
+    "dist/**",
+    "src/generated/openapi.ts",
+    "src/routeTree.gen.ts",
+  ]),
   {
     files: ["**/*.{js,mjs,cjs,ts,tsx}"],
     extends: [js.configs.recommended, tseslint.configs.recommended],

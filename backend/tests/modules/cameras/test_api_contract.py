@@ -175,9 +175,7 @@ def test_canonical_source_id_rejects_uppercase_text() -> None:
     """请求体 Source UUID 与路径参数使用同一小写标准文本规则。"""
 
     with pytest.raises(ValidationError, match="uuid_canonical"):
-        SetDefaultPreviewSourceRequest.model_validate(
-            {"source_id": CAMERA_ID_EXAMPLE.upper()}
-        )
+        SetDefaultPreviewSourceRequest.model_validate({"source_id": CAMERA_ID_EXAMPLE.upper()})
 
 
 def test_list_and_playback_models_forbid_sensitive_fields_recursively(

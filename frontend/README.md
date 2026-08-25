@@ -21,8 +21,10 @@ pnpm lint
 pnpm lint:fix
 ```
 
-Generated files such as `src/routeTree.gen.ts` are excluded from linting. Type
-checking remains part of `pnpm build` and is not replaced by ESLint.
+Generated files such as `src/routeTree.gen.ts` and `src/generated/openapi.ts`
+are excluded from linting. Type checking remains part of `pnpm build` and is
+not replaced by ESLint. Rebuild the OpenAPI operation types from the repository
+contract with `pnpm api:generate`; never edit the generated file directly.
 
 ## Formatting
 

@@ -8,6 +8,7 @@
   },
   "packageManager": "pnpm@11.21.0",
   "scripts": {
+    "api:generate": "openapi-typescript ../contracts/openapi.json -o src/generated/openapi.ts",
     "dev": "vite",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
@@ -64,6 +65,7 @@
     "globals": "^17.11.0",
     "jsdom": "^30.0.1",
     "msw": "^2.15.0",
+    "openapi-typescript": "^7.13.0",
     "prettier": "^3.9.6",
     "tailwindcss": "^4.3.3",
     "typescript": "~6.0.2",

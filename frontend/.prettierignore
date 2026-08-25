@@ -1,4 +1,5 @@
 coverage/
 dist/
 pnpm-lock.yaml
+src/generated/openapi.ts
 src/routeTree.gen.ts

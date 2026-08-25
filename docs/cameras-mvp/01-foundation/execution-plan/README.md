@@ -6,22 +6,25 @@
 
 ## 当前基线
 
-| 步骤              | 状态   | 代码证据                                                                   |
-| ----------------- | ------ | -------------------------------------------------------------------------- |
-| 1 数据库运行时    | 已完成 | `app/core/database/`、Alembic 基线、生命周期与迁移测试                     |
-| 2 关系模型        | 已完成 | Camera 无外键 DDL、稳定约束、巡检与 PostgreSQL 测试                        |
-| 3 领域模型        | 已完成 | 不可变聚合、规范化、固定 ID/时钟与领域测试                                 |
-| 4 Repository/UoW  | 已完成 | 专用端口、SQLAlchemy/Fake 实现、事务与并发测试                             |
-| 5 HTTP 公共机制   | 已完成 | trace、Problem、严格 UUID、分页依赖及 probe 测试                           |
-| 6 OpenAPI 契约    | 已完成 | Cameras Schema/占位 Router、确定性导出脚本与 `contracts/openapi.json`     |
-| 7 前端 Client     | 未开始 | 仍使用 `frontend/src/lib/api-client.ts`，无生成类型                        |
-| 8 前端状态与 Mock | 未开始 | 有通用 Route State/MSW 基础，尚无 Cameras 场景集合                         |
-| 9 契约门禁        | 未开始 | 尚无 regenerate-and-diff 和占位清理门禁                                    |
+| 步骤              | 状态   | 代码证据                                                              |
+| ----------------- | ------ | --------------------------------------------------------------------- |
+| 1 数据库运行时    | 已完成 | `app/core/database/`、Alembic 基线、生命周期与迁移测试                |
+| 2 关系模型        | 已完成 | Camera 无外键 DDL、稳定约束、巡检与 PostgreSQL 测试                   |
+| 3 领域模型        | 已完成 | 不可变聚合、规范化、固定 ID/时钟与领域测试                            |
+| 4 Repository/UoW  | 已完成 | 专用端口、SQLAlchemy/Fake 实现、事务与并发测试                        |
+| 5 HTTP 公共机制   | 已完成 | trace、Problem、严格 UUID、分页依赖及 probe 测试                      |
+| 6 OpenAPI 契约    | 已完成 | Cameras Schema/占位 Router、确定性导出脚本与 `contracts/openapi.json` |
+| 7 前端 Client     | 已完成 | operation 生成类型、单一 Axios Client、Problem 映射与固定 Query Key   |
+| 8 前端状态与 Mock | 未开始 | 有通用 Route State/MSW 基础，尚无 Cameras 场景集合                    |
+| 9 契约门禁        | 未开始 | 尚无 regenerate-and-diff 和占位清理门禁                               |
 
 代码检查结果：不加载本地数据库配置时 Backend 为 `110 passed, 13 skipped`；加载
 `.env.local` 后，PostgreSQL 迁移、约束、事务和并发测试全部执行，为 `123 passed`。测试
 fixture 显式固定 CORS Origin；即使进程传入冲突的 `BACKEND_CORS_ORIGINS`，HTTP Foundation
 定向测试仍为 `27 passed`。
+
+步骤 7 完成后 Frontend 为 `83 passed`，lint、format check 和生产 build 全部通过；
+`pnpm api:generate` 可从已提交 OpenAPI 直接重建 operation 类型，无需手工补丁。
 
 ## 架构边界
 
@@ -131,13 +134,21 @@ example；只有 CameraDetail example 可以包含明确标记的测试凭据和
 退出条件：删除或迁移早期单流 Camera Schema；七条业务路径的 Schema、响应头、媒体类型和
 operation ID 结构测试通过；调用占位接口的临时结果不进入正式契约。
 
-## 步骤 7｜前端类型、Client 与错误映射
+## 步骤 7｜前端类型、Client 与错误映射（已完成）
 
-- 从 `contracts/openapi.json` 生成包含 operation 的 TypeScript 类型，生成文件不手改。
-- 收敛为单一 Axios Client；非 Problem 网络错误不伪造业务 code。
-- 运行时验证 Problem，准确映射 `sources[1].name` 等动态字段。
-- 提供 Foundation 冻结的三个 Query Key；规范化空 q，不加入 sort。
-- 删除 Cameras 手写 DTO；敏感详情不进入持久化缓存、console 或错误上报。
+建立 `pnpm api:generate`，使用固定依赖从 `contracts/openapi.json` 确定性生成包含
+`paths/components/operations` 的 `frontend/src/generated/openapi.ts`；生成文件不进入 lint/format，
+但仍由 TypeScript build 检查，业务代码只从 operation 索引请求、查询和响应类型。
+
+保留唯一生产 Axios 实例并提供七个 Cameras operation 调用。响应错误在 Client 边界立即脱敏：
+只有媒体类型、Problem Schema、HTTP status 和 `X-Trace-Id` 全部一致才公开业务
+`status/code/errors/context`；传输失败和非 Problem 响应不携带业务 code、原始请求配置或响应体，
+占位 Backend 的临时错误不会形成业务分支。
+
+字段错误解析器把 `sources[1].name` 转换为 `['sources', 1, 'name']`，畸形路径降级为表单级错误。
+Query Key 只提供 `cameras/camera/playback` 三种冻结形状，列表 HTTP 参数与 Key 共用 q trim、空值、
+默认分页规范化，且无 sort 维度。当前 Query cache 仅驻留内存；安全回归测试证明 Camera 写请求断网
+后，密码哨兵不进入抛出错误、console、localStorage 或 sessionStorage。
 
 退出条件：重新生成后无需手工补丁，Frontend build/lint/test 通过；占位 Backend 的临时错误
 不产生前端分支。
@@ -181,6 +192,7 @@ uv run ruff check .
 uv run ruff format --check .
 
 cd ../frontend
+pnpm api:generate
 pnpm test
 pnpm lint
 pnpm format:check
