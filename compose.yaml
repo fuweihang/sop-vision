@@ -58,7 +58,7 @@ services:
           - sop-vision-redis
 
   mediamtx:
-    image: bluenviron/mediamtx:${MEDIAMTX_IMAGE_TAG:-1}
+    image: bluenviron/mediamtx:${MEDIAMTX_IMAGE_TAG:-1.20.1}
     restart: unless-stopped
     environment:
       MTX_API: "${MTX_API:-yes}"
