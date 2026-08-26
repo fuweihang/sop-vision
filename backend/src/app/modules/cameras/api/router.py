@@ -174,15 +174,16 @@ async def delete_camera(camera_id: CanonicalUUID4) -> None:
     raise NotImplementedError
 
 
-@router.get(
+@router.post(
     "/camera-sources/{source_id}/playback",
-    operation_id="getCameraSourcePlayback",
+    operation_id="prepareCameraSourcePlayback",
     tags=["camera-sources"],
     response_model=PlaybackInfo,
     responses={
         status.HTTP_200_OK: success_response(
-            "返回已就绪的 WHEP 播放地址。",
+            "准备或恢复 Source 映射，并返回已就绪的 WHEP 播放地址。",
             example=_example(PlaybackInfo),
+            no_store=True,
         ),
         **problem_responses(
             [
@@ -196,5 +197,5 @@ async def delete_camera(camera_id: CanonicalUUID4) -> None:
         ),
     },
 )
-async def get_camera_source_playback(source_id: CanonicalUUID4) -> PlaybackInfo:
+async def prepare_camera_source_playback(source_id: CanonicalUUID4) -> PlaybackInfo:
     raise NotImplementedError

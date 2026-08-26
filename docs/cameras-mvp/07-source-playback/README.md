@@ -33,8 +33,8 @@ MVP 地址不签名，因此 `expires_at=null`；客户端仍只能使用 API �
 | MediaMTX 超时或不可用 | `503 MEDIA_SERVICE_UNAVAILABLE`                |
 | MediaMTX 响应无效     | `502 MEDIA_SERVICE_INVALID_RESPONSE`           |
 
-当前占位代码和 OpenAPI 仍是旧 `GET getCameraSourcePlayback`；实现本切片时必须按根文档的契约差异
-一次性同步为 `POST prepareCameraSourcePlayback`，不能保留两个含义重叠的公共操作。
+Router、OpenAPI、Frontend Client 和 MSW 已统一冻结为 `POST prepareCameraSourcePlayback`；当前
+handler 仍是 Foundation 占位，只有完成本切片的 Backend 行为和测试后才能作为可用恢复接口。
 
 ## Backend 行为
 

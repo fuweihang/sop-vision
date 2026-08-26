@@ -87,6 +87,8 @@ PostgreSQL 使用原生 `uuid`、`inet` 和 `timestamptz`。两个 Camera 表不
 - API 前缀 `/api/v1`；JSON 字段使用 `snake_case`，枚举使用大写英文值。
 - UUID 路径和字段只接受小写、带连字符、RFC variant 正确的 UUID v4 文本。
 - 每条路由使用显式、全局唯一的 `operation_id`。
+- Playback 占位契约是 `POST /camera-sources/{source_id}/playback`
+  （`prepareCameraSourcePlayback`）；该命令可能收敛 MediaMTX Path，不能声明为安全读取。
 - 成功响应为 `application/json`；结构化错误为 `application/problem+json`。
 - 列表参数：`page >= 1`，`1 <= page_size <= 100`，`q` trim 后最长 100，空白等同未提供。
 - 额外查询参数被忽略；请求 DTO 的未知字段返回 `422 UNKNOWN_FIELD`。

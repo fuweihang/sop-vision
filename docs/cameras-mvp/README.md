@@ -26,17 +26,6 @@ State；MediaMTX 保存可丢失的媒体 Runtime State。配置事务与媒体�
 边界；05–10 才能在稳定 Port 上完成业务闭环；11 只汇总跨切片发布门禁，不接收本应由前序切片完成的
 遗留实现。
 
-## 当前契约差异
-
-当前代码、`contracts/openapi.json`、Frontend 类型和 Fixture 仍注册旧占位操作
-`GET /camera-sources/{source_id}/playback`（`getCameraSourcePlayback`）。新计划把它改为具有幂等
-副作用的 `POST` 准备/恢复操作（`prepareCameraSourcePlayback`），因为该用例可能创建或替换
-MediaMTX Path，不能继续声明为安全读取。
-
-在 02/07 实现前，精确的当前 HTTP Schema 仍以 `contracts/openapi.json` 为准；实现 07 时必须在
-同一个变更中同步 Router、Schema、OpenAPI、Frontend 生成类型、Client、MSW 和 Fixture。本文只
-记录已经批准的目标方向，不把尚未修改的占位代码描述成完成能力。
-
 ## 产品范围
 
 MVP 允许用户创建包含多路 RTSP Source 的 Camera，搜索和分页浏览列表，查看详情，完整编辑

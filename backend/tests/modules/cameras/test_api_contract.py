@@ -47,8 +47,8 @@ EXPECTED_CAMERA_OPERATIONS = {
         "deleteCamera",
         {"204", "404", "422", "503"},
     ),
-    ("/api/v1/camera-sources/{source_id}/playback", "get"): (
-        "getCameraSourcePlayback",
+    ("/api/v1/camera-sources/{source_id}/playback", "post"): (
+        "prepareCameraSourcePlayback",
         {"200", "404", "409", "422", "502", "503"},
     ),
 }
@@ -190,6 +190,10 @@ def test_openapi_has_exact_target_paths_operations_responses_and_tags(
     """七条业务路径只能声明 Foundation 冻结的目标成功与业务错误。"""
 
     openapi = application.openapi()
+    playback_path = openapi["paths"]["/api/v1/camera-sources/{source_id}/playback"]
+    # Playback 会收敛 MediaMTX Path，属于有副作用的幂等命令；禁止旧 GET 与 POST 并存，
+    # 否则生成客户端和调用方可能继续把它当成安全读取并进行预取或透明重试。
+    assert set(playback_path) == {"post"}
     for (path, method), (operation_id, statuses) in EXPECTED_CAMERA_OPERATIONS.items():
         operation = openapi["paths"][path][method]
         assert operation["operationId"] == operation_id
@@ -224,10 +228,12 @@ def test_openapi_uses_problem_media_type_and_required_protocol_headers(
             "200"
         ]["headers"]
         assert "Cache-Control" in detail_headers
-    retry_headers = openapi["paths"]["/api/v1/camera-sources/{source_id}/playback"]["get"][
+    playback_response = openapi["paths"]["/api/v1/camera-sources/{source_id}/playback"]["post"][
         "responses"
-    ]["409"]["headers"]
+    ]
+    retry_headers = playback_response["409"]["headers"]
     assert "Retry-After" in retry_headers
+    assert "Cache-Control" in playback_response["200"]["headers"]
     assert (
         "content"
         not in openapi["paths"]["/api/v1/cameras/{camera_id}"]["delete"]["responses"]["204"]

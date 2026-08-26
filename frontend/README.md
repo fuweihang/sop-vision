@@ -35,6 +35,8 @@ Shell 已支持桌面 Sidebar、移动 Sheet、Light/Dark 主题、跳转主内�
 
 - `src/lib/api-client.ts` 是唯一 Axios 实例和错误入口。
 - `src/lib/cameras-api.ts` 封装七个已冻结的目标 operation。
+- Playback Client 使用 `POST prepareCameraSourcePlayback`；它是按需准备/恢复命令，不是常规播放
+  前的查询接口。
 - `src/generated/openapi.ts` 从 `contracts/openapi.json` 生成，不得手工修改。
 - `src/routeTree.gen.ts` 由 TanStack Router 插件生成，不得手工修改。
 - `CameraDetail` 含凭据，只能短期保存在内存；不得进入浏览器持久化存储或错误上报。

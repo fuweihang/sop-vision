@@ -67,7 +67,7 @@ def response_headers(*, location: bool = False, no_store: bool = False) -> dict[
         }
     if no_store:
         headers["Cache-Control"] = {
-            "description": "敏感 CameraDetail 不得被共享或持久化缓存。",
+            "description": "该响应不得被浏览器或共享缓存持久化。",
             "schema": {"type": "string", "const": "no-store"},
         }
     return headers

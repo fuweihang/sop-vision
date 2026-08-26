@@ -11,10 +11,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get Camera Source Playback */
-        get: operations["getCameraSourcePlayback"];
+        get?: never;
         put?: never;
-        post?: never;
+        /** Prepare Camera Source Playback */
+        post: operations["prepareCameraSourcePlayback"];
         delete?: never;
         options?: never;
         head?: never;
@@ -588,7 +588,7 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
-    getCameraSourcePlayback: {
+    prepareCameraSourcePlayback: {
         parameters: {
             query?: never;
             header?: never;
@@ -599,9 +599,11 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description 返回已就绪的 WHEP 播放地址。 */
+            /** @description 准备或恢复 Source 映射，并返回已就绪的 WHEP 播放地址。 */
             200: {
                 headers: {
+                    /** @description 该响应不得被浏览器或共享缓存持久化。 */
+                    "Cache-Control"?: "no-store";
                     /** @description 本次请求的关联 ID；与 Problem body 的 trace_id 相同。 */
                     "X-Trace-Id"?: string;
                     [name: string]: unknown;
@@ -871,7 +873,7 @@ export interface operations {
             /** @description Camera 聚合创建成功。 */
             201: {
                 headers: {
-                    /** @description 敏感 CameraDetail 不得被共享或持久化缓存。 */
+                    /** @description 该响应不得被浏览器或共享缓存持久化。 */
                     "Cache-Control"?: "no-store";
                     /** @description 新建 Camera 的规范详情路径。 */
                     Location?: string;
@@ -991,7 +993,7 @@ export interface operations {
             /** @description 返回 Camera 完整配置与状态投影。 */
             200: {
                 headers: {
-                    /** @description 敏感 CameraDetail 不得被共享或持久化缓存。 */
+                    /** @description 该响应不得被浏览器或共享缓存持久化。 */
                     "Cache-Control"?: "no-store";
                     /** @description 本次请求的关联 ID；与 Problem body 的 trace_id 相同。 */
                     "X-Trace-Id"?: string;
@@ -1161,7 +1163,7 @@ export interface operations {
             /** @description Camera 完整配置更新成功。 */
             200: {
                 headers: {
-                    /** @description 敏感 CameraDetail 不得被共享或持久化缓存。 */
+                    /** @description 该响应不得被浏览器或共享缓存持久化。 */
                     "Cache-Control"?: "no-store";
                     /** @description 本次请求的关联 ID；与 Problem body 的 trace_id 相同。 */
                     "X-Trace-Id"?: string;

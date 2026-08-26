@@ -851,8 +851,8 @@
   "openapi": "3.1.0",
   "paths": {
     "/api/v1/camera-sources/{source_id}/playback": {
-      "get": {
-        "operationId": "getCameraSourcePlayback",
+      "post": {
+        "operationId": "prepareCameraSourcePlayback",
         "parameters": [
           {
             "in": "path",
@@ -880,8 +880,15 @@
                 }
               }
             },
-            "description": "返回已就绪的 WHEP 播放地址。",
+            "description": "准备或恢复 Source 映射，并返回已就绪的 WHEP 播放地址。",
             "headers": {
+              "Cache-Control": {
+                "description": "该响应不得被浏览器或共享缓存持久化。",
+                "schema": {
+                  "const": "no-store",
+                  "type": "string"
+                }
+              },
               "X-Trace-Id": {
                 "description": "本次请求的关联 ID；与 Problem body 的 trace_id 相同。",
                 "schema": {
@@ -1049,7 +1056,7 @@
             }
           }
         },
-        "summary": "Get Camera Source Playback",
+        "summary": "Prepare Camera Source Playback",
         "tags": [
           "camera-sources"
         ]
@@ -1274,7 +1281,7 @@
             "description": "Camera 聚合创建成功。",
             "headers": {
               "Cache-Control": {
-                "description": "敏感 CameraDetail 不得被共享或持久化缓存。",
+                "description": "该响应不得被浏览器或共享缓存持久化。",
                 "schema": {
                   "const": "no-store",
                   "type": "string"
@@ -1553,7 +1560,7 @@
             "description": "返回 Camera 完整配置与状态投影。",
             "headers": {
               "Cache-Control": {
-                "description": "敏感 CameraDetail 不得被共享或持久化缓存。",
+                "description": "该响应不得被浏览器或共享缓存持久化。",
                 "schema": {
                   "const": "no-store",
                   "type": "string"
@@ -1767,7 +1774,7 @@
             "description": "Camera 完整配置更新成功。",
             "headers": {
               "Cache-Control": {
-                "description": "敏感 CameraDetail 不得被共享或持久化缓存。",
+                "description": "该响应不得被浏览器或共享缓存持久化。",
                 "schema": {
                   "const": "no-store",
                   "type": "string"

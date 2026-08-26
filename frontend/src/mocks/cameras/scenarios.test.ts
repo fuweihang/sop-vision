@@ -6,8 +6,8 @@ import {
   createCamera,
   deleteCamera,
   getCamera,
-  getCameraSourcePlayback,
   listCameras,
+  prepareCameraSourcePlayback,
   setDefaultPreviewSource,
   updateCamera,
 } from "@/lib/cameras-api";
@@ -51,7 +51,7 @@ test("成功场景覆盖七个 Cameras operation", async () => {
     { source_id: CAMERA_FIXTURE_IDS.primarySource },
   );
   await deleteCamera(CAMERA_FIXTURE_IDS.primaryCamera);
-  const playback = await getCameraSourcePlayback(
+  const playback = await prepareCameraSourcePlayback(
     CAMERA_FIXTURE_IDS.primarySource,
   );
 
@@ -73,7 +73,7 @@ test("MSW 非详情响应不携带唯一泄漏哨兵或完整 RTSP 配置", asyn
     await setDefaultPreviewSource(CAMERA_FIXTURE_IDS.primaryCamera, {
       source_id: CAMERA_FIXTURE_IDS.primarySource,
     }),
-    await getCameraSourcePlayback(CAMERA_FIXTURE_IDS.primarySource),
+    await prepareCameraSourcePlayback(CAMERA_FIXTURE_IDS.primarySource),
   ];
 
   // Problem 也属于禁止泄密的公共响应。通过真实 MSW handler 和 Client 错误边界取回它，
@@ -137,7 +137,7 @@ test.each([
     const promise =
       operation === "camera"
         ? getCamera(CAMERA_FIXTURE_IDS.primaryCamera)
-        : getCameraSourcePlayback(CAMERA_FIXTURE_IDS.primarySource);
+        : prepareCameraSourcePlayback(CAMERA_FIXTURE_IDS.primarySource);
     const error = await captureProblem(promise);
 
     expect(error.problem.status).toBe(status);

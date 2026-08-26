@@ -255,7 +255,7 @@ export function createCamerasMswScenario(
       return new HttpResponse(null, { status: 204, headers: successHeaders });
     }),
 
-    http.get(playbackUrl, ({ request }) => {
+    http.post(playbackUrl, ({ request }) => {
       const instance = new URL(request.url).pathname;
       if (scenario === "dependency-unavailable") {
         return unavailableProblem(instance, true);

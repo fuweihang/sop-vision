@@ -11,9 +11,9 @@
 - Compose 已包含 Redis，但 Backend 没有 Redis 客户端；Detector、Detection Tasks、
   WebSocket 和实时检测链路均未实现。
 
-“路由已出现在 OpenAPI”只表示当前占位契约可供跨端生成，不表示对应 handler 可用。Cameras 新计划
-已经冻结 Playback 从只读 GET 改为准备/恢复 POST；在对应切片实现前，根契约会明确标注这项尚未
-同步到代码和生成物的差异。
+“路由已出现在 OpenAPI”只表示当前占位契约可供跨端生成，不表示对应 handler 可用。Playback 已
+按准备/恢复语义冻结为 `POST prepareCameraSourcePlayback`，Router、OpenAPI、Frontend Client 和
+MSW 使用同一契约；真实媒体恢复行为仍属于 Cameras 07 切片。
 
 ## 阅读顺序
 

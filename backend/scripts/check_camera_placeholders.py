@@ -23,7 +23,7 @@ CAMERA_HANDLERS = (
     camera_router_module.update_camera,
     camera_router_module.set_default_preview_source,
     camera_router_module.delete_camera,
-    camera_router_module.get_camera_source_playback,
+    camera_router_module.prepare_camera_source_playback,
 )
 
 

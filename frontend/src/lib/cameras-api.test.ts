@@ -9,8 +9,8 @@ import {
   createCamera,
   deleteCamera,
   getCamera,
-  getCameraSourcePlayback,
   listCameras,
+  prepareCameraSourcePlayback,
   setDefaultPreviewSource,
   updateCamera,
   type CameraCreateRequest,
@@ -94,7 +94,7 @@ describe("Cameras operation Client", () => {
     await updateCamera(CAMERA_ID, updateRequest, client);
     await setDefaultPreviewSource(CAMERA_ID, { source_id: SOURCE_ID }, client);
     await deleteCamera(CAMERA_ID, client);
-    await getCameraSourcePlayback(SOURCE_ID, client);
+    await prepareCameraSourcePlayback(SOURCE_ID, client);
 
     expect(requests).toEqual([
       {
@@ -134,7 +134,7 @@ describe("Cameras operation Client", () => {
         data: undefined,
       },
       {
-        method: "get",
+        method: "post",
         url: `/camera-sources/${SOURCE_ID}/playback`,
         params: undefined,
         data: undefined,
