@@ -99,7 +99,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Readiness */
+        /**
+         * Readiness
+         * @description 只检查配置读写必需的数据库；MediaMTX 故障由媒体投影独立表达。
+         */
         get: operations["healthReadiness"];
         put?: never;
         post?: never;
@@ -1540,7 +1543,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description 服务依赖已经就绪。 */
+            /** @description 服务和数据库已经就绪。 */
             200: {
                 headers: {
                     /** @description 本次请求的关联 ID；与 Problem body 的 trace_id 相同。 */

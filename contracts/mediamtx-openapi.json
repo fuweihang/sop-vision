@@ -1,0 +1,156 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "SOP Vision 使用的 MediaMTX Control API",
+    "version": "1.20.1",
+    "description": "从 MediaMTX v1.20.1 官方 api/openapi.yaml 裁剪，只保留 Cameras MVP 使用的接口与字段。"
+  },
+  "x-upstream": {
+    "tag": "v1.20.1",
+    "source": "https://github.com/bluenviron/mediamtx/blob/v1.20.1/api/openapi.yaml"
+  },
+  "paths": {
+    "/v3/config/paths/list": {
+      "get": {
+        "operationId": "configPathsList",
+        "parameters": [
+          { "$ref": "#/components/parameters/Page" },
+          { "$ref": "#/components/parameters/ItemsPerPage" }
+        ],
+        "responses": {
+          "200": {
+            "description": "请求成功。",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/PathConfList" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v3/config/paths/get/{name}": {
+      "get": {
+        "operationId": "configPathsGet",
+        "parameters": [{ "$ref": "#/components/parameters/PathName" }],
+        "responses": {
+          "200": {
+            "description": "请求成功。",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/PathConf" }
+              }
+            }
+          },
+          "404": { "description": "Path 不存在。" }
+        }
+      }
+    },
+    "/v3/config/paths/replace/{name}": {
+      "post": {
+        "operationId": "configPathsReplace",
+        "parameters": [{ "$ref": "#/components/parameters/PathName" }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/PathConf" }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "请求成功。" }
+        }
+      }
+    },
+    "/v3/config/paths/delete/{name}": {
+      "delete": {
+        "operationId": "configPathsDelete",
+        "parameters": [{ "$ref": "#/components/parameters/PathName" }],
+        "responses": {
+          "200": { "description": "请求成功。" },
+          "404": { "description": "Path 不存在。" }
+        }
+      }
+    },
+    "/v3/paths/list": {
+      "get": {
+        "operationId": "pathsList",
+        "parameters": [
+          { "$ref": "#/components/parameters/Page" },
+          { "$ref": "#/components/parameters/ItemsPerPage" }
+        ],
+        "responses": {
+          "200": {
+            "description": "请求成功。",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/PathList" }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "parameters": {
+      "Page": {
+        "name": "page",
+        "in": "query",
+        "schema": { "type": "integer", "default": 0 }
+      },
+      "ItemsPerPage": {
+        "name": "itemsPerPage",
+        "in": "query",
+        "schema": { "type": "integer", "default": 100 }
+      },
+      "PathName": {
+        "name": "name",
+        "in": "path",
+        "required": true,
+        "schema": { "type": "string" }
+      }
+    },
+    "schemas": {
+      "PathConf": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string" },
+          "source": { "type": "string" },
+          "sourceOnDemand": { "type": "boolean" }
+        }
+      },
+      "PathConfList": {
+        "type": "object",
+        "properties": {
+          "itemCount": { "type": "integer", "format": "int64" },
+          "pageCount": { "type": "integer", "format": "int64" },
+          "items": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/PathConf" }
+          }
+        }
+      },
+      "Path": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string" },
+          "available": { "type": "boolean" },
+          "online": { "type": "boolean" }
+        }
+      },
+      "PathList": {
+        "type": "object",
+        "properties": {
+          "itemCount": { "type": "integer", "format": "int64" },
+          "pageCount": { "type": "integer", "format": "int64" },
+          "items": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/Path" }
+          }
+        }
+      }
+    }
+  }
+}

@@ -63,6 +63,9 @@ services:
     environment:
       MTX_API: "${MTX_API:-yes}"
       MTX_APIADDRESS: ":9997"
+      # v1.20.1 默认只允许容器内 localhost 调用 API；这里允许现有 Compose 私有网络中的 Backend。
+      # 基础 Compose 不发布 9997，浏览器仍无法直接访问 Control API。
+      MTX_AUTHINTERNALUSERS_1_IPS: "0.0.0.0/0"
       MTX_WEBRTC: "${MTX_WEBRTC:-yes}"
       MTX_WEBRTCADDRESS: ":8889"
       MTX_WEBRTCLOCALUDPADDRESS: ":8189"

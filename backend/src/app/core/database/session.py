@@ -1,10 +1,13 @@
 """请求/任务级 AsyncSession 生命周期及 FastAPI 依赖装配。"""
 
+import asyncio
 from collections.abc import AsyncGenerator, AsyncIterator
 from contextlib import asynccontextmanager
 from typing import Annotated
 
 from fastapi import Depends, Request
+from sqlalchemy import text
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 
 from app.core.config import Settings
@@ -47,6 +50,18 @@ class DatabaseRuntime:
         """关闭连接池中所有已归还连接；由应用 lifespan 在关闭阶段调用。"""
 
         await self.engine.dispose()
+
+    async def is_ready(self) -> bool:
+        """用独立短连接检查 PostgreSQL，不复用或改变业务 Session 的事务。"""
+
+        try:
+            # 就绪探针必须快速返回，避免数据库网络故障占满健康检查 worker。
+            async with asyncio.timeout(2.0):
+                async with self.engine.connect() as connection:
+                    await connection.execute(text("SELECT 1"))
+        except (TimeoutError, SQLAlchemyError):
+            return False
+        return True
 
 
 def create_database_runtime(settings: Settings) -> DatabaseRuntime:

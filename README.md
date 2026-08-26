@@ -1,7 +1,7 @@
 # SOP Vision
 
 SOP Vision 是面向 IP Camera 的视觉分析平台。当前仓库已经完成可运行的基础设施、
-FastAPI/React 工程骨架，以及 Cameras MVP 的完整 Foundation；Camera CRUD、状态投影、
+FastAPI/React 工程骨架、Cameras Foundation 和 MediaMTX v1.20.1 契约；Camera CRUD、状态投影、
 WHEP 播放器和 Detector 业务仍未实现。
 
 ## 当前状态
@@ -12,6 +12,7 @@ WHEP 播放器和 Detector 业务仍未实现。
 | Backend 公共基础    | 可用     | 应用工厂、数据库生命周期、Alembic、统一 Problem、Trace ID、CORS          |
 | 健康检查            | 可用     | `GET /api/v1/health/live` 与 `GET /api/v1/health/ready`                  |
 | Cameras Foundation  | 已完成   | 领域聚合、Repository/UoW、关系模型、OpenAPI、前端 Client/Mock 和 CI 门禁 |
+| MediaMTX 契约       | 已完成   | v1.20.1 受控协议输入、Stream Gateway Port 和真实实例门禁                |
 | Cameras 业务切片    | 未实现   | 七个目标路由已注册用于冻结契约，但 handler 仍是占位，不能作为可用 API    |
 | Web UI              | 部分可用 | App Shell、路由、主题和通用页面状态已完成；Cameras/Tasks 是页面骨架      |
 | Detector 与实时检测 | 未实现   | `detector/` 仅为预留目录；Backend 尚未接入 Redis 客户端或 WebSocket      |
@@ -26,7 +27,7 @@ flowchart LR
     MTX -->|WebRTC / WHEP| FE[React Frontend]
     FE -->|REST| API[FastAPI]
     API --> PG[(PostgreSQL)]
-    API -->|Control API readiness| MTX
+    API -. "Adapter 尚未实现" .-> MTX
     API -. "尚未接入" .-> REDIS[(Redis)]
     DET[Detector 尚未实现] -.-> REDIS
 ```
@@ -130,6 +131,7 @@ cd backend
 uv run --env-file .env.local pytest
 uv run ruff check .
 uv run ruff format --check .
+uv run python scripts/check_mediamtx_contract.py
 
 cd ../frontend
 pnpm test

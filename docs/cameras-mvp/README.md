@@ -1,6 +1,6 @@
 # Cameras MVP
 
-> 当前状态：Foundation 已完成；02–11 尚未实现。REST 前缀：`/api/v1`。
+> 当前状态：Foundation 和 MediaMTX 契约已完成；03–11 尚未实现。REST 前缀：`/api/v1`。
 
 本目录冻结 Cameras 第一阶段的产品边界、切片依赖和跨端契约。PostgreSQL 保存 Camera Desired
 State；MediaMTX 保存可丢失的媒体 Runtime State。配置事务与媒体同步必须保持可区分：数据库
@@ -11,7 +11,7 @@ State；MediaMTX 保存可丢失的媒体 Runtime State。配置事务与媒体�
 | #   | 切片                                                          | 当前状态 | 公共 API 影响                                                  |
 | --- | ------------------------------------------------------------- | -------- | -------------------------------------------------------------- |
 | 01  | [Foundation](01-foundation/README.md)                         | 已完成   | 公共前置                                                       |
-| 02  | [MediaMTX 契约](02-mediamtx-contract/README.md)               | 未实现   | 无新路由；冻结外部协议与部署边界                               |
+| 02  | [MediaMTX 契约](02-mediamtx-contract/README.md)               | 已完成   | 无新路由；已冻结外部协议与部署边界                             |
 | 03  | [Stream Gateway Adapter](03-stream-gateway-adapter/README.md) | 未实现   | 无新路由；实现 Path 读写和状态投影                             |
 | 04  | [媒体对账](04-media-reconciliation/README.md)                 | 未实现   | 无新路由；恢复 PostgreSQL → MediaMTX Desired State             |
 | 05  | [创建](05-camera-create/README.md)                            | 未实现   | `POST /cameras`（`createCamera`）                              |

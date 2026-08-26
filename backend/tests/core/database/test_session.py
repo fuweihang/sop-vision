@@ -3,6 +3,7 @@
 from unittest.mock import AsyncMock, Mock
 
 import pytest
+from sqlalchemy.exc import SQLAlchemyError
 
 from app.core.config import Settings
 from app.core.database.session import DatabaseRuntime, create_database_runtime
@@ -81,3 +82,31 @@ async def test_runtime_factory_disables_implicit_flush(settings: Settings) -> No
         autoflush=False,
         expire_on_commit=False,
     )
+
+
+async def test_readiness_executes_select_one_on_independent_connection() -> None:
+    """数据库探针只执行轻量查询，不创建业务 Session。"""
+
+    connection = AsyncMock()
+    connection_context = AsyncMock()
+    connection_context.__aenter__.return_value = connection
+    engine = Mock()
+    engine.connect.return_value = connection_context
+    session_factory = Mock()
+    runtime = DatabaseRuntime(engine, session_factory)  # type: ignore[arg-type]
+
+    assert await runtime.is_ready()
+
+    engine.connect.assert_called_once_with()
+    connection.execute.assert_awaited_once()
+    session_factory.assert_not_called()
+
+
+async def test_readiness_returns_false_when_database_connection_fails() -> None:
+    """数据库基础设施异常被收敛为未就绪，不向健康接口泄露连接细节。"""
+
+    engine = Mock()
+    engine.connect.side_effect = SQLAlchemyError("测试连接信息不得进入 HTTP 响应")
+    runtime = DatabaseRuntime(engine, Mock())  # type: ignore[arg-type]
+
+    assert not await runtime.is_ready()

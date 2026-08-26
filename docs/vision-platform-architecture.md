@@ -22,7 +22,7 @@ flowchart LR
     MTX -->|WebRTC / WHEP| BROWSER[Browser]
     BROWSER -->|REST| API[FastAPI]
     API -->|SQLAlchemy async| PG[(PostgreSQL)]
-    API -->|Control API readiness| MTX
+    API -. "Adapter 尚未实现" .-> MTX
     COMPOSE[Docker Compose] --> REDIS[(Redis)]
     API -. "未接入" .-> REDIS
     DET[Detector 预留目录] -. "未实现" .-> REDIS
@@ -32,7 +32,7 @@ flowchart LR
 | ---------- | ---------------------------------------------------- | ----------------------------------------------------------- |
 | PostgreSQL | Compose 服务、连接池、迁移、Camera 关系模型          | 业务 handler 尚未读写 Camera                                |
 | Redis      | Compose 服务、AOF 与健康检查                         | Backend Settings/Client、消息协议和消费者均未实现           |
-| MediaMTX   | RTSP、WHEP、Control API 与健康检查                   | 尚无 Camera 动态 Path 管理和播放业务 Adapter                |
+| MediaMTX   | RTSP、WHEP、锁定 v1.20.1 Control API 契约             | 尚无 Camera 动态 Path 管理和播放业务 Adapter                |
 | FastAPI    | 公共 HTTP/数据库基础、健康检查、Camera Foundation    | Cameras 路由是占位；无鉴权、Redis、WebSocket、Detector 控制 |
 | Frontend   | App Shell、文件路由、API Client/类型、MSW 和通用状态 | Cameras/Tasks 只有页面骨架，无业务数据和播放器              |
 | Detector   | 空的预留目录                                         | 无进程、协议、模型或 Compose 服务                           |
@@ -58,7 +58,8 @@ SQLAlchemy Repository / Unit of Work
 - `app/core/http` 提供 Trace ID、Problem Details、严格 UUID、校验映射和 OpenAPI 公共机制。
 - `app/core/database` 提供 AsyncEngine、Session factory 和生命周期管理，不拥有业务表。
 - `app/modules/cameras` 拥有 Camera 聚合、持久化端口/适配器和 HTTP 契约。
-- `app/modules/stream_gateway` 只拥有 MediaMTX 运行时适配；当前仅实现就绪检查。
+- `app/modules/stream_gateway` 只拥有 MediaMTX 运行时适配；当前已冻结 Port 与 URL 规则，HTTP
+  Adapter 尚未实现。
 - `app/factory.py` 负责资源生命周期和模块装配，OpenAPI 导出复用同一棵真实路由树。
 
 不建立 Generic Repository、全能 Base Service 或第二个 Backend 工程。业务规则留在领域或
@@ -159,9 +160,8 @@ Detector 拉流目标支持 Direct Camera 与 MediaMTX 两种模式，但具体�
 | MediaMTX   | WHEP 中断；使用 Direct 模式的 Detector 可继续 |
 | Detector   | 对应检测停止；MediaMTX 视频仍可播放           |
 
-当前代码只验证 FastAPI 对 MediaMTX 就绪失败返回 `503`。Cameras 目标要求把进程/数据库
-readiness 与媒体依赖健康分开，避免 MTX 故障令仍可用的配置读写被部署层摘除；包括重启对账、
-投影降级和 Playback 自愈在内的其余保证，需要在对应切片通过测试和可观测性验证。
+Backend readiness 已只检查 PostgreSQL，不再因 MediaMTX 故障将仍可用的配置读写从部署层摘除。
+媒体状态投影、重启对账和 Playback 自愈仍需分别在 03、04 和 07 通过测试与可观测性验证。
 
 ## 部署与配置约束
 

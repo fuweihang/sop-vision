@@ -2071,6 +2071,7 @@
     },
     "/api/v1/health/ready": {
       "get": {
+        "description": "只检查配置读写必需的数据库；MediaMTX 故障由媒体投影独立表达。",
         "operationId": "healthReadiness",
         "responses": {
           "200": {
@@ -2084,7 +2085,7 @@
                 }
               }
             },
-            "description": "服务依赖已经就绪。",
+            "description": "服务和数据库已经就绪。",
             "headers": {
               "X-Trace-Id": {
                 "description": "本次请求的关联 ID；与 Problem body 的 trace_id 相同。",

@@ -1,28 +1,30 @@
 # SOP Vision Backend
 
 Backend 是平台的 FastAPI 控制面。当前已完成公共 HTTP/数据库基础、Camera 领域与持久化层，
-并提供 MediaMTX 就绪检查；Camera 业务 handler、动态媒体映射、Redis 和 Detector 控制尚未实现。
+并冻结 MediaMTX v1.20.1 协议与 Port；Camera 业务 handler、动态媒体映射、Redis 和 Detector
+控制尚未实现。
 
 ## 当前能力
 
 | 能力                         | 状态   | 入口                                          |
 | ---------------------------- | ------ | --------------------------------------------- |
 | 存活检查                     | 可用   | `GET /api/v1/health/live`                     |
-| MediaMTX 就绪检查            | 可用   | `GET /api/v1/health/ready`                    |
+| PostgreSQL 就绪检查          | 可用   | `GET /api/v1/health/ready`                    |
+| MediaMTX 协议与 Port         | 已冻结 | `contracts/mediamtx-openapi.json`、`ports.py` |
 | Camera 领域与持久化          | 可用   | `app/modules/cameras/domain`、`persistence`   |
 | Cameras HTTP 契约            | 已冻结 | 七个路由和 Schema 已进入 OpenAPI              |
 | Cameras HTTP 行为            | 未实现 | 七个 handler 当前仅抛出 `NotImplementedError` |
 | Redis / WebSocket / Detector | 未实现 | Compose 变量和目标设计不等于应用接入          |
 
-`/api/v1/health/ready` 当前只检查 MediaMTX Control API，不检查 PostgreSQL 或 Redis。它会请求
-`${MEDIAMTX_API_URL}/v3/config/paths/list`，依赖不可用时返回 `503`。
+`/api/v1/health/ready` 当前只检查 PostgreSQL，不检查 MediaMTX 或 Redis。MediaMTX 不可用不会令
+配置 API 被部署层摘除；媒体依赖健康由后续状态投影和可观测性独立表达。
 
 ## 环境要求
 
 - Python 3.12
 - uv
 - PostgreSQL 17（迁移和持久化集成测试）
-- MediaMTX（就绪检查）
+- MediaMTX v1.20.1（真实协议门禁）
 
 在仓库根目录使用 Compose 启动依赖：
 
@@ -126,7 +128,7 @@ backend/
 │       │   ├── application/    # 应用端口；业务 Service 尚未实现
 │       │   ├── domain/         # 框架无关的 Camera 聚合和值对象
 │       │   └── persistence/    # SQLAlchemy Repository/UoW、Mapper 和巡检
-│       └── stream_gateway/     # MediaMTX Client 与健康检查
+│       └── stream_gateway/     # MediaMTX Port、URL 规则与待实现 Adapter
 └── tests/                      # 结构与源码层级对应的测试
 ```
 
@@ -140,6 +142,7 @@ uv run --env-file .env.local pytest
 uv run --env-file .env.local pytest --cov=app --cov-report=term-missing
 uv run ruff check .
 uv run ruff format --check .
+uv run python scripts/check_mediamtx_contract.py
 uv run python scripts/check_camera_placeholders.py foundation
 ```
 
