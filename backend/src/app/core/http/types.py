@@ -30,5 +30,5 @@ def _validate_canonical_uuid4(value: Any) -> Any:
 
 
 # BeforeValidator 只收紧输入文本，底层类型仍是 UUID，因此 OpenAPI/JSON Schema 保留
-# ``type: string, format: uuid``，步骤 6 无需手工修补生成契约。
+# ``type: string, format: uuid``，无需手工修补生成契约。
 CanonicalUUID4 = Annotated[UUID, BeforeValidator(_validate_canonical_uuid4)]

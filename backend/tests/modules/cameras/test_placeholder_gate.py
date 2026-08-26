@@ -1,4 +1,4 @@
-"""步骤 9 Cameras handler 生命周期门禁的独立回归测试。"""
+"""Cameras handler 占位生命周期门禁的独立回归测试。"""
 
 import pytest
 

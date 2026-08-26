@@ -1,6 +1,7 @@
 # Page Patterns
 
-本文件拥有路由和业务页面组合；Shell、Grid 和 Breakpoint 只在 `layout.yaml` 定义。
+本文件拥有路由和业务页面的目标组合；Shell、Grid 和 Breakpoint 只在 `layout.yaml` 定义。
+Shared App Shell 已实现，其余 Cameras/Tasks sections 仍是后续业务实现约束。
 
 ## Shared App Shell
 

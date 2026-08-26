@@ -1,5 +1,7 @@
 # 03｜Camera 列表
 
+> 状态：目标契约已冻结，业务实现尚未开始。
+>
 > 前置：[Foundation](../01-foundation/README.md)
 >
 > 交付：`GET /api/v1/cameras`（`listCameras`）和 Camera 卡片列表

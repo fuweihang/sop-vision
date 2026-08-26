@@ -1,5 +1,7 @@
 # 05｜更新 Camera 与 Source 集合
 
+> 状态：目标契约已冻结，业务实现尚未开始。
+>
 > 前置：[Foundation](../01-foundation/README.md)、[详情](../04-camera-detail/README.md)
 >
 > 交付：`PUT /api/v1/cameras/{camera_id}`（`updateCamera`）和编辑表单

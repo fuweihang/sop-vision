@@ -1,0 +1,110 @@
+# SOP Vision 产品范围
+
+本文描述仍有效的产品方向，不代表所有能力已经实现。当前实现状态以
+[文档入口](README.md) 为准；Camera 第一阶段的精确契约以
+[Cameras MVP](cameras-mvp/README.md) 为准。
+
+## 产品定位
+
+SOP Vision 是企业内部视觉检测平台，围绕两类核心资源工作：
+
+1. 物理 Camera 及其多路 RTSP CameraSource。
+2. 绑定一路 CameraSource 和一套 Algorithm 的 Detection Task。
+
+“SOP”是产品定位，当前没有定义多步骤流程编排引擎。
+
+## 当前交付边界
+
+已交付的是工程运行栈、Backend/Frontend 公共基础和 Cameras Foundation。用户尚不能通过真实
+Backend 完成 Camera CRUD，也不能创建或运行 Detection Task。`/cameras` 与 `/tasks` 路由已
+存在，但只用于验证 App Shell 和页面层级。
+
+## Cameras 第一阶段
+
+Cameras MVP 计划提供：
+
+- 创建至少含一路 Source 的 Camera，并指定恰好一路默认预览源。
+- 按名称或 IPv4 搜索、分页浏览 Camera。
+- 查看完整配置、Source 状态和默认 Source。
+- 完整更新 Camera 与 Source 集合，或独立切换默认预览源。
+- 从 MediaMTX 获取 Source 状态并通过 WHEP 在浏览器预览。
+- 二次确认后删除 Camera，并在数据库提交后尽力释放媒体映射。
+
+本阶段明确不包含 Camera 启停、厂商字段、批量操作、保存前连通性探测、录像、截图、回放、
+WebSocket 状态推送、软删除、跨业务删除保护和可靠异步媒体清理。完整字段与错误语义不在本文
+重复，见 [Cameras MVP](cameras-mvp/README.md)。
+
+## Detection Tasks 目标范围
+
+Detection Tasks 尚未实现，以下内容是后续产品基线，而不是已冻结 API。
+
+### 业务对象
+
+Detection Task 至少需要：
+
+- 稳定 `task_id`、名称和可选描述。
+- 一个稳定 `source_id`，不得用数组下标引用 CameraSource。
+- 一个稳定 `algorithm_id` 及由 Algorithm schema 驱动的参数。
+- Algorithm 要求时保存 ROI。
+- `enabled` 表示期望运行状态；Actual State 单独维护。
+- 配置版本和已应用版本，用于表达“已保存但尚未生效”。
+
+同一路 CameraSource 可以被多个任务选择。是否复用连接、解码或帧数据属于 Detector 技术设计，
+不由产品关系直接决定。
+
+### 计划用户能力
+
+- 搜索和浏览任务列表，区分无任务与搜索无结果。
+- 创建、查看、编辑和删除任务。
+- 选择 CameraSource 和 Algorithm，按 schema 填写参数并绘制 ROI。
+- 启动、停止、重载和重启任务，并看到操作中的忙碌、成功和失败状态。
+- 查看绑定信息、实时画面、检测 overlay、ROI、运行状态和错误。
+
+新任务保存后默认停止。编辑已存在任务不得隐式改变 `enabled`；“保存配置”和“把配置应用到
+运行实例”必须有清晰、可观测的边界。任务没有暂停状态。
+
+### 状态原则
+
+`enabled` 不能代替 Actual State。例如 `enabled=true` 仍可能处于启动中、重连、降级或错误。
+正式状态枚举、转换条件、超时、重试和按钮可用性尚未冻结，应随 Detector 控制协议一起定义。
+
+## 共同体验要求
+
+- 桌面使用 Sidebar，紧凑视口使用 Sheet；当前路由通过 Breadcrumb 和返回操作表达层级。
+- 首次加载、后台刷新、空数据、搜索无结果和可恢复失败是不同状态。
+- 状态不能只用颜色表达；关键操作具有明确文字、可访问名称和键盘焦点。
+- 耗时操作保持控件尺寸、阻止重复提交，并提供恢复动作。
+- 不可逆删除使用明确对象名称和后果的二次确认。
+- 视频由 `<video>` 渲染，检测框和 ROI 由独立 overlay 绘制，避免复制全部视频帧。
+
+组件、布局与交互细节见 [Design System](design-system/README.md)。
+
+## 当前范围外
+
+- 历史检测结果、异常证据、证据视频和回放。
+- 检测测试工具、图片/视频上传测试和模型评测。
+- 多步骤 SOP 编排。
+- 多租户、组织、用户、鉴权、RBAC 和审计。
+- 多 Worker 调度、GPU 负载均衡和自动故障转移。
+- 录像存储、告警渠道和业务报表。
+
+范围外不等于永久不做；在契约和验收未冻结前，UI 不应展示不可用入口。
+
+## 仍需冻结的决策
+
+后续开发前真正需要解决的问题：
+
+1. 用户、角色、可信网络边界，以及 Camera 凭据的加密、展示和轮换策略。
+2. Algorithm registry、参数 schema、ROI 类型、坐标约定和版本兼容。
+3. Detection Task Actual State 状态机及 start/stop/reload/restart 的超时、幂等和失败恢复。
+4. 运行中任务删除语义，以及 CameraSource 被任务引用时的修改/删除保护。
+5. 配置版本、已应用版本与 Detector Last Known Good 的生成和对账方式。
+6. 实时检测消息协议、发布频率、延迟目标、断线重连和过期判定。
+7. Camera/任务/并发流规模、浏览器支持范围及部署网络容量。
+8. 历史事件、证据、审计与数据保留策略是否进入后续版本。
+
+## 原型边界
+
+[静态交互原型](prototype/v1.0.html) 是早期布局和业务流程证据。原型中的模拟数据、固定延时、
+Hash 路由、数组下标关联、直接凭据展示和前端状态模拟都不是生产实现。React 组件、路由、
+可访问性和 API 以当前源码及 Design System 为准。

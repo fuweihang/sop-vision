@@ -1,5 +1,7 @@
 # 06｜切换默认预览源
 
+> 状态：目标契约已冻结，业务实现尚未开始。
+>
 > 前置：[Foundation](../01-foundation/README.md)、[详情](../04-camera-detail/README.md)
 >
 > 交付：`PATCH /api/v1/cameras/{camera_id}/default-preview-source`

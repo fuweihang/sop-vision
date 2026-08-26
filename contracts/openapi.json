@@ -761,7 +761,7 @@
       },
       "ProblemDetails": {
         "additionalProperties": false,
-        "description": "所有结构化 HTTP 错误共享的唯一响应模型。\n\n``context`` 只允许 JSON 值；调用工厂的映射代码仍需只放入已批准的非敏感字段，不能把\n原始异常、请求体或第三方响应整体塞入该字典。冻结和禁止额外字段也确保步骤 6 注册到\nOpenAPI 的模型与实际运行时响应保持同源。",
+        "description": "所有结构化 HTTP 错误共享的唯一响应模型。\n\n``context`` 只允许 JSON 值；调用工厂的映射代码仍需只放入已批准的非敏感字段，不能把\n原始异常、请求体或第三方响应整体塞入该字典。冻结和禁止额外字段也确保在 OpenAPI 中\n注册的模型与实际运行时响应保持同源。",
         "properties": {
           "code": {
             "title": "Code",

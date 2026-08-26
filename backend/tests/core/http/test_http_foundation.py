@@ -1,4 +1,4 @@
-"""步骤 5 HTTP 公共机制的隔离 probe router 契约测试。
+"""HTTP 公共机制的隔离 probe router 契约测试。
 
 Foundation 明确禁止新增 Camera CRUD handler，因此本文件使用不进入生产应用、不进入 OpenAPI
 的测试路由触发框架行为。这样既能覆盖 FastAPI 的真实参数解析与异常链，又不会让尚未实现的
@@ -34,7 +34,7 @@ pytestmark = pytest.mark.anyio
 # UUID 同时包含字母和数字，才能可靠验证大写文本确实被拒绝；全数字 UUID 的 upper() 不会
 # 改变字符串，无法覆盖 canonical 大小写规则。
 CANONICAL_UUID4 = "8f14e45f-ea9d-4a7d-9b6d-8c9f0a1b2c3d"
-# HTTP 层与领域、ORM、生成契约共用步骤 9 的唯一 sentinel；RTSP 形式专门覆盖完整 URL 泄漏。
+# HTTP 层与领域、ORM、生成契约共用敏感数据门禁的唯一 sentinel；RTSP 形式专门覆盖完整 URL 泄漏。
 LEAK_SENTINEL = CAMERA_LEAK_SENTINEL
 RTSP_LEAK_SENTINEL = CAMERA_LEAK_RTSP_URL
 
@@ -62,7 +62,7 @@ class ProbeUuidBody(BaseModel):
     camera_id: CanonicalUUID4
 
 
-# include_in_schema=False 是退出条件的一部分：探针只验证公共机制，不能污染步骤 6 将生成的
+# include_in_schema=False 是公共契约边界的一部分：探针只验证公共机制，不能污染正式生成的
 # 生产 OpenAPI，更不能冒充已交付的 Camera 业务端点。
 probe_router = APIRouter(prefix="/_http-foundation-probe", include_in_schema=False)
 

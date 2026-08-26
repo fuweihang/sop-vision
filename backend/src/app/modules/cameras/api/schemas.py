@@ -1,8 +1,8 @@
 """Cameras 公共 HTTP 请求与响应 Schema。
 
 本模块是 Camera 配置 API 的唯一 Pydantic Schema 来源。它只描述传输契约，不依赖 ORM、
-Repository 或未来的 Application Service；占位 Router 因而可以先生成稳定 OpenAPI，而不会
-让 Foundation 阶段提前拥有业务行为。
+Repository 或未来的 Application Service；占位 Router 因而可以生成稳定 OpenAPI，而不会
+提前拥有业务行为。
 """
 
 from enum import StrEnum
@@ -30,7 +30,7 @@ CREATED_AT_EXAMPLE = "2026-08-19T03:00:00Z"
 UPDATED_AT_EXAMPLE = "2026-08-19T03:10:00Z"
 LAST_CHECKED_AT_EXAMPLE = "2026-08-19T03:10:01Z"
 TEST_USERNAME = "openapi-test-user"
-# 该值是步骤 9 唯一的泄漏 canary。它会合法出现在写请求和 CameraDetail example 中；
+# 该值是敏感数据门禁唯一的泄漏 canary。它会合法出现在写请求和 CameraDetail example 中；
 # 列表、Playback、Problem 与日志的专项测试则必须证明该值无法越过各自的安全边界。
 TEST_PASSWORD = "cameras-mvp-leak-sentinel"
 

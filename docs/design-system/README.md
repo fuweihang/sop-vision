@@ -57,8 +57,11 @@
 - `layout.tokens.json` 保存 spacing、radius、size、breakpoint、layer 和 motion。
 - 前端当前不直接消费这些 JSON；组件继续使用 shadcn/Tailwind 语义类。
 
-## 当前范围
+## 规范与实现范围
 
-覆盖 App Shell、Cameras、Detection Tasks、表单、Dialog/AlertDialog、数据列表、Preview、ROI MVP、Light/Dark、键盘操作和响应式 Reflow。
+规范覆盖 App Shell、Cameras、Detection Tasks、表单、Dialog/AlertDialog、数据列表、Preview、
+ROI MVP、Light/Dark、键盘操作和响应式 Reflow。其中当前代码只实现 App Shell、路由层级、
+主题和通用页面状态；Cameras/Tasks 业务页面、表单、Preview 与 ROI 仍是目标模式。
 
-尚未覆盖真实移动设备验证、图表业务语义、高级 ROI 顶点编辑、拖放、品牌插画和大规模数据虚拟化。
+规范尚未覆盖真实移动设备验证、图表业务语义、高级 ROI 顶点编辑、拖放、品牌插画和大规模
+数据虚拟化。

@@ -1,5 +1,7 @@
 # 02｜创建 Camera
 
+> 状态：目标契约已冻结，业务实现尚未开始。
+>
 > 前置：[Foundation](../01-foundation/README.md)
 >
 > 交付：`POST /api/v1/cameras`（`createCamera`）和新增表单

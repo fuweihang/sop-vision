@@ -1,4 +1,4 @@
-"""步骤 6 Cameras Schema、占位 Router 与 OpenAPI 的结构契约测试。"""
+"""Cameras Schema、占位 Router 与 OpenAPI 的结构契约测试。"""
 
 import json
 from collections.abc import Mapping

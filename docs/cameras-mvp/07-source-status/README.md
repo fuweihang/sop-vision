@@ -1,5 +1,7 @@
 # 07｜CameraSource 状态
 
+> 状态：目标契约已冻结，业务实现尚未开始。
+>
 > 前置：[Foundation](../01-foundation/README.md)
 >
 > 交付：MediaMTX `/paths/list` Adapter、Source 映射、Camera 聚合和前端状态展示；无新 REST 路由

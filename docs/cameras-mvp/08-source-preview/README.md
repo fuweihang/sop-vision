@@ -1,5 +1,7 @@
 # 08｜CameraSource WHEP 预览
 
+> 状态：目标契约已冻结，业务实现尚未开始。
+>
 > 前置：[Foundation](../01-foundation/README.md)、[详情](../04-camera-detail/README.md)
 >
 > 交付：`GET /api/v1/camera-sources/{source_id}/playback`

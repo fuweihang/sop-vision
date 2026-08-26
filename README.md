@@ -1,97 +1,113 @@
 # SOP Vision
 
-SOP Vision 是面向 IP Camera 的视觉分析平台。MediaMTX 负责视频接入与浏览器播放，
-FastAPI 负责业务控制，Detector 负责检测、Tracking 和 SOP 判断。
+SOP Vision 是面向 IP Camera 的视觉分析平台。当前仓库已经完成可运行的基础设施、
+FastAPI/React 工程骨架，以及 Cameras MVP 的完整 Foundation；Camera CRUD、状态投影、
+WHEP 播放器和 Detector 业务仍未实现。
 
-> 项目正在按目标架构增量实现。准确的 Cameras 范围与进度见
-> [Cameras MVP](docs/cameras-mvp/README.md)；完整服务边界见
-> [总体架构设计](docs/vision-platform-architecture.md)。
+## 当前状态
 
-## 架构
+| 范围                | 状态     | 说明                                                                     |
+| ------------------- | -------- | ------------------------------------------------------------------------ |
+| 本地运行栈          | 可用     | PostgreSQL、Redis、MediaMTX、FastAPI、React/Nginx                        |
+| Backend 公共基础    | 可用     | 应用工厂、数据库生命周期、Alembic、统一 Problem、Trace ID、CORS          |
+| 健康检查            | 可用     | `GET /api/v1/health/live` 与 `GET /api/v1/health/ready`                  |
+| Cameras Foundation  | 已完成   | 领域聚合、Repository/UoW、关系模型、OpenAPI、前端 Client/Mock 和 CI 门禁 |
+| Cameras 业务切片    | 未实现   | 七个目标路由已注册用于冻结契约，但 handler 仍是占位，不能作为可用 API    |
+| Web UI              | 部分可用 | App Shell、路由、主题和通用页面状态已完成；Cameras/Tasks 是页面骨架      |
+| Detector 与实时检测 | 未实现   | `detector/` 仅为预留目录；Backend 尚未接入 Redis 客户端或 WebSocket      |
+
+精确的 Cameras 状态与目标契约见 [Cameras MVP](docs/cameras-mvp/README.md)。
+
+## 架构边界
 
 ```mermaid
 flowchart LR
-    CAM["IP Camera"] -->|RTSP| MTX["MediaMTX"]
-    CAM -. "Direct RTSP（可选）" .-> DET["Detector"]
-    MTX -->|RTSP（可选）| DET
-    MTX -->|WebRTC / WHEP| FE["Web Frontend"]
-    FE -->|REST / WebSocket| API["FastAPI"]
-    API -->|Control API| MTX
-    API -->|gRPC| DET
+    CAM[IP Camera] -->|RTSP| MTX[MediaMTX]
+    MTX -->|WebRTC / WHEP| FE[React Frontend]
+    FE -->|REST| API[FastAPI]
     API --> PG[(PostgreSQL)]
-    API <--> REDIS[(Redis)]
-    DET --> REDIS
+    API -->|Control API readiness| MTX
+    API -. "尚未接入" .-> REDIS[(Redis)]
+    DET[Detector 尚未实现] -.-> REDIS
 ```
 
-- PostgreSQL 保存持久化 Desired State；Redis 保存运行时 Actual State、缓存和消息。
-- 前端通过 FastAPI 管理业务资源，通过 MediaMTX 播放视频；FastAPI 不代理视频字节。
-- Detector 生命周期独立于 FastAPI，可直接读取 Camera 或通过 MediaMTX 读取统一视频源。
+- PostgreSQL 是持久化业务配置的事实源；Redis 预留给运行时状态和消息，不保存正式配置。
+- MediaMTX 负责视频接入和浏览器媒体传输；FastAPI 不代理视频字节。
+- FastAPI 是控制面。Frontend 不直接访问 PostgreSQL、Redis 或 MediaMTX Control API。
+- Detector 应独立运行；其目标边界与尚未落地的链路见
+  [总体架构](docs/vision-platform-architecture.md)。
 
-## 仓库
+## 仓库结构
 
 ```text
 .
-├── backend/              # FastAPI 控制面
-├── detector/             # Detector 预留目录
-├── docs/                 # 架构、需求和实施文档
-├── frontend/             # React、TypeScript、Vite
-├── compose.yaml          # 完整服务
-├── compose.dev.yaml      # 宿主机开发端口覆盖
+├── backend/              # FastAPI、SQLAlchemy、Alembic 和后端测试
+├── contracts/            # 确定性生成并提交的 OpenAPI 契约
+├── detector/             # Detector 预留目录，当前无实现
+├── docs/                 # 架构、产品、Cameras MVP 与设计系统
+├── frontend/             # React、TypeScript、Vite 和 Nginx 镜像
+├── scripts/              # 跨端契约与敏感数据门禁
+├── compose.yaml          # 完整运行栈
+├── compose.dev.yaml      # 宿主机开发所需的额外端口
 └── .env.example
 ```
 
-当前仓库包含 FastAPI、React 前端、PostgreSQL、Redis 和 MediaMTX。Cameras 已具备数据库、
-领域、Repository/UoW 和 HTTP 公共基础，业务 CRUD、状态投影和播放器仍按 MVP 计划实施；
-Detector 与 Redis 应用客户端尚未接入。
+## 使用 Compose 运行
 
-## 环境配置
+要求 Docker 与 Docker Compose。首次启动：
 
-环境要求：Docker 与 Docker Compose、Python 3.12 与 uv、Node.js 24 与 pnpm 11。
+```bash
+cp .env.example .env
+docker compose --env-file .env config
+docker compose --env-file .env up --build --wait
+docker compose --env-file .env exec backend alembic upgrade head
+```
 
-项目按运行位置拆分配置，不能把容器服务名用于宿主机进程：
+访问地址：
 
-| 文件                  | 使用者             | 地址规则                                      |
-| --------------------- | ------------------ | --------------------------------------------- |
-| `.env`                | Compose 和应用容器 | 使用 `postgres`、`redis`、`mediamtx` 等服务名 |
-| `backend/.env.local`  | 宿主机 Uvicorn     | 使用 `127.0.0.1` 和开发端口                   |
-| `frontend/.env.local` | 宿主机 Vite        | 使用浏览器可访问的 Backend 地址               |
+- Frontend：<http://localhost:8000>
+- OpenAPI UI：<http://localhost:3001/docs>
+- Backend 存活检查：<http://localhost:3001/api/v1/health/live>
+- MediaMTX WHEP 服务：<http://localhost:8889>
 
-首次开发前执行：
+容器启动不会自动执行数据库迁移；部署新 revision 后必须显式运行 `alembic upgrade head`。
+当前 Frontend 只展示应用 Shell 和页面骨架。调用 Cameras 目标路由会进入占位 handler，
+不代表 CRUD 已可使用。
+
+停止服务使用：
+
+```bash
+docker compose down
+```
+
+命名卷默认保留。只有明确需要删除本地 PostgreSQL/Redis 数据时才使用
+`docker compose down --volumes`。
+
+## 宿主机开发
+
+要求 Python 3.12、uv、Node.js 24 和 pnpm 11。配置按运行位置拆分，容器服务名不能用于
+宿主机进程：
 
 ```bash
 cp .env.example .env
 cp backend/.env.local.example backend/.env.local
 cp frontend/.env.local.example frontend/.env.local
+
+docker compose -f compose.yaml -f compose.dev.yaml \
+  up -d --wait postgres redis mediamtx
 ```
 
-实际配置文件不会提交。修改 PostgreSQL 用户、密码或端口时，需同步修改根 `.env` 和
-`backend/.env.local` 的连接串。
-
-## 日常开发
-
-日常开发只用 Compose 启动基础设施，Backend 和 Frontend 在宿主机运行，以使用自动重载、
-HMR 和本地调试。
-
-安装依赖：
+安装依赖并迁移数据库：
 
 ```bash
 cd backend
-uv sync
+uv sync --locked
+uv run --env-file .env.local alembic upgrade head
 
 cd ../frontend
 corepack enable
 pnpm install --frozen-lockfile
 ```
-
-启动基础设施：
-
-```bash
-docker compose -f compose.yaml -f compose.dev.yaml \
-  up --wait postgres redis mediamtx
-```
-
-宿主机端口为 PostgreSQL `5432`、Redis `6379`、MediaMTX Control API `9997`、RTSP
-`8554`、WebRTC/WHEP `8889`。
 
 分别启动 Backend 和 Frontend：
 
@@ -104,30 +120,8 @@ cd frontend
 pnpm dev
 ```
 
-- Frontend：<http://127.0.0.1:8000>
-- OpenAPI：<http://127.0.0.1:3001/docs>
-
-停止基础设施但保留数据：
-
-```bash
-docker compose -f compose.yaml -f compose.dev.yaml stop postgres redis mediamtx
-```
-
-## Compose 全栈
-
-```bash
-test -f .env || cp .env.example .env
-docker compose --env-file .env config
-docker compose --env-file .env build
-docker compose --env-file .env up --wait
-```
-
-容器版 Backend/Frontend 不挂载源码。代码或 `FRONTEND_API_BASE_URL` 变化后需重新构建对应
-镜像；该前端地址在构建时写入静态产物。停止服务使用 `docker compose down`，它会保留命名
-数据卷；只有明确需要清空本地数据时才使用 `docker compose down --volumes`。
-
-局域网部署时，将 `MTX_WEBRTCADDITIONALHOSTS` 和 `PUBLIC_WEBRTC_BASE_URL` 配置为浏览器
-可达的 IP 或域名。
+配置变量、数据库测试和 MSW 场景分别见 [Backend README](backend/README.md) 与
+[Frontend README](frontend/README.md)。
 
 ## 质量检查
 
@@ -142,9 +136,21 @@ pnpm test
 pnpm lint
 pnpm format:check
 pnpm build
+
+cd ..
+bash scripts/check-cameras-contracts.sh
+bash scripts/check-cameras-sensitive-data.sh
 ```
 
-Backend 的迁移、配置和定向测试说明见 [Backend README](backend/README.md)。
-Cameras 的生成漂移、敏感数据和 Foundation/MVP 占位门禁以
-[Foundation 执行计划](docs/cameras-mvp/01-foundation/execution-plan/README.md#步骤-9契约门禁与交接已完成)
-中的命令与交接规则为准。
+未配置 `TEST_DATABASE_URL` 时，PostgreSQL 迁移和 Repository 集成测试会跳过；完整验收必须
+确认这些测试实际执行。
+
+## 文档
+
+从 [文档入口](docs/README.md) 开始阅读。核心文档包括：
+
+- [总体架构](docs/vision-platform-architecture.md)
+- [产品范围](docs/product-requirements.md)
+- [Cameras MVP](docs/cameras-mvp/README.md)
+- [Design System](docs/design-system/README.md)
+- [实时检测数据设计](docs/realtime-detection-design.md)

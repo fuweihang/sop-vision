@@ -40,7 +40,7 @@ describe("Cameras 生成契约敏感数据门禁", () => {
     expect(generatedOccurrences).toBe(openapiOccurrences);
   });
 
-  test("生成物不再携带步骤 9 前各层分散使用的旧 sentinel", () => {
+  test("生成物不再携带历史上各层分散使用的旧 sentinel", () => {
     const legacySentinels = [
       "foundation-leak-sentinel",
       "domain-leak-sentinel",
