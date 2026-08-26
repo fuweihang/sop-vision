@@ -15,7 +15,7 @@
 | 5 HTTP 公共机制   | 已完成 | trace、Problem、严格 UUID、分页依赖及 probe 测试                      |
 | 6 OpenAPI 契约    | 已完成 | Cameras Schema/占位 Router、确定性导出脚本与 `contracts/openapi.json` |
 | 7 前端 Client     | 已完成 | operation 生成类型、单一 Axios Client、Problem 映射与固定 Query Key   |
-| 8 前端状态与 Mock | 未开始 | 有通用 Route State/MSW 基础，尚无 Cameras 场景集合                    |
+| 8 前端状态与 Mock | 已完成 | 通用页面状态、类型安全 Fixture、严格 MSW 基础与显式场景集合           |
 | 9 契约门禁        | 未开始 | 尚无 regenerate-and-diff 和占位清理门禁                               |
 
 代码检查结果：不加载本地数据库配置时 Backend 为 `110 passed, 13 skipped`；加载
@@ -25,6 +25,10 @@ fixture 显式固定 CORS Origin；即使进程传入冲突的 `BACKEND_CORS_ORI
 
 步骤 7 完成后 Frontend 为 `83 passed`，lint、format check 和生产 build 全部通过；
 `pnpm api:generate` 可从已提交 OpenAPI 直接重建 operation 类型，无需手工补丁。
+
+步骤 8 完成后 Frontend 为 `104 passed`；Camera Card Grid 与 Task Table Pending 按原型信息结构
+响应式重排，页面状态基元、固定 Fixture、十一种 Node/Browser MSW 场景及严格未处理请求门禁已接入。
+OpenAPI 再生成无漂移，lint、format check 和生产 build 全部通过。
 
 ## 架构边界
 
@@ -153,12 +157,16 @@ Query Key 只提供 `cameras/camera/playback` 三种冻结形状，列表 HTTP �
 退出条件：重新生成后无需手工补丁，Frontend build/lint/test 通过；占位 Backend 的临时错误
 不产生前端分支。
 
-## 步骤 8｜页面状态基元与 MSW
+## 步骤 8｜页面状态基元与 MSW（已完成）
 
-- 复用设计系统实现首次加载、后台刷新、空数据、搜索无结果和可恢复错误组合基元。
-- 使用生成类型建立固定 UUID/时间的 Cameras Fixture Builder 和显式 MSW 场景。
-- 覆盖成功、嵌套 `422`、`404/409/502/503`、首次失败和后台刷新失败。
-- 每例重置 handler/计数器；未处理请求直接失败，绝不访问真实 Backend/MediaMTX。
+- 复用设计系统实现首次加载、后台刷新、空数据、搜索无结果和可恢复错误组合基元；Camera
+  Pending 保持 16:9 预览 Card Grid，Task Pending 保持宽屏语义 Table 和窄屏字段堆叠结构。
+- 使用 operation 生成类型建立固定 UUID/时间、聚合不变量派生和非详情白名单投影的 Cameras
+  Fixture Builder；敏感哨兵只允许进入 CameraDetail 与写请求。
+- 十一种显式 MSW 场景覆盖七个 operation 成功、两类空列表、嵌套 `422`、`404/409/502/503`、
+  首次失败恢复和后台刷新失败保留旧内容。
+- Node 测试与可选 Browser Worker 共用场景工厂；每例重置 handler、闭包计数器和 Query cache，
+  未处理请求直接失败，绝不访问真实 Backend/MediaMTX。
 
 退出条件：后续切片可选择场景独立开发；公共基元不内置具体 CRUD；Frontend 全套检查通过。
 

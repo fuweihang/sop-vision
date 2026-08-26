@@ -8,7 +8,7 @@ import { RoutePending } from "@/components/route-state/route-pending";
 import { createTestRouter } from "@/test/render-router";
 
 test("Pending 提供可访问状态并隐藏装饰性 Skeleton", () => {
-  render(<RoutePending label="正在加载摄像头内容" variant="camera-list" />);
+  render(<RoutePending label="正在加载摄像头内容" variant="card-list" />);
 
   const status = screen.getByRole("status", {
     name: "正在加载摄像头内容",
@@ -20,6 +20,15 @@ test("Pending 提供可访问状态并隐藏装饰性 Skeleton", () => {
   expect(
     status.querySelectorAll('[data-slot="skeleton"].animate-pulse').length,
   ).toBeGreaterThan(0);
+  expect(status.querySelectorAll('[data-slot="card"]')).toHaveLength(4);
+});
+
+test("Table List Pending 在宽屏保留原型的五列表头", () => {
+  render(<RoutePending label="正在加载检测任务" variant="table-list" />);
+
+  const status = screen.getByRole("status", { name: "正在加载检测任务" });
+  expect(status.querySelectorAll("th")).toHaveLength(5);
+  expect(status.querySelectorAll("tbody tr")).toHaveLength(5);
 });
 
 test("Error 重试通过 Router invalidate 重新加载路由", async () => {

@@ -10,7 +10,7 @@ export const Route = createFileRoute("/_app/tasks/")({
 });
 
 function TasksListPending() {
-  return <RoutePending label="正在加载检测任务列表" variant="task-list" />;
+  return <RoutePending label="正在加载检测任务列表" variant="table-list" />;
 }
 
 function TasksPage() {

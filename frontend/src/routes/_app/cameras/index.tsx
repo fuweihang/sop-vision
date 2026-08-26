@@ -10,7 +10,7 @@ export const Route = createFileRoute("/_app/cameras/")({
 });
 
 function CamerasListPending() {
-  return <RoutePending label="正在加载摄像头列表" variant="camera-list" />;
+  return <RoutePending label="正在加载摄像头列表" variant="card-list" />;
 }
 
 function CamerasPage() {
