@@ -65,8 +65,9 @@ whep_url_for(source_id)
 `app/modules/stream_gateway/urls.py` 保存 RTSP 组件编码和 WHEP 地址规则。具体 `httpx`、分页聚合、
 重试、错误转换、状态投影和可观测性仍由[下一切片](../03-stream-gateway-adapter/README.md)实现。
 
-MediaMTX 故障不能令 Backend 配置 API 整体失去就绪状态。现有 `/api/v1/health/ready` 只检查
-PostgreSQL，媒体不可用由 03 的投影、指标和日志降级表达，不新增公共健康路由。
+MediaMTX 故障不能令 Backend 配置 API 整体失去就绪状态。由 `app/api/health.py` 提供的现有
+`/api/v1/health/ready` 只检查 PostgreSQL；媒体不可用由 03 的投影、指标和日志降级表达，
+`stream_gateway` 不拥有也不新增公共健康路由。
 
 ## 安全与验收
 

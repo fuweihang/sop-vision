@@ -1,10 +1,17 @@
-from typing import Annotated
+"""应用进程级健康探针，不归属于任何业务或外部服务适配模块。"""
+
+from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from pydantic import BaseModel
 
 from app.core.database.session import DatabaseRuntime, get_database_runtime
 from app.core.http import problem_responses, success_response
-from app.modules.stream_gateway.schemas.health import HealthResponse
+
+
+class HealthResponse(BaseModel):
+    status: Literal["ok"]
+
 
 router = APIRouter(prefix="/health", tags=["health"])
 

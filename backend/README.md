@@ -119,6 +119,8 @@ backend/
 ├── scripts/                    # OpenAPI 导出与占位生命周期门禁
 ├── src/app/
 │   ├── factory.py              # 应用、中间件、路由和 lifespan 组装
+│   ├── api/
+│   │   └── health.py           # 应用存活与 PostgreSQL 就绪探针
 │   ├── core/
 │   │   ├── database/           # Engine、Session 和 Runtime
 │   │   └── http/               # Trace、Problem、校验与 OpenAPI 公共机制
@@ -132,7 +134,8 @@ backend/
 └── tests/                      # 结构与源码层级对应的测试
 ```
 
-`core` 不依赖业务模块；`cameras` 拥有 Camera 配置；`stream_gateway` 只拥有媒体运行时适配。
+`api` 拥有不属于具体业务模块的应用级 HTTP 入口；`core` 提供公共基础设施，不依赖业务模块；
+`cameras` 拥有 Camera 配置；`stream_gateway` 只拥有媒体运行时适配。
 不要建立平行 Backend、Generic Repository 或跨领域的全能 Service。
 
 ## 质量检查

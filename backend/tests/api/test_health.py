@@ -22,7 +22,7 @@ class StubDatabaseRuntime:
 
 
 async def test_liveness(client: httpx.AsyncClient) -> None:
-    """数据库 Runtime 的加入不改变现有存活检查契约。"""
+    """存活探针只表达应用进程可响应，不依赖数据库或 MediaMTX。"""
 
     response = await client.get("/api/v1/health/live")
 

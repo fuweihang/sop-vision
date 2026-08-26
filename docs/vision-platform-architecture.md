@@ -57,6 +57,7 @@ SQLAlchemy Repository / Unit of Work
 
 - `app/core/http` 提供 Trace ID、Problem Details、严格 UUID、校验映射和 OpenAPI 公共机制。
 - `app/core/database` 提供 AsyncEngine、Session factory 和生命周期管理，不拥有业务表。
+- `app/api/health.py` 提供应用存活与 PostgreSQL 就绪探针，不归属于业务模块或 MediaMTX 适配。
 - `app/modules/cameras` 拥有 Camera 聚合、持久化端口/适配器和 HTTP 契约。
 - `app/modules/stream_gateway` 只拥有 MediaMTX 运行时适配；当前已冻结 Port 与 URL 规则，HTTP
   Adapter 尚未实现。
@@ -89,7 +90,7 @@ URL 后缀、顺序和时间。完整 RTSP URL 由聚合派生，不单独持久
 
 ## HTTP 与跨端契约
 
-- 公共 API 前缀是 `/api/v1`，健康检查是当前唯一可用的业务外 API。
+- 公共 API 前缀是 `/api/v1`，应用级健康检查是当前唯一可用的业务外 API。
 - Cameras 七个目标 operation 已注册到真实应用并导出到 `contracts/openapi.json`，但 handler
   仍为纯占位。
 - OpenAPI 生成 Frontend operation 类型；Frontend 不维护第二份手写 DTO。

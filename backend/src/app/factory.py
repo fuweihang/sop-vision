@@ -7,6 +7,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app import __version__
+from app.api.health import router as health_router
 from app.core.config import Settings, get_settings
 from app.core.database import DatabaseRuntime, create_database_runtime
 from app.core.http import (
@@ -16,7 +17,6 @@ from app.core.http import (
 )
 from app.modules.cameras.api.error_handlers import install_camera_exception_handlers
 from app.modules.cameras.api.router import router as cameras_router
-from app.modules.stream_gateway.api.router import router as stream_gateway_router
 from app.modules.stream_gateway.services.mediamtx import MediaMTXClient
 
 DatabaseRuntimeFactory = Callable[[Settings], DatabaseRuntime]
@@ -85,7 +85,8 @@ def create_app(
     # 同一个 Problem 工厂，所以媒体类型、trace 和脱敏规则不会分叉。
     install_http_exception_handlers(application)
     install_camera_exception_handlers(application)
-    application.include_router(stream_gateway_router)
+    # 健康探针描述应用进程及其必要数据库依赖，不经由任何业务或外部服务适配模块注册。
+    application.include_router(health_router, prefix="/api/v1")
     # Cameras 的业务 handler 仍是 Foundation 占位，但必须注册到真实应用，保证应用自身
     # /openapi.json、导出产物和未来运行时只共享一棵路由树。
     application.include_router(cameras_router, prefix="/api/v1")
