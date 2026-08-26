@@ -33,6 +33,9 @@ packages = ["src/app"]
 addopts = "-q"
 pythonpath = ["src"]
 testpaths = ["tests"]
+markers = [
+    "sensitive_data: Cameras 凭据与完整 RTSP URL 的跨层泄漏专项门禁",
+]
 
 [tool.ruff]
 line-length = 100

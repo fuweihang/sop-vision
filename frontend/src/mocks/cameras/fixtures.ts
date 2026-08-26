@@ -31,8 +31,8 @@ export const CAMERA_FIXTURE_TIMES = {
 
 export const CAMERA_FIXTURE_TRACE_ID = "tr_cameras_fixture_0001";
 
-/** 此哨兵只能存在于敏感详情和写请求 Fixture，非详情响应测试会显式扫描它。 */
-export const CAMERA_FIXTURE_SECRET = "camera-fixture-leak-sentinel";
+/** 此唯一哨兵贯穿后端与前端，只能存在于敏感详情和写请求 Fixture。 */
+export const CAMERA_FIXTURE_SECRET = "cameras-mvp-leak-sentinel";
 
 const DEFAULT_SOURCE_IDS = [
   CAMERA_FIXTURE_IDS.primarySource,

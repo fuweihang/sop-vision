@@ -119,7 +119,7 @@ export interface components {
          * @example {
          *       "ip_address": "192.0.2.64",
          *       "name": "洗手区 01",
-         *       "password": "openapi-test-password",
+         *       "password": "cameras-mvp-leak-sentinel",
          *       "rtsp_port": 554,
          *       "sources": [
          *         {
@@ -166,7 +166,7 @@ export interface components {
          *       "ip_address": "192.0.2.64",
          *       "name": "洗手区 01",
          *       "online_source_count": 1,
-         *       "password": "openapi-test-password",
+         *       "password": "cameras-mvp-leak-sentinel",
          *       "rtsp_port": 554,
          *       "source_count": 2,
          *       "sources": [
@@ -174,7 +174,7 @@ export interface components {
          *           "is_default_preview": true,
          *           "last_checked_at": "2026-08-19T03:10:01Z",
          *           "name": "主码流",
-         *           "rtsp_url": "rtsp://openapi-test-user:openapi-test-password@192.0.2.64:554/Streaming/Channels/101",
+         *           "rtsp_url": "rtsp://openapi-test-user:cameras-mvp-leak-sentinel@192.0.2.64:554/Streaming/Channels/101",
          *           "source_id": "3f2504e0-4f89-41d3-9a0c-0305e82c3301",
          *           "status": "ONLINE",
          *           "url_suffix": "Streaming/Channels/101",
@@ -185,7 +185,7 @@ export interface components {
          *           "is_default_preview": false,
          *           "last_checked_at": "2026-08-19T03:10:01Z",
          *           "name": "子码流",
-         *           "rtsp_url": "rtsp://openapi-test-user:openapi-test-password@192.0.2.64:554/Streaming/Channels/102",
+         *           "rtsp_url": "rtsp://openapi-test-user:cameras-mvp-leak-sentinel@192.0.2.64:554/Streaming/Channels/102",
          *           "source_id": "8f14e45f-ea9d-4a7d-9b6d-8c9f0a1b2c3d",
          *           "status": "OFFLINE",
          *           "url_suffix": "Streaming/Channels/102"
@@ -391,7 +391,7 @@ export interface components {
          * @example {
          *       "ip_address": "192.0.2.65",
          *       "name": "洗手区东侧 01",
-         *       "password": "openapi-test-password-updated",
+         *       "password": "cameras-mvp-leak-sentinel",
          *       "rtsp_port": 554,
          *       "sources": [
          *         {
@@ -888,7 +888,7 @@ export interface operations {
                      *       "ip_address": "192.0.2.64",
                      *       "name": "洗手区 01",
                      *       "online_source_count": 1,
-                     *       "password": "openapi-test-password",
+                     *       "password": "cameras-mvp-leak-sentinel",
                      *       "rtsp_port": 554,
                      *       "source_count": 2,
                      *       "sources": [
@@ -896,7 +896,7 @@ export interface operations {
                      *           "is_default_preview": true,
                      *           "last_checked_at": "2026-08-19T03:10:01Z",
                      *           "name": "主码流",
-                     *           "rtsp_url": "rtsp://openapi-test-user:openapi-test-password@192.0.2.64:554/Streaming/Channels/101",
+                     *           "rtsp_url": "rtsp://openapi-test-user:cameras-mvp-leak-sentinel@192.0.2.64:554/Streaming/Channels/101",
                      *           "source_id": "3f2504e0-4f89-41d3-9a0c-0305e82c3301",
                      *           "status": "ONLINE",
                      *           "url_suffix": "Streaming/Channels/101",
@@ -907,7 +907,7 @@ export interface operations {
                      *           "is_default_preview": false,
                      *           "last_checked_at": "2026-08-19T03:10:01Z",
                      *           "name": "子码流",
-                     *           "rtsp_url": "rtsp://openapi-test-user:openapi-test-password@192.0.2.64:554/Streaming/Channels/102",
+                     *           "rtsp_url": "rtsp://openapi-test-user:cameras-mvp-leak-sentinel@192.0.2.64:554/Streaming/Channels/102",
                      *           "source_id": "8f14e45f-ea9d-4a7d-9b6d-8c9f0a1b2c3d",
                      *           "status": "OFFLINE",
                      *           "url_suffix": "Streaming/Channels/102"
@@ -1006,7 +1006,7 @@ export interface operations {
                      *       "ip_address": "192.0.2.64",
                      *       "name": "洗手区 01",
                      *       "online_source_count": 1,
-                     *       "password": "openapi-test-password",
+                     *       "password": "cameras-mvp-leak-sentinel",
                      *       "rtsp_port": 554,
                      *       "source_count": 2,
                      *       "sources": [
@@ -1014,7 +1014,7 @@ export interface operations {
                      *           "is_default_preview": true,
                      *           "last_checked_at": "2026-08-19T03:10:01Z",
                      *           "name": "主码流",
-                     *           "rtsp_url": "rtsp://openapi-test-user:openapi-test-password@192.0.2.64:554/Streaming/Channels/101",
+                     *           "rtsp_url": "rtsp://openapi-test-user:cameras-mvp-leak-sentinel@192.0.2.64:554/Streaming/Channels/101",
                      *           "source_id": "3f2504e0-4f89-41d3-9a0c-0305e82c3301",
                      *           "status": "ONLINE",
                      *           "url_suffix": "Streaming/Channels/101",
@@ -1025,7 +1025,7 @@ export interface operations {
                      *           "is_default_preview": false,
                      *           "last_checked_at": "2026-08-19T03:10:01Z",
                      *           "name": "子码流",
-                     *           "rtsp_url": "rtsp://openapi-test-user:openapi-test-password@192.0.2.64:554/Streaming/Channels/102",
+                     *           "rtsp_url": "rtsp://openapi-test-user:cameras-mvp-leak-sentinel@192.0.2.64:554/Streaming/Channels/102",
                      *           "source_id": "8f14e45f-ea9d-4a7d-9b6d-8c9f0a1b2c3d",
                      *           "status": "OFFLINE",
                      *           "url_suffix": "Streaming/Channels/102"
@@ -1176,7 +1176,7 @@ export interface operations {
                      *       "ip_address": "192.0.2.64",
                      *       "name": "洗手区 01",
                      *       "online_source_count": 1,
-                     *       "password": "openapi-test-password",
+                     *       "password": "cameras-mvp-leak-sentinel",
                      *       "rtsp_port": 554,
                      *       "source_count": 2,
                      *       "sources": [
@@ -1184,7 +1184,7 @@ export interface operations {
                      *           "is_default_preview": true,
                      *           "last_checked_at": "2026-08-19T03:10:01Z",
                      *           "name": "主码流",
-                     *           "rtsp_url": "rtsp://openapi-test-user:openapi-test-password@192.0.2.64:554/Streaming/Channels/101",
+                     *           "rtsp_url": "rtsp://openapi-test-user:cameras-mvp-leak-sentinel@192.0.2.64:554/Streaming/Channels/101",
                      *           "source_id": "3f2504e0-4f89-41d3-9a0c-0305e82c3301",
                      *           "status": "ONLINE",
                      *           "url_suffix": "Streaming/Channels/101",
@@ -1195,7 +1195,7 @@ export interface operations {
                      *           "is_default_preview": false,
                      *           "last_checked_at": "2026-08-19T03:10:01Z",
                      *           "name": "子码流",
-                     *           "rtsp_url": "rtsp://openapi-test-user:openapi-test-password@192.0.2.64:554/Streaming/Channels/102",
+                     *           "rtsp_url": "rtsp://openapi-test-user:cameras-mvp-leak-sentinel@192.0.2.64:554/Streaming/Channels/102",
                      *           "source_id": "8f14e45f-ea9d-4a7d-9b6d-8c9f0a1b2c3d",
                      *           "status": "OFFLINE",
                      *           "url_suffix": "Streaming/Channels/102"

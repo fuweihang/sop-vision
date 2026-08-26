@@ -4,8 +4,8 @@ import { afterEach, describe, expect, test, vi } from "vitest";
 import { apiClient } from "@/lib/api-client";
 import { ApiTransportError } from "@/lib/api-errors";
 import { createCamera, type CameraCreateRequest } from "@/lib/cameras-api";
+import { CAMERA_FIXTURE_SECRET } from "@/mocks/cameras/fixtures";
 
-const LEAK_SENTINEL = "frontend-camera-password-leak-sentinel";
 const originalAdapter = apiClient.defaults.adapter;
 
 afterEach(() => {
@@ -41,7 +41,7 @@ describe("单一 Axios Client 安全边界", () => {
       ip_address: "192.0.2.10",
       rtsp_port: 554,
       username: "test-user",
-      password: LEAK_SENTINEL,
+      password: CAMERA_FIXTURE_SECRET,
       sources: [
         {
           name: "主码流",
@@ -58,9 +58,9 @@ describe("单一 Axios Client 安全边界", () => {
       caught = error;
     }
 
-    expect(JSON.stringify(originalAxiosError)).toContain(LEAK_SENTINEL);
+    expect(JSON.stringify(originalAxiosError)).toContain(CAMERA_FIXTURE_SECRET);
     expect(caught).toBeInstanceOf(ApiTransportError);
-    expect(JSON.stringify(caught)).not.toContain(LEAK_SENTINEL);
+    expect(JSON.stringify(caught)).not.toContain(CAMERA_FIXTURE_SECRET);
     expect(consoleError).not.toHaveBeenCalled();
     expect(consoleLog).not.toHaveBeenCalled();
     expect(localStorage.length).toBe(0);

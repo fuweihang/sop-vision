@@ -43,6 +43,7 @@ from tests.modules.cameras.builders import (
     FixedIdGenerator,
     uuid4_from_index,
 )
+from tests.modules.cameras.constants import CAMERA_LEAK_SENTINEL
 from tests.modules.cameras.repository_contract import assert_camera_repository_contract
 
 pytestmark = pytest.mark.anyio
@@ -335,7 +336,7 @@ async def test_camera_repository_round_trip_literal_search_and_transaction_visib
         repository = SQLAlchemyCameraRepository(reading_session)
         restored = await repository.get(camera.camera_id)
         assert restored == camera
-        assert restored.credentials.password.reveal() == "builder-camera-secret"
+        assert restored.credentials.password.reveal() == CAMERA_LEAK_SENTINEL
         assert await repository.count(CameraListCriteria(q="ALPHA")) == 1
         assert await repository.count(CameraListCriteria(q="中文")) == 1
         assert await repository.count(CameraListCriteria(q="192.168.10.21")) == 1
@@ -455,7 +456,7 @@ async def test_uow_converts_deferred_constraint_at_commit_and_restores_session(
         with pytest.raises(CameraConstraintViolationError) as captured:
             await uow.commit()
         assert captured.value.kind is CameraConstraintViolationKind.DUPLICATE_SOURCE_SUFFIX
-        assert "builder-camera-secret" not in str(captured.value)
+        assert CAMERA_LEAK_SENTINEL not in str(captured.value)
 
         # commit 失败路径已 rollback，同一个 Session 可以继续安全读取原值。
         restored = await uow.cameras.get(camera.camera_id)

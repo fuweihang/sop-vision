@@ -145,3 +145,6 @@ pnpm build
 ```
 
 Backend 的迁移、配置和定向测试说明见 [Backend README](backend/README.md)。
+Cameras 的生成漂移、敏感数据和 Foundation/MVP 占位门禁以
+[Foundation 执行计划](docs/cameras-mvp/01-foundation/execution-plan/README.md#步骤-9契约门禁与交接已完成)
+中的命令与交接规则为准。

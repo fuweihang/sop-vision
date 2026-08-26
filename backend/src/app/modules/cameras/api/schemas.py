@@ -30,7 +30,9 @@ CREATED_AT_EXAMPLE = "2026-08-19T03:00:00Z"
 UPDATED_AT_EXAMPLE = "2026-08-19T03:10:00Z"
 LAST_CHECKED_AT_EXAMPLE = "2026-08-19T03:10:01Z"
 TEST_USERNAME = "openapi-test-user"
-TEST_PASSWORD = "openapi-test-password"
+# 该值是步骤 9 唯一的泄漏 canary。它会合法出现在写请求和 CameraDetail example 中；
+# 列表、Playback、Problem 与日志的专项测试则必须证明该值无法越过各自的安全边界。
+TEST_PASSWORD = "cameras-mvp-leak-sentinel"
 
 
 def _normalize_url_suffix(value: Any) -> Any:
@@ -180,7 +182,7 @@ class CameraUpdateRequest(_RequestModel):
                     "ip_address": "192.0.2.65",
                     "rtsp_port": 554,
                     "username": TEST_USERNAME,
-                    "password": "openapi-test-password-updated",
+                    "password": TEST_PASSWORD,
                     "sources": [
                         {
                             "source_id": PRIMARY_SOURCE_ID_EXAMPLE,
@@ -261,7 +263,7 @@ class CameraDetail(_ResponseModel):
                             "name": "主码流",
                             "url_suffix": "Streaming/Channels/101",
                             "rtsp_url": (
-                                "rtsp://openapi-test-user:openapi-test-password@"
+                                f"rtsp://{TEST_USERNAME}:{TEST_PASSWORD}@"
                                 "192.0.2.64:554/Streaming/Channels/101"
                             ),
                             "is_default_preview": True,
@@ -277,7 +279,7 @@ class CameraDetail(_ResponseModel):
                             "name": "子码流",
                             "url_suffix": "Streaming/Channels/102",
                             "rtsp_url": (
-                                "rtsp://openapi-test-user:openapi-test-password@"
+                                f"rtsp://{TEST_USERNAME}:{TEST_PASSWORD}@"
                                 "192.0.2.64:554/Streaming/Channels/102"
                             ),
                             "is_default_preview": False,

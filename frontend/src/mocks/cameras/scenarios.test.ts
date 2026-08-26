@@ -15,6 +15,7 @@ import {
   buildCameraCreateRequest,
   buildCameraUpdateRequest,
   CAMERA_FIXTURE_IDS,
+  CAMERA_FIXTURE_SECRET,
 } from "@/mocks/cameras/fixtures";
 import { createCamerasMswScenario } from "@/mocks/cameras/scenarios";
 import { mockServer } from "@/mocks/node";
@@ -62,6 +63,32 @@ test("成功场景覆盖七个 Cameras operation", async () => {
     CAMERA_FIXTURE_IDS.primarySource,
   );
   expect(playback.status).toBe("AVAILABLE");
+});
+
+test("MSW 非详情响应不携带唯一泄漏哨兵或完整 RTSP 配置", async () => {
+  useScenario("success");
+
+  const nonDetailPayloads: unknown[] = [
+    await listCameras(),
+    await setDefaultPreviewSource(CAMERA_FIXTURE_IDS.primaryCamera, {
+      source_id: CAMERA_FIXTURE_IDS.primarySource,
+    }),
+    await getCameraSourcePlayback(CAMERA_FIXTURE_IDS.primarySource),
+  ];
+
+  // Problem 也属于禁止泄密的公共响应。通过真实 MSW handler 和 Client 错误边界取回它，
+  // 可以同时防止场景工厂或 Axios 映射未来把敏感详情整对象塞进 context。
+  mockServer.resetHandlers();
+  useScenario("dependency-unavailable");
+  nonDetailPayloads.push((await captureProblem(listCameras())).problem);
+
+  for (const payload of nonDetailPayloads) {
+    const serialized = JSON.stringify(payload);
+    expect(serialized).not.toContain(CAMERA_FIXTURE_SECRET);
+    expect(serialized).not.toContain("fixture-camera-user");
+    expect(serialized).not.toContain("url_suffix");
+    expect(serialized).not.toContain("rtsp://");
+  }
 });
 
 test("空列表与搜索无结果是可独立选择的确定场景", async () => {

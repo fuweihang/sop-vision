@@ -4,6 +4,7 @@ from ipaddress import IPv4Address
 from unittest.mock import Mock
 from uuid import UUID
 
+import pytest
 from sqlalchemy import CheckConstraint, UniqueConstraint
 
 from app.modules.cameras.persistence.integrity import (
@@ -12,6 +13,7 @@ from app.modules.cameras.persistence.integrity import (
     report_reference_integrity_issues,
 )
 from app.modules.cameras.persistence.models import CameraRow, CameraSourceRow
+from tests.modules.cameras.constants import CAMERA_LEAK_SENTINEL
 
 
 def test_camera_tables_have_no_foreign_keys() -> None:
@@ -62,6 +64,7 @@ def test_source_unique_constraints_are_initially_deferred() -> None:
     assert all(constraint.initially == "DEFERRED" for constraint in unique_constraints)
 
 
+@pytest.mark.sensitive_data
 def test_camera_row_repr_does_not_expose_password() -> None:
     """默认 ORM repr 不能泄露 Camera 凭据。"""
 
@@ -71,11 +74,11 @@ def test_camera_row_repr_does_not_expose_password() -> None:
         ip_address=IPv4Address("192.0.2.10"),
         rtsp_port=554,
         username="operator",
-        password="metadata-test-password",
+        password=CAMERA_LEAK_SENTINEL,
         default_preview_source_id=UUID("10000000-0000-4000-8000-000000000001"),
     )
 
-    assert "metadata-test-password" not in repr(camera)
+    assert CAMERA_LEAK_SENTINEL not in repr(camera)
 
 
 def test_integrity_report_logs_only_stable_kind_and_ids() -> None:

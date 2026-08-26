@@ -27,15 +27,16 @@ from app.modules.cameras.domain import (
     CameraFieldError,
     CameraValidationError,
 )
+from tests.modules.cameras.constants import CAMERA_LEAK_RTSP_URL, CAMERA_LEAK_SENTINEL
 
 pytestmark = pytest.mark.anyio
 
 # UUID 同时包含字母和数字，才能可靠验证大写文本确实被拒绝；全数字 UUID 的 upper() 不会
 # 改变字符串，无法覆盖 canonical 大小写规则。
 CANONICAL_UUID4 = "8f14e45f-ea9d-4a7d-9b6d-8c9f0a1b2c3d"
-# 两个唯一 sentinel 用于证明 Pydantic、异常链、响应和捕获日志都不会回显秘密或完整 RTSP URL。
-LEAK_SENTINEL = "foundation-leak-sentinel"
-RTSP_LEAK_SENTINEL = f"rtsp://admin:{LEAK_SENTINEL}@192.0.2.1:554/live"
+# HTTP 层与领域、ORM、生成契约共用步骤 9 的唯一 sentinel；RTSP 形式专门覆盖完整 URL 泄漏。
+LEAK_SENTINEL = CAMERA_LEAK_SENTINEL
+RTSP_LEAK_SENTINEL = CAMERA_LEAK_RTSP_URL
 
 
 class ProbeSource(BaseModel):
@@ -314,6 +315,7 @@ async def test_nested_array_field_path_is_preserved(probe_client: httpx.AsyncCli
     ]
 
 
+@pytest.mark.sensitive_data
 async def test_unknown_json_field_does_not_echo_sensitive_input(
     probe_client: httpx.AsyncClient,
     caplog: pytest.LogCaptureFixture,
@@ -408,6 +410,7 @@ async def test_domain_error_reuses_public_problem_model(probe_client: httpx.Asyn
     }
 
 
+@pytest.mark.sensitive_data
 async def test_known_database_error_is_safe_problem(
     probe_client: httpx.AsyncClient,
     caplog: pytest.LogCaptureFixture,

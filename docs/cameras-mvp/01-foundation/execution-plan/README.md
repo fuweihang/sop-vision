@@ -16,10 +16,10 @@
 | 6 OpenAPI 契约    | 已完成 | Cameras Schema/占位 Router、确定性导出脚本与 `contracts/openapi.json` |
 | 7 前端 Client     | 已完成 | operation 生成类型、单一 Axios Client、Problem 映射与固定 Query Key   |
 | 8 前端状态与 Mock | 已完成 | 通用页面状态、类型安全 Fixture、严格 MSW 基础与显式场景集合           |
-| 9 契约门禁        | 未开始 | 尚无 regenerate-and-diff 和占位清理门禁                               |
+| 9 契约门禁        | 已完成 | GitHub Actions、生成漂移、双阶段占位及唯一 sentinel 门禁              |
 
-代码检查结果：不加载本地数据库配置时 Backend 为 `110 passed, 13 skipped`；加载
-`.env.local` 后，PostgreSQL 迁移、约束、事务和并发测试全部执行，为 `123 passed`。测试
+代码检查结果：不加载本地数据库配置时 Backend 为 `112 passed, 13 skipped`；加载
+`.env.local` 后，PostgreSQL 迁移、约束、事务和并发测试全部执行，为 `125 passed`。测试
 fixture 显式固定 CORS Origin；即使进程传入冲突的 `BACKEND_CORS_ORIGINS`，HTTP Foundation
 定向测试仍为 `27 passed`。
 
@@ -29,6 +29,10 @@ fixture 显式固定 CORS Origin；即使进程传入冲突的 `BACKEND_CORS_ORI
 步骤 8 完成后 Frontend 为 `104 passed`；Camera Card Grid 与 Task Table Pending 按原型信息结构
 响应式重排，页面状态基元、固定 Fixture、十一种 Node/Browser MSW 场景及严格未处理请求门禁已接入。
 OpenAPI 再生成无漂移，lint、format check 和生产 build 全部通过。
+
+步骤 9 完成后 GitHub Actions 使用 PostgreSQL 17 按冻结顺序执行完整门禁；Backend 为
+`125 passed`，Frontend 为 `107 passed`，两端 lint、format check 和生产 build 通过。敏感数据
+专项为 Backend `6 passed`、Frontend `34 passed`；OpenAPI 与生成 TS 在干净工作区重建无漂移。
 
 ## 架构边界
 
@@ -170,7 +174,7 @@ Query Key 只提供 `cameras/camera/playback` 三种冻结形状，列表 HTTP �
 
 退出条件：后续切片可选择场景独立开发；公共基元不内置具体 CRUD；Frontend 全套检查通过。
 
-## 步骤 9｜契约门禁与交接
+## 步骤 9｜契约门禁与交接（已完成）
 
 CI 顺序：Backend 检查 → PostgreSQL 迁移/Repository 测试 → 导出 OpenAPI → 生成 TS →
 工作区漂移检查 → Frontend 检查 → 敏感数据专项测试。
@@ -183,6 +187,21 @@ Foundation 收口时允许七个 handler 仍是一行 `raise NotImplementedError
 它们已被对应功能切片原位替换。每个功能切片替换 handler 时必须同步重新生成 OpenAPI、前端
 类型和 Fixture，并增加运行时行为测试。
 
+已交付：
+
+- `.github/workflows/cameras-foundation.yml` 在 Linux runner 上使用独立 PostgreSQL service，
+  依次执行 Backend、迁移/Repository、跨端生成与漂移、占位生命周期、Frontend 和敏感专项。
+- `scripts/check-cameras-contracts.sh` 从真实应用重建 OpenAPI 和 operation 类型，并只比较两份
+  已提交生成物；开发者不需要手工记忆生成顺序。
+- `check_camera_placeholders.py foundation` 允许零到七个纯占位并拒绝混入临时逻辑；手动触发
+  workflow 时选择 `enforce_mvp_handlers`，会追加 `mvp` 模式并拒绝任何剩余占位。
+- `scripts/check-cameras-sensitive-data.sh` 使用同一个 `cameras-mvp-leak-sentinel` 覆盖领域、
+  Pydantic、SQLAlchemy、Problem、日志、生成物、MSW 非详情响应和浏览器存储。
+
+交接规则：功能切片只能原位替换自己的 handler，不删除 Foundation 门禁。切片提交前先更新
+后端 Schema/运行时测试，再运行跨端生成脚本并审查两份生成物 diff；实现全部七个切片后，必须
+以 `enforce_mvp_handlers=true` 运行 GitHub Actions，普通 Foundation 绿色状态不能替代发布门禁。
+
 ## 统一交付要求
 
 - 每步包含实现、与风险匹配的测试、必要命令说明和公共契约变更说明。
@@ -194,17 +213,20 @@ Foundation 收口时允许七个 handler 仍是一行 `raise NotImplementedError
 
 ```bash
 cd backend
-uv run python scripts/export_openapi.py
 uv run --env-file .env.local pytest
 uv run ruff check .
 uv run ruff format --check .
+uv run python scripts/check_camera_placeholders.py foundation
 
 cd ../frontend
-pnpm api:generate
 pnpm test
 pnpm lint
 pnpm format:check
 pnpm build
+
+cd ..
+bash scripts/check-cameras-contracts.sh
+bash scripts/check-cameras-sensitive-data.sh
 ```
 
 步骤 6–9 新增的 OpenAPI 导出、类型生成和漂移检查必须提供稳定脚本，并加入上述完整门禁；

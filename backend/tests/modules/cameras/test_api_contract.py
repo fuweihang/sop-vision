@@ -1,7 +1,5 @@
 """步骤 6 Cameras Schema、占位 Router 与 OpenAPI 的结构契约测试。"""
 
-import ast
-import inspect
 import json
 from collections.abc import Mapping
 from pathlib import Path
@@ -14,9 +12,9 @@ from pydantic import BaseModel
 from pydantic_core import ValidationError
 
 from app.core.http.problems import PROBLEM_MEDIA_TYPE, ProblemDetails
-from app.modules.cameras.api import router as camera_router_module
 from app.modules.cameras.api.schemas import (
     CAMERA_ID_EXAMPLE,
+    TEST_PASSWORD,
     CameraCreateRequest,
     CameraDetail,
     CameraPage,
@@ -25,6 +23,7 @@ from app.modules.cameras.api.schemas import (
     PlaybackInfo,
     SetDefaultPreviewSourceRequest,
 )
+from scripts.check_camera_placeholders import GateMode, check_camera_placeholders
 from scripts.export_openapi import build_openapi_document, export_openapi, serialize_openapi
 
 pytestmark = pytest.mark.anyio
@@ -53,15 +52,6 @@ EXPECTED_CAMERA_OPERATIONS = {
         {"200", "404", "409", "422", "502", "503"},
     ),
 }
-PLACEHOLDER_HANDLERS = (
-    camera_router_module.list_cameras,
-    camera_router_module.create_camera,
-    camera_router_module.get_camera,
-    camera_router_module.update_camera,
-    camera_router_module.set_default_preview_source,
-    camera_router_module.delete_camera,
-    camera_router_module.get_camera_source_playback,
-)
 SENSITIVE_FIELDS = {"username", "password", "url_suffix", "rtsp_url"}
 
 
@@ -178,6 +168,7 @@ def test_canonical_source_id_rejects_uppercase_text() -> None:
         SetDefaultPreviewSourceRequest.model_validate({"source_id": CAMERA_ID_EXAMPLE.upper()})
 
 
+@pytest.mark.sensitive_data
 def test_list_and_playback_models_forbid_sensitive_fields_recursively(
     application: FastAPI,
 ) -> None:
@@ -190,7 +181,7 @@ def test_list_and_playback_models_forbid_sensitive_fields_recursively(
         assert property_names.isdisjoint(SENSITIVE_FIELDS)
         example_text = json.dumps(_model_example(model), ensure_ascii=False)
         assert "rtsp://" not in example_text
-        assert "openapi-test-password" not in example_text
+        assert TEST_PASSWORD not in example_text
 
 
 def test_openapi_has_exact_target_paths_operations_responses_and_tags(
@@ -255,16 +246,10 @@ def test_health_operation_ids_and_readiness_problem_are_stable(application: Fast
 
 
 def test_placeholder_handlers_only_raise_not_implemented() -> None:
-    """Foundation 不得在占位函数中装配 UoW、Service、Repository 或临时错误协议。"""
+    """Foundation 只允许纯占位，且不阻止后续切片逐个原位替换完整 handler。"""
 
-    for handler in PLACEHOLDER_HANDLERS:
-        tree = ast.parse(inspect.getsource(handler))
-        function = next(node for node in ast.walk(tree) if isinstance(node, ast.AsyncFunctionDef))
-        assert len(function.body) == 1
-        statement = function.body[0]
-        assert isinstance(statement, ast.Raise)
-        assert isinstance(statement.exc, ast.Name)
-        assert statement.exc.id == "NotImplementedError"
+    report = check_camera_placeholders(GateMode.FOUNDATION)
+    assert not report.invalid_handlers
 
 
 async def test_placeholder_runtime_500_is_not_added_to_target_contract(

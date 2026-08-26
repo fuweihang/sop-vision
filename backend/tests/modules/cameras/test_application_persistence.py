@@ -28,6 +28,7 @@ from tests.modules.cameras.builders import (
     FixedIdGenerator,
     uuid4_from_index,
 )
+from tests.modules.cameras.constants import CAMERA_LEAK_SENTINEL
 from tests.modules.cameras.fakes import FakeCameraStore, FakeCameraUnitOfWork
 from tests.modules.cameras.repository_contract import assert_camera_repository_contract
 
@@ -76,6 +77,7 @@ def test_list_criteria_and_pagination_reject_non_normalized_boundaries() -> None
         validate_camera_list_pagination(1, 101)
 
 
+@pytest.mark.sensitive_data
 def test_mapper_round_trip_preserves_complete_aggregate_and_secret_boundary() -> None:
     """显式 Mapper 保留 ID、时间、顺序和凭据，默认输出不泄露密码。"""
 
@@ -84,9 +86,9 @@ def test_mapper_round_trip_preserves_complete_aggregate_and_secret_boundary() ->
     restored = rows_to_camera(camera_row, source_rows)
 
     assert restored == camera
-    assert restored.credentials.password.reveal() == "builder-camera-secret"
-    assert "builder-camera-secret" not in repr(camera_row)
-    assert "builder-camera-secret" not in repr(restored)
+    assert restored.credentials.password.reveal() == CAMERA_LEAK_SENTINEL
+    assert CAMERA_LEAK_SENTINEL not in repr(camera_row)
+    assert CAMERA_LEAK_SENTINEL not in repr(restored)
 
 
 async def test_fake_uow_isolates_uncommitted_commit_and_rollback_snapshots() -> None:

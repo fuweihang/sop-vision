@@ -22,6 +22,7 @@ from tests.modules.cameras.builders import (
     FixedIdGenerator,
     uuid4_from_index,
 )
+from tests.modules.cameras.constants import CAMERA_LEAK_SENTINEL
 
 
 def error_pairs(error: CameraValidationError) -> list[tuple[str, str]]:
@@ -392,14 +393,17 @@ def test_reconstitution_rejects_corrupted_aggregate_without_silent_repair(corrup
     assert "database-secret" not in repr(caught.value)
 
 
+@pytest.mark.sensitive_data
 def test_repr_exceptions_and_logs_do_not_contain_password_or_full_rtsp_url(caplog) -> None:
-    sentinel = "domain-leak-sentinel"
+    sentinel = CAMERA_LEAK_SENTINEL
     builder = CameraBuilder()
     builder.password = sentinel
     camera = builder.build(source_count=1)
     full_url = camera.rtsp_url_for(camera.sources[0].source_id)
 
-    assert full_url == ("rtsp://admin:domain-leak-sentinel@192.168.1.64:554/Streaming/Channels/001")
+    assert full_url == (
+        f"rtsp://admin:{CAMERA_LEAK_SENTINEL}@192.168.1.64:554/Streaming/Channels/001"
+    )
     assert sentinel not in repr(camera)
     assert full_url not in repr(camera)
 

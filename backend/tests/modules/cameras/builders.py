@@ -5,6 +5,7 @@ from datetime import UTC, datetime
 from uuid import RFC_4122, UUID
 
 from app.modules.cameras.domain import Camera, CameraSourceChange, NewCameraSource
+from tests.modules.cameras.constants import CAMERA_LEAK_SENTINEL
 
 FIXED_TIME = datetime(2026, 8, 24, 8, 0, tzinfo=UTC)
 
@@ -80,7 +81,7 @@ class CameraBuilder:
         self.ip_address = "192.168.1.64"
         self.rtsp_port = 554
         self.username = "admin"
-        self.password = "builder-camera-secret"
+        self.password = CAMERA_LEAK_SENTINEL
         self.clock = FixedClock(FIXED_TIME)
 
     def build(self, *, source_count: int = 2, id_start: int = 1) -> Camera:

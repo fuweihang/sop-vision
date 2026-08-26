@@ -9,6 +9,7 @@ import {
   parseProblemFieldPath,
   type ProblemDetails,
 } from "@/lib/api-errors";
+import { CAMERA_FIXTURE_SECRET } from "@/mocks/cameras/fixtures";
 
 const TRACE_ID = "tr_frontend_test";
 
@@ -99,13 +100,13 @@ describe("API 错误映射", () => {
   test("无 HTTP 响应时不保留 Axios 请求配置或伪造业务 code", () => {
     const mapped = mapApiError({
       isAxiosError: true,
-      config: { data: "password=leak-sentinel" },
+      config: { data: `password=${CAMERA_FIXTURE_SECRET}` },
       request: {},
     });
 
     expect(mapped).toBeInstanceOf(ApiTransportError);
     expect(mapped).not.toHaveProperty("code");
-    expect(JSON.stringify(mapped)).not.toContain("leak-sentinel");
+    expect(JSON.stringify(mapped)).not.toContain(CAMERA_FIXTURE_SECRET);
   });
 
   test("非 Axios 编程错误保持原样", () => {
