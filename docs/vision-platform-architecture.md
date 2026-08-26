@@ -111,8 +111,15 @@ Compose 已提供 Redis，但应用尚未接入。通信语义见
 ### MediaMTX
 
 MediaMTX 是媒体路由层，不拥有 Camera 业务配置、用户权限或算法逻辑。目标实现从 PostgreSQL
-读取 Desired State，通过 Control API 协调以 `source_id` 命名的 Path，并把 WHEP 地址返回给
-浏览器；配置提交成功与媒体映射成功必须是两个可区分结果。
+读取 Desired State，在 Camera 数据库提交后通过 Control API 协调以 `source_id` 命名的 Path。
+后台 Reconciler 在启动、周期和 MediaMTX 内存状态丢失后恢复合法 Path，并清理数据库已不存在的
+受管孤儿 Path；它不把外部操作提升为数据库事务。
+
+列表和详情只观察一次 Path 快照，严格在线时返回 WHEP 地址，浏览器正常播放直接连接 MediaMTX。
+公共 Playback 操作 `POST /api/v1/camera-sources/{source_id}/playback`
+（`prepareCameraSourcePlayback`）是有副作用的幂等准备/恢复命令，只在 Path 缺失或播放恢复时
+使用，不能成为每张 Camera Card 的必经 N+1 请求，也不能替代后台对账。配置提交成功与媒体映射
+成功始终是两个可区分结果。
 
 ## 目标检测链路
 
@@ -152,8 +159,9 @@ Detector 拉流目标支持 Direct Camera 与 MediaMTX 两种模式，但具体�
 | MediaMTX   | WHEP 中断；使用 Direct 模式的 Detector 可继续 |
 | Detector   | 对应检测停止；MediaMTX 视频仍可播放           |
 
-当前代码只验证 FastAPI 对 MediaMTX 就绪失败返回 `503`，其余故障保证需要在对应模块实现时
-通过测试和可观测性验证。
+当前代码只验证 FastAPI 对 MediaMTX 就绪失败返回 `503`。Cameras 目标要求把进程/数据库
+readiness 与媒体依赖健康分开，避免 MTX 故障令仍可用的配置读写被部署层摘除；包括重启对账、
+投影降级和 Playback 自愈在内的其余保证，需要在对应切片通过测试和可观测性验证。
 
 ## 部署与配置约束
 

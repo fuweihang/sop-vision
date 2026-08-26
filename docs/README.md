@@ -11,7 +11,9 @@
 - Compose 已包含 Redis，但 Backend 没有 Redis 客户端；Detector、Detection Tasks、
   WebSocket 和实时检测链路均未实现。
 
-“路由已出现在 OpenAPI”只表示跨端契约已经冻结，不表示对应 handler 可用。
+“路由已出现在 OpenAPI”只表示当前占位契约可供跨端生成，不表示对应 handler 可用。Cameras 新计划
+已经冻结 Playback 从只读 GET 改为准备/恢复 POST；在对应切片实现前，根契约会明确标注这项尚未
+同步到代码和生成物的差异。
 
 ## 阅读顺序
 
@@ -33,7 +35,7 @@
 | [实时检测数据设计](realtime-detection-design.md)          | 目标设计    | Detector、Redis、WebSocket 的通信语义与约束 |
 | [交互原型](prototype/v1.0.html)                           | 参考产物    | 早期布局与业务流程，不代表当前实现或 API    |
 
-`cameras-mvp/02–09` 是尚未实现的功能契约，不是完成记录。`prototype/` 和架构图是设计证据，
+`cameras-mvp/02–11` 是尚未实现的功能契约，不是完成记录。`prototype/` 和架构图是设计证据，
 不得覆盖运行时代码、`components.json`、OpenAPI 或数据库迁移中的事实。
 
 ## 事实优先级

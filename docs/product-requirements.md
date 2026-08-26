@@ -27,12 +27,15 @@ Cameras MVP 计划提供：
 - 按名称或 IPv4 搜索、分页浏览 Camera。
 - 查看完整配置、Source 状态和默认 Source。
 - 完整更新 Camera 与 Source 集合，或独立切换默认预览源。
-- 从 MediaMTX 获取 Source 状态并通过 WHEP 在浏览器预览。
-- 二次确认后删除 Camera，并在数据库提交后尽力释放媒体映射。
+- 数据库提交后把 Source Desired State 同步到 MediaMTX，并从 MediaMTX 获取运行状态。
+- 列表和详情直接使用 Backend 返回的在线 WHEP 地址预览；映射丢失时可按需准备和恢复。
+- 二次确认后删除 Camera，并在数据库提交后尽力释放媒体映射；周期对账恢复 MTX 重启后的
+  合法 Path 并清理受管孤儿 Path。
 
 本阶段明确不包含 Camera 启停、厂商字段、批量操作、保存前连通性探测、录像、截图、回放、
-WebSocket 状态推送、软删除、跨业务删除保护和可靠异步媒体清理。完整字段与错误语义不在本文
-重复，见 [Cameras MVP](cameras-mvp/README.md)。
+WebSocket 状态推送、软删除、跨业务删除保护和事务级 Outbox/Saga 媒体投递。周期 Desired State
+对账属于 MVP，但不提供与数据库同事务、零窗口或恰好一次的外部副作用保证。完整字段与错误语义
+不在本文重复，见 [Cameras MVP](cameras-mvp/README.md)。
 
 ## Detection Tasks 目标范围
 

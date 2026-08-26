@@ -3,7 +3,7 @@
 > 状态：已完成。本文记录当前稳定存在的公共能力与后续切片必须遵守的约束。
 
 Foundation 已建立 Camera 领域、关系库持久化、事务、HTTP、跨端类型、Mock 与质量门禁；它不
-实现 02–09 的业务 Service 或完成态页面。
+实现 02–11 的业务 Service、MediaMTX Adapter、对账任务或完成态页面。
 
 ## 已实现能力
 
@@ -177,6 +177,6 @@ pnpm format:check
 pnpm build
 ```
 
-`foundation` 占位门禁允许 02–09 逐个用完整 handler 原位替换，但拒绝混入临时代码的半占位。
+`foundation` 占位门禁允许 02–11 逐个用完整实现原位替换，但拒绝混入临时代码的半占位。
 最终 MVP 必须改用 `mvp` 模式并保证零占位。数据库集成测试需要独立的 `TEST_DATABASE_URL`；
 未配置时测试会跳过，不能算作完整持久化验收。
