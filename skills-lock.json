@@ -13,6 +13,18 @@
       "skillPath": "skills/develop-fastapi-endpoint/SKILL.md",
       "computedHash": "f74a0f630cc840376134ccec4ad027336ff9c7e43e2997a12a7777f6c5c551cb"
     },
+    "docs-cleanup": {
+      "source": "fuweihang/skills",
+      "sourceType": "github",
+      "skillPath": "skills/docs-cleanup/SKILL.md",
+      "computedHash": "41a7ab983894c6ef3b7a8166652ad491b3be9985021823c332f0d98cbe667dd1"
+    },
+    "plan-split": {
+      "source": "fuweihang/skills",
+      "sourceType": "github",
+      "skillPath": "skills/plan-split/SKILL.md",
+      "computedHash": "d1fdd9f07c6daef6ea8ff3a83501656c6980737ee0fc14d5ba07da1cb3b53243"
+    },
     "react-router": {
       "source": "TanStack/router",
       "sourceType": "github",
