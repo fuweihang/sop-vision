@@ -1,5 +1,7 @@
 # 03｜Stream Gateway Adapter 与状态投影
 
+> 状态：已完成。本文记录当前稳定存在的 MediaMTX Adapter、完整快照与 Source 投影契约。
+>
 > 前置：[Foundation](../01-foundation/README.md)、[MediaMTX 契约](../02-mediamtx-contract/README.md)
 >
 > 交付：MediaMTX Path 读写 Adapter、批量状态投影和 WHEP URL 生成；无新公共路由

@@ -1,6 +1,7 @@
 """应用配置解析及数据库凭据脱敏回归测试。"""
 
 import logging
+import re
 from collections.abc import Iterator
 
 import pytest
@@ -104,3 +105,52 @@ def test_database_url_validation_log_does_not_expose_password(caplog) -> None:
             pytest.fail("无效的 DATABASE_URL 被错误接受")
 
     assert password not in caplog.text
+
+
+@pytest.mark.parametrize(
+    ("field", "value", "expected_message"),
+    [
+        ("mediamtx_api_url", "ftp://mediamtx:9997", "绝对 HTTP(S) URL"),
+        ("mediamtx_api_url", "http://user:secret@mediamtx:9997", "不能包含凭据"),
+        ("mediamtx_api_url", "http://mediamtx:9997/control", "不能包含路径前缀"),
+        ("mediamtx_api_url", "http://mediamtx:9997?token=secret", "query 或 fragment"),
+        ("public_webrtc_base_url", "//vision.example/media", "绝对 HTTP(S) URL"),
+        (
+            "public_webrtc_base_url",
+            "https://user:secret@vision.example/media",
+            "不能包含凭据",
+        ),
+        (
+            "public_webrtc_base_url",
+            "https://vision.example/media#player",
+            "query 或 fragment",
+        ),
+    ],
+)
+def test_media_base_urls_fail_during_settings_validation(
+    field: str,
+    value: str,
+    expected_message: str,
+) -> None:
+    """媒体部署地址错误必须阻止启动，而不是延迟成运行态 OFFLINE。"""
+
+    with pytest.raises(ValidationError, match=re.escape(expected_message)):
+        Settings(
+            database_url=SecretStr(
+                "postgresql+psycopg://sop_vision:sop_vision@localhost/sop_vision"
+            ),
+            **{field: value},
+        )
+
+
+def test_public_webrtc_base_url_accepts_reverse_proxy_path_prefix() -> None:
+    """WHEP 可部署在反向代理子路径下，而 Control API 仍固定为主机根路径。"""
+
+    settings = Settings(
+        database_url=SecretStr("postgresql+psycopg://sop_vision:sop_vision@localhost/sop_vision"),
+        mediamtx_api_url="https://mediamtx.internal:9997/",
+        public_webrtc_base_url="https://vision.example/media/webrtc/",
+    )
+
+    assert settings.mediamtx_api_url.endswith("/")
+    assert settings.public_webrtc_base_url.endswith("/media/webrtc/")

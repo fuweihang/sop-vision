@@ -20,6 +20,7 @@ from pydantic import (
 )
 
 from app.core.http import CanonicalUUID4
+from app.modules.stream_gateway.ports import SourceRuntimeErrorCode, SourceRuntimeStatus
 
 # 契约 example 只使用 RFC 5737 文档网段、example.invalid 域名和明确的测试凭据。固定 ID 与
 # 时间让连续生成 OpenAPI 时字节稳定，也避免开发者误把真实 Camera 数据复制进生成物。
@@ -70,23 +71,6 @@ class CameraStatus(StrEnum):
     ONLINE = "ONLINE"
     OFFLINE = "OFFLINE"
     DEGRADED = "DEGRADED"
-
-
-class CameraSourceStatus(StrEnum):
-    """Source 只公开在线/离线二态，不把媒体服务内部状态泄漏给前端。"""
-
-    ONLINE = "ONLINE"
-    OFFLINE = "OFFLINE"
-
-
-class CameraSourceErrorCode(StrEnum):
-    """状态投影允许公开的稳定离线原因。"""
-
-    PATH_NOT_FOUND = "MTX_PATH_NOT_FOUND"
-    PATH_NOT_AVAILABLE = "MTX_PATH_NOT_AVAILABLE"
-    PATH_OFFLINE = "MTX_PATH_OFFLINE"
-    CONTROL_API_UNAVAILABLE = "MTX_CONTROL_API_UNAVAILABLE"
-    CONTROL_API_INVALID_RESPONSE = "MTX_CONTROL_API_INVALID_RESPONSE"
 
 
 class PlaybackProtocol(StrEnum):
@@ -230,9 +214,9 @@ class CameraSourceDetail(_ResponseModel):
     url_suffix: str
     rtsp_url: str
     is_default_preview: bool
-    status: CameraSourceStatus
+    status: SourceRuntimeStatus
     last_checked_at: AwareDatetime
-    error: CameraSourceErrorCode | None
+    error: SourceRuntimeErrorCode | None
     whep_url: str | None
 
 
@@ -316,7 +300,7 @@ class DefaultPreviewSourceSummary(_ResponseModel):
 
     source_id: UUID4
     name: str
-    status: CameraSourceStatus
+    status: SourceRuntimeStatus
     last_checked_at: AwareDatetime
     whep_url: str | None
 

@@ -17,7 +17,7 @@ from app.core.http import (
 )
 from app.modules.cameras.api.error_handlers import install_camera_exception_handlers
 from app.modules.cameras.api.router import router as cameras_router
-from app.modules.stream_gateway.services.mediamtx import MediaMTXClient
+from app.modules.stream_gateway.services.mediamtx import MediaMTXAdapter
 
 DatabaseRuntimeFactory = Callable[[Settings], DatabaseRuntime]
 # FastAPI lifespan 接收应用实例，并返回由框架进入/退出的异步上下文管理器。
@@ -44,13 +44,15 @@ def create_lifespan(
             stack.push_async_callback(database_runtime.dispose)
             application.state.database_runtime = database_runtime
 
-            # MediaMTX 客户端复用现有应用级生命周期，并在数据库 Runtime 之前关闭。
-            client = MediaMTXClient(
-                base_url=settings.mediamtx_api_url,
-                timeout=settings.mediamtx_api_timeout,
+            # Adapter 持有唯一的共享 HTTP Client，并以框架无关 Port 身份进入 app.state。
+            # 后续 Cameras Service 只通过 dependency 获取 Port，不会接触 httpx 或具体实现。
+            stream_gateway = MediaMTXAdapter(
+                control_api_url=settings.mediamtx_api_url,
+                request_timeout=settings.mediamtx_api_timeout,
+                public_webrtc_base_url=settings.public_webrtc_base_url,
             )
-            stack.push_async_callback(client.close)
-            application.state.stream_gateway_mediamtx_client = client
+            stack.push_async_callback(stream_gateway.close)
+            application.state.stream_gateway = stream_gateway
             yield
 
     return lifespan

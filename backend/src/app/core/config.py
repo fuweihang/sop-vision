@@ -2,6 +2,7 @@
 
 from functools import lru_cache
 from typing import Annotated, Any
+from urllib.parse import SplitResult, urlsplit
 
 from pydantic import AfterValidator, BeforeValidator, Field, SecretStr
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
@@ -41,6 +42,48 @@ def validate_database_url(value: SecretStr) -> SecretStr:
 DatabaseUrl = Annotated[SecretStr, AfterValidator(validate_database_url)]
 
 
+def _split_http_base_url(value: str, *, setting_name: str) -> SplitResult:
+    """解析部署基础地址，并把所有失败压缩为不回显输入值的配置错误。"""
+
+    if not isinstance(value, str) or not value or value.strip() != value:
+        raise ValueError(f"{setting_name} 必须是绝对 HTTP(S) URL")
+    try:
+        parsed = urlsplit(value)
+        # 访问 hostname/port 会额外触发 IPv6 括号和端口范围校验，不能只检查 netloc 文本。
+        hostname = parsed.hostname
+        _ = parsed.port
+    except ValueError:
+        raise ValueError(f"{setting_name} 必须是有效的绝对 HTTP(S) URL") from None
+    if parsed.scheme not in {"http", "https"} or not parsed.netloc or not hostname:
+        raise ValueError(f"{setting_name} 必须是绝对 HTTP(S) URL")
+    if parsed.username is not None or parsed.password is not None:
+        raise ValueError(f"{setting_name} 不能包含凭据")
+    # 即使 query/fragment 为空，显式的 ?/# 分隔符也没有基础地址语义，因此一并拒绝。
+    if "?" in value or "#" in value:
+        raise ValueError(f"{setting_name} 不能包含 query 或 fragment")
+    return parsed
+
+
+def validate_mediamtx_api_url(value: str) -> str:
+    """Control API 固定挂载在主机根路径，禁止隐式路径前缀改变锁定端点。"""
+
+    parsed = _split_http_base_url(value, setting_name="MEDIAMTX_API_URL")
+    if parsed.path not in {"", "/"}:
+        raise ValueError("MEDIAMTX_API_URL 不能包含路径前缀")
+    return value
+
+
+def validate_public_webrtc_base_url(value: str) -> str:
+    """公开 WHEP 地址允许反向代理路径前缀，但禁止凭据和 URL 参数。"""
+
+    _split_http_base_url(value, setting_name="PUBLIC_WEBRTC_BASE_URL")
+    return value
+
+
+MediaMTXApiUrl = Annotated[str, AfterValidator(validate_mediamtx_api_url)]
+PublicWebRTCBaseUrl = Annotated[str, AfterValidator(validate_public_webrtc_base_url)]
+
+
 class Settings(BaseSettings):
     """从进程环境读取 Backend 配置；DATABASE_URL 必须由部署环境显式提供。"""
 
@@ -49,6 +92,8 @@ class Settings(BaseSettings):
         extra="ignore",
         # Pydantic 默认会在校验异常中附带 input_value；数据库配置必须关闭该行为。
         hide_input_in_errors=True,
+        # 部署默认值也必须经过同一校验，避免后续修改默认地址时绕过启动门禁。
+        validate_default=True,
     )
 
     app_name: str = "SOP Vision 后端"
@@ -61,9 +106,9 @@ class Settings(BaseSettings):
     database_pool_recycle: int = Field(default=1800, ge=-1)
     database_connect_timeout: int = Field(default=10, ge=1)
     database_echo: bool = False
-    mediamtx_api_url: str = "http://mediamtx:9997"
+    mediamtx_api_url: MediaMTXApiUrl = "http://mediamtx:9997"
     mediamtx_api_timeout: float = Field(default=5.0, gt=0)
-    public_webrtc_base_url: str = "http://localhost:8889"
+    public_webrtc_base_url: PublicWebRTCBaseUrl = "http://localhost:8889"
     backend_cors_origins: CommaSeparatedList = Field(
         default_factory=lambda: ["http://localhost:8000"]
     )

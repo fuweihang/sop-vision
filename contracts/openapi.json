@@ -300,7 +300,7 @@
           "error": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/CameraSourceErrorCode"
+                "$ref": "#/components/schemas/SourceRuntimeErrorCode"
               },
               {
                 "type": "null"
@@ -330,7 +330,7 @@
             "type": "string"
           },
           "status": {
-            "$ref": "#/components/schemas/CameraSourceStatus"
+            "$ref": "#/components/schemas/SourceRuntimeStatus"
           },
           "url_suffix": {
             "title": "Url Suffix",
@@ -361,27 +361,6 @@
         ],
         "title": "CameraSourceDetail",
         "type": "object"
-      },
-      "CameraSourceErrorCode": {
-        "description": "状态投影允许公开的稳定离线原因。",
-        "enum": [
-          "MTX_PATH_NOT_FOUND",
-          "MTX_PATH_NOT_AVAILABLE",
-          "MTX_PATH_OFFLINE",
-          "MTX_CONTROL_API_UNAVAILABLE",
-          "MTX_CONTROL_API_INVALID_RESPONSE"
-        ],
-        "title": "CameraSourceErrorCode",
-        "type": "string"
-      },
-      "CameraSourceStatus": {
-        "description": "Source 只公开在线/离线二态，不把媒体服务内部状态泄漏给前端。",
-        "enum": [
-          "ONLINE",
-          "OFFLINE"
-        ],
-        "title": "CameraSourceStatus",
-        "type": "string"
       },
       "CameraSourceUpdateRequest": {
         "additionalProperties": false,
@@ -629,7 +608,7 @@
             "type": "string"
           },
           "status": {
-            "$ref": "#/components/schemas/CameraSourceStatus"
+            "$ref": "#/components/schemas/SourceRuntimeStatus"
           },
           "whep_url": {
             "anyOf": [
@@ -841,6 +820,27 @@
         ],
         "title": "SetDefaultPreviewSourceRequest",
         "type": "object"
+      },
+      "SourceRuntimeErrorCode": {
+        "description": "状态投影允许进入 Cameras API 的稳定离线原因。",
+        "enum": [
+          "MTX_PATH_NOT_FOUND",
+          "MTX_PATH_NOT_AVAILABLE",
+          "MTX_PATH_OFFLINE",
+          "MTX_CONTROL_API_UNAVAILABLE",
+          "MTX_CONTROL_API_INVALID_RESPONSE"
+        ],
+        "title": "SourceRuntimeErrorCode",
+        "type": "string"
+      },
+      "SourceRuntimeStatus": {
+        "description": "Source 对外只暴露在线/离线二态。",
+        "enum": [
+          "ONLINE",
+          "OFFLINE"
+        ],
+        "title": "SourceRuntimeStatus",
+        "type": "string"
       }
     }
   },

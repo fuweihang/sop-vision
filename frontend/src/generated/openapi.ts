@@ -297,7 +297,7 @@ export interface components {
          * @description CameraDetail 内唯一允许包含连接后缀和完整 RTSP URL 的 Source 形状。
          */
         CameraSourceDetail: {
-            error: components["schemas"]["CameraSourceErrorCode"] | null;
+            error: components["schemas"]["SourceRuntimeErrorCode"] | null;
             /** Is Default Preview */
             is_default_preview: boolean;
             /**
@@ -314,24 +314,12 @@ export interface components {
              * Format: uuid4
              */
             source_id: string;
-            status: components["schemas"]["CameraSourceStatus"];
+            status: components["schemas"]["SourceRuntimeStatus"];
             /** Url Suffix */
             url_suffix: string;
             /** Whep Url */
             whep_url: string | null;
         };
-        /**
-         * CameraSourceErrorCode
-         * @description 状态投影允许公开的稳定离线原因。
-         * @enum {string}
-         */
-        CameraSourceErrorCode: "MTX_PATH_NOT_FOUND" | "MTX_PATH_NOT_AVAILABLE" | "MTX_PATH_OFFLINE" | "MTX_CONTROL_API_UNAVAILABLE" | "MTX_CONTROL_API_INVALID_RESPONSE";
-        /**
-         * CameraSourceStatus
-         * @description Source 只公开在线/离线二态，不把媒体服务内部状态泄漏给前端。
-         * @enum {string}
-         */
-        CameraSourceStatus: "ONLINE" | "OFFLINE";
         /**
          * CameraSourceUpdateRequest
          * @description PUT 中的一路 Source；无 ID 表示新增，有 ID 表示保留并完整更新。
@@ -472,7 +460,7 @@ export interface components {
              * Format: uuid4
              */
             source_id: string;
-            status: components["schemas"]["CameraSourceStatus"];
+            status: components["schemas"]["SourceRuntimeStatus"];
             /** Whep Url */
             whep_url: string | null;
         };
@@ -582,6 +570,18 @@ export interface components {
              */
             source_id: string;
         };
+        /**
+         * SourceRuntimeErrorCode
+         * @description 状态投影允许进入 Cameras API 的稳定离线原因。
+         * @enum {string}
+         */
+        SourceRuntimeErrorCode: "MTX_PATH_NOT_FOUND" | "MTX_PATH_NOT_AVAILABLE" | "MTX_PATH_OFFLINE" | "MTX_CONTROL_API_UNAVAILABLE" | "MTX_CONTROL_API_INVALID_RESPONSE";
+        /**
+         * SourceRuntimeStatus
+         * @description Source 对外只暴露在线/离线二态。
+         * @enum {string}
+         */
+        SourceRuntimeStatus: "ONLINE" | "OFFLINE";
     };
     responses: never;
     parameters: never;
