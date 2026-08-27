@@ -1,0 +1,3 @@
+interface:
+  display_name: "方案拆分"
+  short_description: "将过大的实施方案拆分为可独立交付的任务"
