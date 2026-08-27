@@ -5,8 +5,9 @@
 
 ## 项目现状
 
-- Cameras Foundation 与 MediaMTX 契约已完成；后者已锁定 v1.20.1、受控协议输入和媒体 Port。
-- Cameras CRUD、Source 状态、WHEP 预览和删除仍只有目标契约，没有业务实现。
+- Cameras Foundation、MediaMTX 契约和 Stream Gateway Adapter 已完成；当前已具备 v1.20.1
+  Control API 的完整快照、Path 读写、Source 状态投影和 WHEP URL 构造。
+- Cameras CRUD、把 Source 状态接入 Camera 响应、WHEP 预览和删除仍只有目标契约，没有业务实现。
 - Frontend 已具备 App Shell、路由、通用页面状态、API Client 与 MSW；业务页面仍是骨架。
 - Compose 已包含 Redis，但 Backend 没有 Redis 客户端；Detector、Detection Tasks、
   WebSocket 和实时检测链路均未实现。
@@ -25,18 +26,18 @@ MSW 使用同一契约；真实媒体恢复行为仍属于 Cameras 07 切片。
 
 ## 文档职责
 
-| 文档                                                         | 性质        | 负责内容                                    |
-| ------------------------------------------------------------ | ----------- | ------------------------------------------- |
-| [总体架构](vision-platform-architecture.md)                  | 当前 + 目标 | 服务边界、数据职责、已实现与未实现链路      |
-| [产品范围](product-requirements.md)                          | 产品基线    | 产品对象、计划能力、范围外事项和未决问题    |
-| [Cameras MVP](cameras-mvp/README.md)                         | 冻结契约    | Camera 第一阶段范围、状态和功能切片         |
-| [Cameras Foundation](cameras-mvp/01-foundation/README.md)    | 已实现约束  | 数据、事务、HTTP、敏感数据和跨端基础        |
-| [MediaMTX 契约](cameras-mvp/02-mediamtx-contract/README.md)  | 已实现约束  | 外部协议、媒体 Port、地址和部署边界         |
-| [Design System](design-system/README.md)                     | 设计规范    | 当前 Shell 与计划业务页面的 UI 规则         |
-| [实时检测数据设计](realtime-detection-design.md)             | 目标设计    | Detector、Redis、WebSocket 的通信语义与约束 |
-| [交互原型](prototype/v1.0.html)                              | 参考产物    | 早期布局与业务流程，不代表当前实现或 API    |
+| 文档                                                        | 性质        | 负责内容                                    |
+| ----------------------------------------------------------- | ----------- | ------------------------------------------- |
+| [总体架构](vision-platform-architecture.md)                 | 当前 + 目标 | 服务边界、数据职责、已实现与未实现链路      |
+| [产品范围](product-requirements.md)                         | 产品基线    | 产品对象、计划能力、范围外事项和未决问题    |
+| [Cameras MVP](cameras-mvp/README.md)                        | 冻结契约    | Camera 第一阶段范围、状态和功能切片         |
+| [Cameras Foundation](cameras-mvp/01-foundation/README.md)   | 已实现约束  | 数据、事务、HTTP、敏感数据和跨端基础        |
+| [MediaMTX 契约](cameras-mvp/02-mediamtx-contract/README.md) | 已实现约束  | 外部协议、媒体 Port、地址和部署边界         |
+| [Design System](design-system/README.md)                    | 设计规范    | 当前 Shell 与计划业务页面的 UI 规则         |
+| [实时检测数据设计](realtime-detection-design.md)            | 目标设计    | Detector、Redis、WebSocket 的通信语义与约束 |
+| [交互原型](prototype/v1.0.html)                             | 参考产物    | 早期布局与业务流程，不代表当前实现或 API    |
 
-`cameras-mvp/03–11` 是尚未实现的功能契约，不是完成记录。`prototype/` 和架构图是设计证据，
+`cameras-mvp/04–11` 是尚未实现的功能契约，不是完成记录。`prototype/` 和架构图是设计证据，
 不得覆盖运行时代码、`components.json`、OpenAPI 或数据库迁移中的事实。
 
 ## 事实优先级

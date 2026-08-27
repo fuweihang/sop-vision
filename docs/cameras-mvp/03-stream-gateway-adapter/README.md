@@ -31,8 +31,8 @@ Application Service（后续切片）
 - `urls.py` 负责发送给 MediaMTX 的 RTSP 组件编码和公开 WHEP URL 拼接。
 
 `MediaMTXAdapter` 已由应用 lifespan 创建并关闭，FastAPI dependency 返回 `StreamGatewayPort` 而非
-具体实现。当前 Camera handler 仍未消费该 dependency；请求级协调由 04–10 的 Cameras Application
-切片实现。
+具体实现。当前 Camera handler 仍未消费该 dependency；04 负责共享 Desired State 构造和周期对账，
+05–10 在各自请求用例中完成媒体调用与状态处理。
 
 ## Port 契约
 

@@ -15,8 +15,8 @@ SOP Vision 是企业内部视觉检测平台，围绕两类核心资源工作：
 
 ## 当前交付边界
 
-已交付的是工程运行栈、Backend/Frontend 公共基础、Cameras Foundation 和 MediaMTX 外部协议
-契约。用户尚不能通过真实 Backend 完成 Camera CRUD，也不能创建或运行 Detection Task。
+已交付的是工程运行栈、Backend/Frontend 公共基础、Cameras Foundation、MediaMTX 外部协议和
+Stream Gateway Adapter。用户尚不能通过真实 Backend 完成 Camera CRUD，也不能创建或运行 Detection Task。
 `/cameras` 与 `/tasks` 路由已存在，但只用于验证 App Shell 和页面层级。
 
 ## Cameras 第一阶段
