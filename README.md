@@ -1,8 +1,8 @@
 # SOP Vision
 
 SOP Vision 是面向 IP Camera 的视觉分析平台。当前仓库已经完成可运行的基础设施、
-FastAPI/React 工程骨架、Cameras Foundation、MediaMTX v1.20.1 契约和 Stream Gateway Adapter；
-Camera 业务 handler、周期对账、WHEP 播放器和 Detector 业务仍未实现。
+FastAPI/React 工程骨架，以及 Camera 配置、MediaMTX 适配和后台媒体对账所需的公共能力；
+Camera 业务 handler、WHEP 播放器和 Detector 业务仍未实现。
 
 ## 当前状态
 
@@ -13,7 +13,8 @@ Camera 业务 handler、周期对账、WHEP 播放器和 Detector 业务仍未�
 | 健康检查            | 可用     | `GET /api/v1/health/live` 与 `GET /api/v1/health/ready`                  |
 | Cameras Foundation  | 已完成   | 领域聚合、Repository/UoW、关系模型、OpenAPI、前端 Client/Mock 和 CI 门禁 |
 | MediaMTX 媒体边界   | 已完成   | v1.20.1 协议、Path 读写、完整快照、状态投影和真实 Adapter 门禁           |
-| Cameras 业务切片    | 未实现   | 七个目标路由已注册用于冻结契约，但 handler 仍是占位，不能作为可用 API    |
+| 媒体后台对账        | 已完成   | 启动/周期恢复数据库 Source Path，并清理受管孤儿 Path                     |
+| Cameras HTTP 业务   | 未实现   | 七个目标路由已注册用于冻结契约，但 handler 仍是占位，不能作为可用 API    |
 | Web UI              | 部分可用 | App Shell、路由、主题和通用页面状态已完成；Cameras/Tasks 是页面骨架      |
 | Detector 与实时检测 | 未实现   | `detector/` 仅为预留目录；Backend 尚未接入 Redis 客户端或 WebSocket      |
 
@@ -27,7 +28,7 @@ flowchart LR
     MTX -->|WebRTC / WHEP| FE[React Frontend]
     FE -->|REST| API[FastAPI]
     API --> PG[(PostgreSQL)]
-    API -->|已实现 Control API Adapter| MTX
+    API -->|已实现 Adapter 与周期对账| MTX
     API -. "尚未接入" .-> REDIS[(Redis)]
     DET[Detector 尚未实现] -.-> REDIS
 ```

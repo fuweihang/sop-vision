@@ -8,7 +8,7 @@
 
 `app/modules/stream_gateway` 是 Backend 访问 MediaMTX 的唯一边界。它拥有外部协议适配和 Source
 运行态投影，不拥有 Camera 配置、数据库事务、Camera 聚合或 HTTP Problem 转换。PostgreSQL 仍是
-Desired State 的唯一事实源，MediaMTX 配置与运行态都可以丢失并由后续对账重建。
+Desired State 的唯一事实源，MediaMTX 配置与运行态都可以丢失并由后台对账重建。
 
 ## 当前架构
 
@@ -31,8 +31,8 @@ Application Service（后续切片）
 - `urls.py` 负责发送给 MediaMTX 的 RTSP 组件编码和公开 WHEP URL 拼接。
 
 `MediaMTXAdapter` 已由应用 lifespan 创建并关闭，FastAPI dependency 返回 `StreamGatewayPort` 而非
-具体实现。当前 Camera handler 仍未消费该 dependency；04 负责共享 Desired State 构造和周期对账，
-05–10 在各自请求用例中完成媒体调用与状态处理。
+具体实现。当前 Camera handler 仍未消费该 dependency；04 已负责共享 Desired State 构造和周期
+对账，05–10 在各自请求用例中完成媒体调用与状态处理。
 
 ## Port 契约
 
@@ -127,9 +127,9 @@ Adapter 只记录一次 I/O 的汇总日志，包括稳定 operation/outcome、�
 UUID 和 trace ID。快照不逐 Path 记录日志，纯投影函数不记录日志；Source 离线原因汇总留给消费
 投影的 Cameras Application。
 
-## 后续接入约束
+## 接入约束
 
-- 04 使用配置快照实现启动和周期对账，并在轮次之间负责重试与退避。
+- 04 已使用配置快照实现启动和周期对账，并在轮次之间负责重试与退避。
 - 05–10 通过 `StreamGatewayPort` 完成提交后媒体同步、请求级运行态投影和播放准备。
 - Application Service 负责把 Port 错误转换为 API 降级或 HTTP Problem；Adapter 不依赖 FastAPI。
 - MediaMTX 版本升级必须同步更新受控协议、Fixture 和真实容器门禁，不能在运行时猜测字段别名。

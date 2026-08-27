@@ -1,6 +1,6 @@
 # Cameras MVP
 
-> 当前状态：Foundation、MediaMTX 契约和 Stream Gateway Adapter 已完成；04–11 尚未实现。
+> 当前状态：Foundation、MediaMTX 契约、Stream Gateway Adapter 和媒体对账已完成；05–11 尚未实现。
 > REST 前缀：`/api/v1`。
 
 本目录冻结 Cameras 第一阶段的产品边界、切片依赖和跨端契约。PostgreSQL 保存 Camera Desired
@@ -14,7 +14,7 @@ State；MediaMTX 保存可丢失的媒体 Runtime State。配置事务与媒体�
 | 01  | [Foundation](01-foundation/README.md)                         | 已完成   | 公共前置                                                       |
 | 02  | [MediaMTX 契约](02-mediamtx-contract/README.md)               | 已完成   | 无新路由；已冻结外部协议与部署边界                             |
 | 03  | [Stream Gateway Adapter](03-stream-gateway-adapter/README.md) | 已完成   | 无新路由；实现 Path 读写和状态投影                             |
-| 04  | [媒体对账](04-media-reconciliation/README.md)                 | 未实现   | 无新路由；恢复 PostgreSQL → MediaMTX Desired State             |
+| 04  | [媒体对账](04-media-reconciliation/README.md)                 | 已完成   | 无新路由；恢复 PostgreSQL → MediaMTX Desired State             |
 | 05  | [创建](05-camera-create/README.md)                            | 未实现   | `POST /cameras`（`createCamera`）                              |
 | 06  | [详情](06-camera-detail/README.md)                            | 未实现   | `GET /cameras/{camera_id}`（`getCamera`）                      |
 | 07  | [播放准备](07-source-playback/README.md)                      | 未实现   | `POST /camera-sources/{source_id}/playback`                    |
@@ -23,7 +23,7 @@ State；MediaMTX 保存可丢失的媒体 Runtime State。配置事务与媒体�
 | 10  | [删除](10-camera-delete/README.md)                            | 未实现   | `DELETE /cameras/{camera_id}`（`deleteCamera`）                |
 | 11  | [发布门禁](11-release-gates/README.md)                        | 未实现   | 无新路由；端到端故障、安全和容量验收                           |
 
-顺序表达的是完成依赖，不要求把同一切片的 Backend 与 Frontend 严格串行开发。02–04 先建立真实媒体
+顺序表达的是完成依赖，不要求把同一切片的 Backend 与 Frontend 严格串行开发。02–04 已建立真实媒体
 边界：04 提供共享 Desired State 构造和后台恢复，但不替 Camera handler 安装即时同步。05、09、10
 在各自数据库提交后调用媒体 Port；11 只汇总跨切片发布门禁，不接收本应由前序切片完成的遗留实现。
 

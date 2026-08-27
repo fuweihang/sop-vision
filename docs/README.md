@@ -5,8 +5,8 @@
 
 ## 项目现状
 
-- Cameras Foundation、MediaMTX 契约和 Stream Gateway Adapter 已完成；当前已具备 v1.20.1
-  Control API 的完整快照、Path 读写、Source 状态投影和 WHEP URL 构造。
+- Cameras Foundation、MediaMTX Adapter 和后台媒体对账已完成；当前已具备 v1.20.1 Control API
+  的完整快照、Path 读写、Source 状态投影、WHEP URL 构造和 PostgreSQL Source Path 恢复。
 - Cameras CRUD、把 Source 状态接入 Camera 响应、WHEP 预览和删除仍只有目标契约，没有业务实现。
 - Frontend 已具备 App Shell、路由、通用页面状态、API Client 与 MSW；业务页面仍是骨架。
 - Compose 已包含 Redis，但 Backend 没有 Redis 客户端；Detector、Detection Tasks、
@@ -14,7 +14,7 @@
 
 “路由已出现在 OpenAPI”只表示当前占位契约可供跨端生成，不表示对应 handler 可用。Playback 已
 按准备/恢复语义冻结为 `POST prepareCameraSourcePlayback`，Router、OpenAPI、Frontend Client 和
-MSW 使用同一契约；真实媒体恢复行为仍属于 Cameras 07 切片。
+MSW 使用同一契约；这个公共 Playback handler 的按需恢复行为仍属于 Cameras 07 切片。
 
 ## 阅读顺序
 
@@ -33,11 +33,12 @@ MSW 使用同一契约；真实媒体恢复行为仍属于 Cameras 07 切片。
 | [Cameras MVP](cameras-mvp/README.md)                        | 冻结契约    | Camera 第一阶段范围、状态和功能切片         |
 | [Cameras Foundation](cameras-mvp/01-foundation/README.md)   | 已实现约束  | 数据、事务、HTTP、敏感数据和跨端基础        |
 | [MediaMTX 契约](cameras-mvp/02-mediamtx-contract/README.md) | 已实现约束  | 外部协议、媒体 Port、地址和部署边界         |
+| [媒体对账](cameras-mvp/04-media-reconciliation/README.md)   | 已实现约束  | 后台恢复、并发锁、退避和资源生命周期        |
 | [Design System](design-system/README.md)                    | 设计规范    | 当前 Shell 与计划业务页面的 UI 规则         |
 | [实时检测数据设计](realtime-detection-design.md)            | 目标设计    | Detector、Redis、WebSocket 的通信语义与约束 |
 | [交互原型](prototype/v1.0.html)                             | 参考产物    | 早期布局与业务流程，不代表当前实现或 API    |
 
-`cameras-mvp/04–11` 是尚未实现的功能契约，不是完成记录。`prototype/` 和架构图是设计证据，
+`cameras-mvp/05–11` 是尚未实现的功能契约，不是完成记录。`prototype/` 和架构图是设计证据，
 不得覆盖运行时代码、`components.json`、OpenAPI 或数据库迁移中的事实。
 
 ## 事实优先级

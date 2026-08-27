@@ -22,20 +22,20 @@ flowchart LR
     MTX -->|WebRTC / WHEP| BROWSER[Browser]
     BROWSER -->|REST| API[FastAPI]
     API -->|SQLAlchemy async| PG[(PostgreSQL)]
-    API -->|已实现 Control API Adapter| MTX
+    API -->|已实现 Adapter 与周期对账| MTX
     COMPOSE[Docker Compose] --> REDIS[(Redis)]
     API -. "未接入" .-> REDIS
     DET[Detector 预留目录] -. "未实现" .-> REDIS
 ```
 
-| 组件       | 当前实现                                                            | 当前限制                                                          |
-| ---------- | ------------------------------------------------------------------- | ----------------------------------------------------------------- |
-| PostgreSQL | Compose 服务、连接池、迁移、Camera 关系模型                         | 业务 handler 尚未读写 Camera                                      |
-| Redis      | Compose 服务、AOF 与健康检查                                        | Backend Settings/Client、消息协议和消费者均未实现                 |
-| MediaMTX   | RTSP、WHEP、锁定 v1.20.1 Control API 和 Backend Adapter             | 尚无周期对账、Camera handler 和浏览器播放器                       |
-| FastAPI    | 公共 HTTP/数据库基础、健康检查、Camera Foundation、MediaMTX Adapter | Cameras 路由是占位；无对账、鉴权、Redis、WebSocket、Detector 控制 |
-| Frontend   | App Shell、文件路由、API Client/类型、MSW 和通用状态                | Cameras/Tasks 只有页面骨架，无业务数据和播放器                    |
-| Detector   | 空的预留目录                                                        | 无进程、协议、模型或 Compose 服务                                 |
+| 组件       | 当前实现                                                           | 当前限制                                                    |
+| ---------- | ------------------------------------------------------------------ | ----------------------------------------------------------- |
+| PostgreSQL | Compose 服务、连接池、迁移、Camera 关系模型                        | Camera HTTP handler 尚未读写聚合                            |
+| Redis      | Compose 服务、AOF 与健康检查                                       | Backend Settings/Client、消息协议和消费者均未实现           |
+| MediaMTX   | RTSP、WHEP、锁定 v1.20.1 Adapter，以及由数据库恢复 Path 的后台对账 | 尚无 Camera 即时同步 handler 和浏览器播放器                 |
+| FastAPI    | 公共基础、Camera Foundation、MediaMTX Adapter、启动/周期对账       | Cameras 路由是占位；无鉴权、Redis、WebSocket、Detector 控制 |
+| Frontend   | App Shell、文件路由、API Client/类型、MSW 和通用状态               | Cameras/Tasks 只有页面骨架，无业务数据和播放器              |
+| Detector   | 空的预留目录                                                       | 无进程、协议、模型或 Compose 服务                           |
 
 [目标架构概念图](vision-platform-architecture.png) 描述完整演进方向，其中 Worker、gRPC、
 WebSocket、Redis 数据链路和大部分业务模块尚未落地。
@@ -58,9 +58,10 @@ SQLAlchemy Repository / Unit of Work
 - `app/core/http` 提供 Trace ID、Problem Details、严格 UUID、校验映射和 OpenAPI 公共机制。
 - `app/core/database` 提供 AsyncEngine、Session factory 和生命周期管理，不拥有业务表。
 - `app/api/health.py` 提供应用存活与 PostgreSQL 就绪探针，不归属于业务模块或 MediaMTX 适配。
-- `app/modules/cameras` 拥有 Camera 聚合、持久化端口/适配器和 HTTP 契约。
+- `app/modules/cameras` 拥有 Camera 聚合、持久化端口/适配器、HTTP 契约、媒体 Desired State 构造和
+  后台对账。
 - `app/modules/stream_gateway` 只拥有 MediaMTX 运行时适配；Port、URL 规则、HTTP Adapter、完整
-  配置/运行态快照和 Source 状态投影已经实现，不拥有 Camera 配置或周期对账。
+  配置/运行态快照和 Source 状态投影已经实现，不拥有 Camera 配置或对账调度。
 - `app/factory.py` 负责资源生命周期和模块装配，OpenAPI 导出复用同一棵真实路由树。
 
 不建立 Generic Repository、全能 Base Service 或第二个 Backend 工程。业务规则留在领域或
@@ -112,10 +113,16 @@ Compose 已提供 Redis，但应用尚未接入。通信语义见
 
 ### MediaMTX
 
-MediaMTX 是媒体路由层，不拥有 Camera 业务配置、用户权限或算法逻辑。当前 Adapter 已能读取完整
-配置/运行态快照，并能通过 Control API 覆盖或删除以 `source_id` 命名的 Path。04 将从 PostgreSQL
-读取 Desired State，在启动、周期和 MediaMTX 内存状态丢失后恢复合法 Path，并清理数据库已不存在
-的受管孤儿 Path；05、09、10 分别负责各自数据库提交后的即时媒体调用。外部操作不进入数据库事务。
+MediaMTX 是媒体路由层，不拥有 Camera 业务配置、用户权限或算法逻辑。Adapter 能读取完整配置/
+运行态快照，并能通过 Control API 覆盖或删除以 `source_id` 命名的 Path。后台 Reconciler 已从
+PostgreSQL 读取 Desired State，在启动、周期和 MediaMTX 内存状态丢失后恢复合法 Path，并清理
+数据库已不存在的受管孤儿 Path；05、09、10 仍需分别实现数据库提交后的即时媒体调用。外部操作
+不进入数据库事务。
+
+每轮对账使用 PostgreSQL session advisory lock 保证多实例互斥。持锁连接只在一条只读
+`LEFT JOIN` 查询期间开启短事务，远端 I/O 不持有数据库事务；配置快照或数据库聚合不完整时整轮
+零写入。写入按 Source ID 固定顺序先恢复缺失/漂移 Path，再清理受管孤儿 Path，单项失败不阻断
+其余项。连续失败按配置上限指数退避，锁竞争按正常周期重试。
 
 列表和详情只观察一次 Path 快照，严格在线时返回 WHEP 地址，浏览器正常播放直接连接 MediaMTX。
 公共 Playback 操作 `POST /api/v1/camera-sources/{source_id}/playback`
@@ -162,7 +169,7 @@ Detector 拉流目标支持 Direct Camera 与 MediaMTX 两种模式，但具体�
 | Detector   | 对应检测停止；MediaMTX 视频仍可播放           |
 
 Backend readiness 已只检查 PostgreSQL，不再因 MediaMTX 故障将仍可用的配置读写从部署层摘除。
-媒体状态投影已经在 03 完成；重启对账和 Playback 自愈仍需分别在 04 和 07 通过测试与日志验证。
+媒体状态投影和重启对账已经分别在 03、04 完成；Playback 自愈仍需在 07 实现并验证。
 
 ## 部署与配置约束
 

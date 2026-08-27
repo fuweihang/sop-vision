@@ -31,7 +31,7 @@
 受控输入、真实协议测试和 03 Adapter Fixture。
 
 Control API 修改的是 MediaMTX 内存配置，不写回 `mediamtx.yml`。PostgreSQL 因而仍是 Desired
-State 唯一事实源，重启恢复由[媒体对账](../04-media-reconciliation/README.md)负责。
+State 唯一事实源，重启恢复由已实现的 [媒体对账](../04-media-reconciliation/README.md)负责。
 
 ## Path 与上游配置
 

@@ -1,8 +1,8 @@
 # SOP Vision Backend
 
-Backend 是平台的 FastAPI 控制面。当前已完成公共 HTTP/数据库基础、Camera 领域与持久化层，
-并冻结 MediaMTX v1.20.1 协议与 Port；Camera 业务 handler、动态媒体映射、Redis 和 Detector
-控制尚未实现。
+Backend 是平台的 FastAPI 控制面。当前已完成公共 HTTP/数据库基础、Camera 领域与持久化层、
+MediaMTX v1.20.1 Adapter，以及 PostgreSQL 到 MediaMTX 的后台媒体对账；Camera 业务 handler、
+Redis 和 Detector 控制尚未实现。
 
 ## 当前能力
 
@@ -10,14 +10,15 @@ Backend 是平台的 FastAPI 控制面。当前已完成公共 HTTP/数据库基
 | ---------------------------- | ------ | --------------------------------------------- |
 | 存活检查                     | 可用   | `GET /api/v1/health/live`                     |
 | PostgreSQL 就绪检查          | 可用   | `GET /api/v1/health/ready`                    |
-| MediaMTX 协议与 Port         | 已冻结 | `contracts/mediamtx-openapi.json`、`ports.py` |
+| MediaMTX 协议与 Adapter      | 可用   | `contracts/mediamtx-openapi.json`、`ports.py` |
 | Camera 领域与持久化          | 可用   | `app/modules/cameras/domain`、`persistence`   |
+| 媒体后台对账                 | 可用   | `application/reconciliation.py`               |
 | Cameras HTTP 契约            | 已冻结 | 七个路由和 Schema 已进入 OpenAPI              |
 | Cameras HTTP 行为            | 未实现 | 七个 handler 当前仅抛出 `NotImplementedError` |
 | Redis / WebSocket / Detector | 未实现 | Compose 变量和目标设计不等于应用接入          |
 
 `/api/v1/health/ready` 当前只检查 PostgreSQL，不检查 MediaMTX 或 Redis。MediaMTX 不可用不会令
-配置 API 被部署层摘除；媒体依赖健康由后续状态投影和可观测性独立表达。
+配置 API 被部署层摘除；媒体故障由状态投影和脱敏对账日志独立表达。
 
 ## 环境要求
 
@@ -57,19 +58,21 @@ uv run --env-file .env.local uvicorn app.main:app \
 
 应用通过 Pydantic Settings 读取以下变量：
 
-| 环境变量                   | 默认值                  | 说明                                               |
-| -------------------------- | ----------------------- | -------------------------------------------------- |
-| `DATABASE_URL`             | 必填                    | 必须使用 `postgresql+psycopg://` 的 SQLAlchemy URL |
-| `DATABASE_POOL_SIZE`       | `5`                     | 常驻连接池大小                                     |
-| `DATABASE_MAX_OVERFLOW`    | `5`                     | 临时溢出连接数                                     |
-| `DATABASE_POOL_TIMEOUT`    | `30`                    | 获取连接最长等待秒数                               |
-| `DATABASE_POOL_RECYCLE`    | `1800`                  | 连接回收秒数；`-1` 表示禁用按时回收                |
-| `DATABASE_CONNECT_TIMEOUT` | `10`                    | 建立 PostgreSQL 连接超时秒数                       |
-| `DATABASE_ECHO`            | `false`                 | 是否输出 SQL；参数始终隐藏                         |
-| `MEDIAMTX_API_URL`         | `http://mediamtx:9997`  | MediaMTX Control API 地址                          |
-| `MEDIAMTX_API_TIMEOUT`     | `5`                     | Control API 请求超时秒数                           |
-| `PUBLIC_WEBRTC_BASE_URL`   | `http://localhost:8889` | 已预留给播放切片，当前 handler 尚未使用            |
-| `BACKEND_CORS_ORIGINS`     | `http://localhost:8000` | 允许的 Origin，多个值使用逗号分隔                  |
+| 环境变量                                   | 默认值                  | 说明                                               |
+| ------------------------------------------ | ----------------------- | -------------------------------------------------- |
+| `DATABASE_URL`                             | 必填                    | 必须使用 `postgresql+psycopg://` 的 SQLAlchemy URL |
+| `DATABASE_POOL_SIZE`                       | `5`                     | 常驻连接池大小                                     |
+| `DATABASE_MAX_OVERFLOW`                    | `5`                     | 临时溢出连接数                                     |
+| `DATABASE_POOL_TIMEOUT`                    | `30`                    | 获取连接最长等待秒数                               |
+| `DATABASE_POOL_RECYCLE`                    | `1800`                  | 连接回收秒数；`-1` 表示禁用按时回收                |
+| `DATABASE_CONNECT_TIMEOUT`                 | `10`                    | 建立 PostgreSQL 连接超时秒数                       |
+| `DATABASE_ECHO`                            | `false`                 | 是否输出 SQL；参数始终隐藏                         |
+| `MEDIAMTX_API_URL`                         | `http://mediamtx:9997`  | MediaMTX Control API 地址                          |
+| `MEDIAMTX_API_TIMEOUT`                     | `5`                     | Control API 请求超时秒数                           |
+| `PUBLIC_WEBRTC_BASE_URL`                   | `http://localhost:8889` | WHEP 公网基础地址；当前播放 handler 尚未使用       |
+| `MEDIA_RECONCILIATION_INTERVAL_SECONDS`    | `30`                    | 对账成功或锁竞争后的轮询间隔秒数                   |
+| `MEDIA_RECONCILIATION_MAX_BACKOFF_SECONDS` | `300`                   | 连续失败时指数退避的上限秒数                       |
+| `BACKEND_CORS_ORIGINS`                     | `http://localhost:8000` | 允许的 Origin，多个值使用逗号分隔                  |
 
 `BACKEND_PORT`、`BACKEND_LOG_LEVEL` 和 `UVICORN_LOG_LEVEL` 由 Compose/Uvicorn 读取，不属于
 应用 Settings。`REDIS_URL` 已在运行环境中预留，但当前代码不会读取它。
@@ -127,16 +130,21 @@ backend/
 │   └── modules/
 │       ├── cameras/
 │       │   ├── api/            # Schema、依赖、错误映射和占位 Router
-│       │   ├── application/    # 应用端口；业务 Service 尚未实现
+│       │   ├── application/    # 应用端口、媒体 Desired State 与后台对账
 │       │   ├── domain/         # 框架无关的 Camera 聚合和值对象
-│       │   └── persistence/    # SQLAlchemy Repository/UoW、Mapper 和巡检
-│       └── stream_gateway/     # MediaMTX Port、URL 规则与待实现 Adapter
+│       │   └── persistence/    # Repository/UoW、Mapper、巡检和对账锁/读取
+│       └── stream_gateway/     # MediaMTX Port、URL 规则、状态投影与 Adapter
 └── tests/                      # 结构与源码层级对应的测试
 ```
 
 `api` 拥有不属于具体业务模块的应用级 HTTP 入口；`core` 提供公共基础设施，不依赖业务模块；
 `cameras` 拥有 Camera 配置；`stream_gateway` 只拥有媒体运行时适配。
 不要建立平行 Backend、Generic Repository 或跨领域的全能 Service。
+
+应用 lifespan 在数据库 Runtime 和 MediaMTX Client 创建后启动媒体对账，不等待首轮完成。关闭时
+先取消并等待对账任务，再关闭 Client 和连接池。对账故障不改变 `/health/ready`：该探针仍只检查
+PostgreSQL，避免 MediaMTX 故障同时让配置控制面被摘除。详细规则见
+[媒体对账](../docs/cameras-mvp/04-media-reconciliation/README.md)。
 
 ## 质量检查
 

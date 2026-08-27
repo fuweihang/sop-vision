@@ -1,160 +1,103 @@
 # 04｜媒体 Desired State 对账
 
+> 状态：已完成。本文记录后台媒体恢复必须保持的当前行为与边界。
+>
 > 前置：[Foundation](../01-foundation/README.md)、[Stream Gateway Adapter](../03-stream-gateway-adapter/README.md)
 >
-> 交付：可复用的媒体 Desired State 构造、启动/周期对账和 MediaMTX 重启恢复；无新公共路由
+> 公共 API：无新增路由
 
-PostgreSQL 保存全部 CameraSource Desired State；MediaMTX Path 是可重建的 Runtime State。本切片
-负责后台恢复路径，不实现 Camera CRUD、Playback 或新的 HTTP handler。
+PostgreSQL 保存全部 CameraSource Desired State；MediaMTX Path 是可丢失、可重建的运行时配置。
+Backend 启动后立即在后台执行首轮对账，之后周期执行，用数据库恢复缺失或漂移的 Path，并清理
+数据库中已不存在的受管孤儿 Path。
 
-## 本切片负责什么
+## 职责与边界
 
-- 在 Cameras Application 中提供从最新 `Camera` 聚合构造 `DesiredSource` 的纯函数。04 的后台
-  对账使用它，05 创建、07 Playback 和 09 更新也必须复用它，避免各自拼接上游 RTSP URL。
-- 实现一次完整对账：读取双方快照，计算缺失、漂移和孤儿 Path，再调用现有
-  `ensure_path` / `release_path`。
-- 用 FastAPI lifespan 管理立即执行一次、之后周期执行的后台任务。
-- 用 PostgreSQL session advisory lock 保证同一时刻只有一个 Backend 进程执行一轮对账。
-- 记录不含凭据、完整 RTSP URL 或远端配置的轮次汇总日志。
+- `cameras/application/media.py` 从最新 `Camera` 聚合构造 `DesiredSource`。创建、更新、Playback 和
+  后台对账必须复用这里的安全 RTSP URL 构造，不能各自拼接凭据或上游地址。
+- `cameras/application/reconciliation.py` 负责纯差异计算、单轮执行、结果分类、周期和退避。
+- `cameras/persistence/reconciliation.py` 用 PostgreSQL 完成全量聚合读取和跨实例互斥。
+- `stream_gateway` 仍只负责 MediaMTX 协议适配、受管 Path 判断和实际 I/O，不读取 Camera 数据库。
+- `app/factory.py` 只组装并管理这个窄用途后台任务，不提供通用任务调度框架。
 
-以下内容不在 04 实现：
+Camera 创建、更新和删除提交后的即时媒体调用仍分别属于 05、09、10；Playback 的存在性检查、
+预算、single-flight 和 HTTP 错误转换属于 07。对账不实现 Camera CRUD、运行状态聚合、播放器、
+媒体健康路由、指标框架或事务级 Outbox/Saga。
 
-- Camera 创建、更新和删除后的即时调用。05、09、10 在各自数据库提交后调用媒体端口。
-- Playback 的 Source 存在性检查、`3s` 预算、single-flight 和 HTTP 错误转换，这些属于 07。
-- Camera/Source 运行状态聚合、WHEP 播放器、媒体健康路由、指标框架、Outbox/Saga 或通用任务
-  调度框架。
+## Desired State 与所有权
 
-## 与即时同步的边界
+每个数据库 Source 生成一项不可变 `DesiredSource`：
 
-提交后才能访问媒体端口的公共事务规则见
-[Foundation](../01-foundation/README.md#持久化与事务)。具体调用分别由
-[05 创建](../05-camera-create/README.md#后端顺序)、
-[09 更新](../09-camera-update-default-source/README.md#完整更新-camera)和
-[10 删除](../10-camera-delete/README.md#删除语义)实现。04 只提供共享 Desired State 构造和后台恢复，
-不安装 ORM 事件、Repository hook 或隐式提交回调。
+- Path 名称是 Source ID 的小写标准 UUID v4 文本。
+- `source` 使用 Camera 当前主机、端口、凭据和 Source 后缀生成，并按 RTSP URI 组件安全编码。
+- `sourceOnDemand` 固定为 `false`。
+- Source 必须属于传入 Camera；跨 Camera 拼接会在写入 MediaMTX 前被拒绝。
+- 包含凭据的上游 URL 不进入对象默认表示、日志、异常或持久化缓存。
 
-## 代码位置与接口
+只有能严格解析为小写标准 UUID v4 的远端 Path 属于 Cameras。其他名称即使使用 RTSP Source，
+也不比较、不覆盖、不删除。受管 Path 的 `source` 或 `sourceOnDemand` 缺失、类型错误或与数据库
+不同，都视为漂移并由完整 Desired State 覆盖。
 
-- `app/modules/cameras/application/media.py`：提供单 Source 和整 Camera 的 `DesiredSource` 构造
-  函数，内部调用 `build_mediamtx_source_url()`；返回对象的默认表示不得包含上游 URL。
-- `app/modules/cameras/application/reconciliation.py`：保存差异计算、单轮执行结果、
-  `reconcile_once()` 和周期 Runner；只依赖 Application Port 与 `StreamGatewayPort`。
-- `app/modules/cameras/application/ports.py`：增加只读 `CameraMediaStateReader` 和跨实例
-  `MediaReconciliationLease`。成功取得 Lease 时，上下文返回绑定同一数据库连接的 Reader；未取得
-  时返回 `None`。Application 不接触 SQLAlchemy Connection、Session 或 ORM Row。
-- `app/modules/cameras/persistence/reconciliation.py`：实现 PostgreSQL 全量读取和 advisory lock。
-- `app/modules/stream_gateway/ports.py`：公开标准 UUID v4 Path 名称到 Source ID 的纯解析函数；
-  Adapter 和 Reconciler 复用同一个所有权判断，不在两个模块复制规则。
-- `app/factory.py`：组装 Reader、Lease、Reconciler 和后台任务，并保证任务先于 HTTP Client 与
-  数据库连接池关闭；应用工厂增加窄范围 Runner factory 测试注入点，不引入通用调度框架。
+## 单轮行为
 
-全量 Reader 使用一条按 Camera、Source 顺序排列的 `LEFT JOIN` 查询读取全部 Camera 与 Source，
-在 Session 关闭前通过现有 Mapper 重建不可变聚合。单条 SQL 保证本次数据库结果来自同一个语句
-快照，也能让“Camera 没有 Source”等损坏数据进入聚合检查。ORM Row 不离开持久化模块。
+每轮按以下固定顺序执行：
 
-读取数据库失败或任一聚合损坏时，本轮不执行任何 MediaMTX 写操作。数据库中的孤儿 Source 不会
-生成 Desired State；其同名远端 UUID Path 如果存在，会按远端孤儿处理。
+1. 非阻塞尝试取得 PostgreSQL session advisory lock。竞争失败返回 `skipped_lock`，不读取数据库、
+   MediaMTX 快照，也不执行写入。
+2. 获取一份完整 MediaMTX 配置快照。远端不可用或无法证明分页完整时立即结束，禁止依据部分数据
+   覆盖或删除 Path。
+3. 使用持锁 Connection 读取一份完整 PostgreSQL Camera/Source 快照，并构造全部 Desired State。
+   读取、Mapper、聚合不变量或 Desired State 构造失败时整轮零写入。
+4. 按 Source ID 计算缺失/漂移 Path 和受管孤儿 Path。重复 Source ID 会让差异计算失败，不能被
+   `dict` 静默覆盖。
+5. 按 Source ID 顺序先 `ensure_path` 所有缺失/漂移项，再 `release_path` 所有孤儿项。先恢复后删除
+   可降低取消或进程退出时只完成破坏性操作的风险。
+6. 单项写失败只增加 `failed_count`，继续处理其余项；本轮不重试、不重新取快照，下一轮从双方完整
+   快照重新计算。
 
-## 单轮执行顺序
+单轮结果只使用 `success`、`partial_failure`、`skipped_lock`、`database_error`、
+`gateway_unavailable`、`gateway_invalid_response` 和 `unexpected_error`。除 `success` 与正常锁竞争外，
+其余结果都会增加 Runner 的连续失败次数。
 
-每轮严格执行以下步骤：
+## 数据库锁与并发
 
-1. 尝试取得 advisory lock；未取得时记录 `skipped_lock`，不读取双方快照，也不调用媒体写接口。
-   取得时同时得到只读 Reader，后续数据库快照复用持锁 Connection。
-2. 获取一份完整 MediaMTX 配置快照。快照不可用或不完整时立即放弃本轮，不基于部分结果修改
-   Path。
-3. 读取一份完整 PostgreSQL Camera/Source 快照，并使用共享纯函数构造 Desired State。读取失败
-   或聚合损坏时放弃本轮。
-4. 按 Source ID 计算三个互斥集合：
-   - 数据库有、远端没有：缺失；
-   - 双方都有，但 `source` 不完全相等、`sourceOnDemand is not False`，或 Adapter 标记字段未知：
-     漂移；
-   - 远端属于[受管 Path](../README.md#冻结决策)、数据库没有：孤儿。
-5. 先按 Source ID 顺序逐项 `ensure_path` 缺失和漂移 Path，再按 Source ID 顺序逐项
-   `release_path` 孤儿 Path。非受管 Path 完全忽略。
-6. 单项失败继续处理其余项，并把轮次记为 `partial_failure`；同一调用不自动重试，也不在本轮
-   重新获取快照。下一轮必须重新读取双方完整快照。
-7. 在成功、失败或取消路径释放 advisory lock，再结束本轮。
+- 锁使用代码中固定的有符号 64 位 key，不能改用受进程随机种子影响的 `hash()`。
+- Lease 在专用 PostgreSQL Connection 上持有 session advisory lock，并把同一 Connection 交给只读
+  Reader；`pool_size=1, max_overflow=0` 时也不能再申请第二条连接。
+- Reader 用一条有固定排序的 `LEFT JOIN` 重建全部 Camera 聚合。没有 Source 的 Camera 也必须进入
+  Mapper 并报告损坏，不能被内连接静默漏掉。
+- 数据查询只在短只读事务中执行；MediaMTX HTTP 调用期间保留 session lock，但不持有数据库事务。
+- 正常、异常和取消路径都必须释放锁。无法证明解锁成功时丢弃底层连接，禁止带锁连接返回连接池。
+- 锁只排除其他 Reconciler，不阻塞 CRUD 或 Playback。快照后的并发提交允许造成短暂旧写，系统
+  空闲后的下一轮必须以最新数据库状态恢复一致。
 
-MVP 使用顺序写入，不提前加入批处理队列、并发 worker 或按 Camera 分片。一次对账结束后才安排
-下一次，因此同一进程不会出现重叠轮次。
+## 周期与资源生命周期
 
-## 锁与并发
+| 环境变量                                   | 默认值 | 约束               |
+| ------------------------------------------ | ------ | ------------------ |
+| `MEDIA_RECONCILIATION_INTERVAL_SECONDS`    | `30`   | 大于 `0`           |
+| `MEDIA_RECONCILIATION_MAX_BACKOFF_SECONDS` | `300`  | 不小于正常轮询间隔 |
 
-- 使用固定、代码内记录的有符号 64 位 lock key 调用 `pg_try_advisory_lock`；禁止使用进程随机化
-  的 Python `hash()`。本阶段不增加数据库表或迁移。
-- 锁使用专用 PostgreSQL Connection 的 session lock。取得锁后先结束获取锁产生的短事务，远端
-  HTTP 调用期间只持有 Connection 和 session lock，不持有数据库事务。
-- Lease 返回的 Reader 复用这条 Connection，并只在执行全量 `LEFT JOIN` 时开启短只读事务；读取
-  结束后先结束事务，再执行媒体写入。这样即使 `database_pool_size=1` 且 `max_overflow=0` 也不会
-  因为等待第二条连接而卡住。
-- Connection 在整轮内不能归还连接池。`finally` 中执行 `pg_advisory_unlock`；连接中断或关闭是
-  最后的自动释放保障，避免带锁连接回到池中。
-- 锁只排除其他 Reconciler，不阻塞 CRUD 或 Playback。快照完成后的并发提交可能让本轮短暂使用
-  旧数据；系统空闲后，后续成功轮次必须以当时数据库数据为准恢复一致。
-- 删除与 Playback、更新与即时同步的交错行为分别在 07、09、10 实现，并在 11 做组合验收；04
-  只证明晚到的受管孤儿最终会被删除，数据库存在的 Source 最终会被恢复。
+Runner 启动后立即执行首轮；完整成功和锁竞争后，从本轮结束时起等待正常间隔。失败轮次按
+`interval × 2^n` 增长到最大值，再在计算结果的 `50%–100%` 范围加入随机抖动；成功后清零。
+轮次串行执行，同一进程不会重叠。
 
-## 周期、退避和 lifespan
-
-新增并同步到 `.env.example`、`backend/.env.local.example` 与 `compose.yaml` 的配置：
-
-| Settings 字段                              | 环境变量                                   | 默认值 | 规则             |
-| ------------------------------------------ | ------------------------------------------ | ------ | ---------------- |
-| `media_reconciliation_interval_seconds`    | `MEDIA_RECONCILIATION_INTERVAL_SECONDS`    | `30`   | 大于 `0`         |
-| `media_reconciliation_max_backoff_seconds` | `MEDIA_RECONCILIATION_MAX_BACKOFF_SECONDS` | `300`  | 大于等于正常间隔 |
-
-- lifespan 创建 Database Runtime 和 `MediaMTXAdapter` 后启动后台任务，不等待首次对账完成再开放 API；
-  MediaMTX 或对账失败不能阻止 Backend 启动，也不改变现有 readiness。
-- Runner 启动后立即执行第一轮。完整成功后，从该轮结束时起等待正常间隔。
-- 数据库读取失败、配置快照失败、部分写失败或未预期异常都算失败轮次。连续失败使用
-  `min(interval × 2^n, max_backoff)`，并在该值的 `50%–100%` 范围取可测试的随机抖动；完整成功
-  后清零。未取得锁不增加失败次数，按正常间隔再次尝试。
-- 应用关闭时先取消 Runner，并最多等待 `5s`。取消必须传播，不能被普通错误处理吞掉；任务退出
-  后才关闭共享 MediaMTX HTTP Client 和 Database Runtime。
-- 生产应用始终启动 Runner。无关的单元/API 测试通过应用工厂的专用注入点使用可控 Runner，不能
-  依赖真实 PostgreSQL 或 MediaMTX 后台连接。
+FastAPI lifespan 在 Database Runtime 和共享 MediaMTX Client 创建后启动 Runner，不等待首轮完成，
+因此对账或 MediaMTX 故障不会阻止 Backend 开放 API，也不会改变只检查 PostgreSQL 的 readiness。
+关闭时先取消 Runner 并最多等待 5 秒，再关闭 MediaMTX Client 和数据库连接池。取消必须传播，
+后台任务的非取消退出必须留下错误日志。
 
 ## 日志与安全
 
-每轮只记录一条 Reconciler 汇总，稳定字段包括：
+Runner 每轮只记录一次脱敏汇总，包括稳定结果、耗时、Desired/受管 Path 数、成功恢复/释放数、
+失败数、下次等待和 Trace ID。Adapter 单独记录每次 MediaMTX I/O 的脱敏结果。
 
-```text
-operation=media_reconciliation
-outcome=success|partial_failure|skipped_lock|database_error|gateway_unavailable|
-        gateway_invalid_response|unexpected_error
-duration_ms desired_count managed_path_count ensured_count released_count failed_count
-next_delay_seconds
-```
+对账日志不得记录用户名、密码、Source 后缀、期望或远端 `source`、完整 RTSP URL、完整配置快照、
+原始异常文本或响应正文。后台任务没有请求 Trace ID 时使用 `-`。
 
-Adapter 继续负责单次 I/O 的脱敏日志。Reconciler 不记录用户名、密码、后缀、期望 `source`、远端
-`source`、完整配置快照、异常链文本或持久化缓存。后台任务没有请求 Trace ID 时使用 `-`。
+## 长期验证
 
-## 实施步骤
-
-1. 增加共享 Desired State 构造函数和 Path 所有权解析函数，并补纯函数测试。
-2. 增加 Reader/Lease Port 及 PostgreSQL 实现，验证全量聚合读取和 session lock 释放。
-3. 实现纯差异计算、单轮协调与稳定结果分类，再实现周期、退避和取消。
-4. 在 Settings、环境示例、Compose 和 lifespan 中完成装配；保持公共路由和 OpenAPI 不变。
-5. 补齐单元、PostgreSQL 集成、lifespan、敏感数据和恢复测试，再运行 Backend 全量门禁。
-
-## 验收
-
-- 纯差异测试覆盖无变化、缺失、已知/未知字段漂移、孤儿、非受管 Path 和确定性处理顺序。
-- 清空 Fake MediaMTX 配置后，一轮能恢复全部数据库 Source；下一轮无重复变更。
-- 配置快照失败、数据库读取失败或聚合损坏时零写入；单项失败不阻断其他项，下一轮重新获取双方
-  快照后能成功。
-- 两个 Reconciler 竞争时只有一个读取并写入；正常完成、异常和任务取消后 lock 都能再次取得，
-  连接池中不遗留 session lock；最小连接池配置也能完成一轮对账。
-- Backend 启动不等待 MediaMTX；关闭顺序为 Runner、MediaMTX Client、Database Runtime，且在
-  限时内完成。
-- 直接向测试数据库提交合法 Camera、完全不执行即时媒体调用，后续对账仍能恢复 Path，证明提交
-  后崩溃窗口不依赖 CRUD hook。
-- 并发提交造成的暂时旧写入，在停止并发后的下一轮恢复为数据库最新配置；对账不会修改数据库
-  Camera，也不会删除非受管 Path。
-- 日志、异常、默认对象表示和测试失败输出不包含测试凭据、完整 RTSP URL 或远端配置。
-
-实现后至少执行：
+相关测试覆盖纯差异、完整快照失败零写入、单项失败继续、下一轮恢复、失败退避、任务取消、最小
+连接池、跨实例锁竞争、损坏聚合和敏感数据过滤：
 
 ```bash
 cd backend
@@ -162,15 +105,8 @@ uv run pytest tests/modules/cameras/test_media.py \
   tests/modules/cameras/test_media_reconciliation.py \
   tests/modules/cameras/test_reconciliation_persistence.py \
   tests/test_config.py tests/test_main.py
-uv run pytest
-uv run ruff check .
-uv run ruff format --check .
-
-cd ..
-bash scripts/check-cameras-contracts.sh
-bash scripts/check-cameras-sensitive-data.sh
-docker compose config
 ```
 
-需要 PostgreSQL 的测试必须使用独立 `TEST_DATABASE_URL`；未配置导致的跳过不能算作本切片验收
-通过。真实 MediaMTX 重启、CRUD/Playback 交错和部署容量由 11 使用完整系统再次验证。
+PostgreSQL 集成测试要求独立的 `TEST_DATABASE_URL`；跳过这些测试不等于锁和 Reader 已通过验证。
+真实 MediaMTX 重启，以及 CRUD/Playback 与对账交错，仍由
+[发布门禁](../11-release-gates/README.md)在完整系统中验证。
