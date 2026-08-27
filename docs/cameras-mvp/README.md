@@ -57,7 +57,8 @@ Browser ◀────────────── WHEP ───────
 4. Camera 创建、更新和删除先提交数据库，再尽力同步 MediaMTX；媒体失败不改变配置结果。
 5. MVP 使用 `sourceOnDemand=false`，使 MediaMTX 持续连接 RTSP，`ONLINE/OFFLINE` 表达实际运行态。
 6. 保存前不探测 RTSP；数据库成功不以 MediaMTX 或摄像头就绪为条件。
-7. Source 为 `ONLINE/OFFLINE`；Camera 为 `ONLINE/OFFLINE/DEGRADED`，严格判定由 Adapter 切片所有。
+7. Source 为 `ONLINE/OFFLINE`，严格 Path 判定由 Adapter 切片所有；Camera 为
+   `ONLINE/OFFLINE/DEGRADED`，由 Cameras Application 对同一批 Source 投影做纯聚合。
 8. `listCameras` 和 `getCamera` 只观察一份状态快照，不创建 Path；严格在线时才返回非空
    `whep_url`。
 9. Cards 和详情正常播放直接使用其响应中的 `whep_url`，不为每张 Card 先调用 FastAPI。

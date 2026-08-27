@@ -27,6 +27,8 @@ Camera 创建、更新或删除只在 PostgreSQL 成功提交后调用媒体端�
 - Backend 启动后执行一次全量对账，之后默认每 `30s` 执行一次；间隔必须可配置。
 - 每轮读取 PostgreSQL 当前全部 Source Desired State和 MediaMTX 配置 Path 快照，按 Source ID
   计算缺失、漂移和孤儿集合。
+- 受管 Path 的 `source` 或 `sourceOnDemand` 被 Adapter 标记为未知时按漂移处理；非受管 Path 的
+  无关配置字段不参与比较，所有权和快照有效性遵循[Adapter 配置快照](../03-stream-gateway-adapter/README.md#完整配置快照)。
 - 缺失或漂移 Path 使用当前数据库配置 `ensure_path`；数据库已不存在的受管 UUID Path 使用
   `release_path`。
 - 单项失败不阻断其他 Source，但本轮结果必须标为部分失败并在下轮重试。
