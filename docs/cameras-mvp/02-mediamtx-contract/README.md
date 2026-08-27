@@ -63,9 +63,9 @@ whep_url_for(source_id)
 
 `app/modules/stream_gateway/ports.py` 保存框架无关 Port 与最小数据形状；
 `app/modules/stream_gateway/urls.py` 保存 RTSP 组件编码和 WHEP 地址规则。具体 `httpx`、分页聚合、
-预算、错误转换、状态投影和 Adapter I/O 日志仍由
-[下一切片](../03-stream-gateway-adapter/README.md)实现；投影结果汇总日志由消费投影的 Cameras
-Application 切片负责。
+预算、错误转换、状态投影和 Adapter I/O 日志已由
+[Stream Gateway Adapter](../03-stream-gateway-adapter/README.md)实现；投影结果汇总日志仍由消费投影的
+Cameras Application 切片负责。
 
 MediaMTX 故障不能令 Backend 配置 API 整体失去就绪状态。由 `app/api/health.py` 提供的现有
 `/api/v1/health/ready` 只检查 PostgreSQL；媒体不可用由 03 的投影和消费投影的 Application
