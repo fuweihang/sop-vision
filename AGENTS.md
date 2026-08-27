@@ -1,25 +1,25 @@
-# Repository Guidelines
+# 仓库指南
 
-## Project Structure & Module Organization
+## 项目结构与模块组织
 
-`backend/src/app/` contains the FastAPI control plane. Keep shared configuration in `core/` and place domain code under `modules/<domain>/`, separating `api/`, `schemas/`, and `services/`. Backend tests live in `backend/tests/` and mirror the source hierarchy. `frontend/src/` contains the React application: file-based routes are in `routes/`, reusable primitives in `components/ui/`, shell components in `components/app-shell/`, and shared logic in `lib/`. Keep frontend tests beside their subjects as `*.test.ts` or `*.test.tsx`. Architecture, requirements, and UI rules belong in `docs/`; consult `docs/design-system/` before changing shared UI. Do not edit generated `frontend/src/routeTree.gen.ts` manually.
+`backend/src/app/` 包含 FastAPI 控制平面。共享配置应放在 `core/` 中，领域代码应放在 `modules/<domain>/` 下，并分别组织到 `api/`、`schemas/` 和 `services/` 中。后端测试位于 `backend/tests/`，其目录结构应与源代码保持一致。`frontend/src/` 包含 React 应用：基于文件的路由位于 `routes/`，可复用的基础组件位于 `components/ui/`，应用外壳组件位于 `components/app-shell/`，共享逻辑位于 `lib/`。前端测试应与被测对象放在一起，并命名为 `*.test.ts` 或 `*.test.tsx`。架构、需求和 UI 规则应记录在 `docs/` 中；修改共享 UI 前，请先查阅 `docs/design-system/`。不要手动编辑自动生成的 `frontend/src/routeTree.gen.ts`。
 
-## Build, Test, and Development Commands
+## 构建、测试与开发命令
 
-- `cp .env.example .env && docker compose up --build --wait` builds and starts the complete local stack.
-- `docker compose config` validates Compose and environment interpolation; `docker compose down` stops the stack.
-- In `backend/`, run `uv sync`, then `uv run --env-file ../.env uvicorn app.main:app --app-dir src --reload --port 3001` for local API development.
-- In `frontend/`, use Node 24 and pnpm 11: `pnpm install`, `pnpm dev`, and `pnpm build` install, serve, and type-check/build the app.
-- Run `uv run pytest`, `uv run ruff check .`, and `uv run ruff format --check .` in `backend/`; run `pnpm test`, `pnpm lint`, and `pnpm format:check` in `frontend/`.
+- `cp .env.example .env && docker compose up --build --wait` 用于构建并启动完整的本地技术栈。
+- `docker compose config` 用于验证 Compose 配置和环境变量插值；`docker compose down` 用于停止该技术栈。
+- 在 `backend/` 中，先运行 `uv sync`，再运行 `uv run --env-file ../.env uvicorn app.main:app --app-dir src --reload --port 3001` 进行本地 API 开发。
+- 在 `frontend/` 中使用 Node 24 和 pnpm 11：通过 `pnpm install`、`pnpm dev` 和 `pnpm build` 分别安装依赖、启动开发服务以及执行类型检查并构建应用。
+- 在 `backend/` 中运行 `uv run pytest`、`uv run ruff check .` 和 `uv run ruff format --check .`；在 `frontend/` 中运行 `pnpm test`、`pnpm lint` 和 `pnpm format:check`。
 
-## Coding Style & Naming Conventions
+## 编码风格与命名约定
 
-Python uses four spaces, a 100-character line limit, type hints, `snake_case` functions/modules, and `PascalCase` classes. Ruff enforces imports and modern Python 3.12 practices. TypeScript uses two spaces, semicolons, double quotes, strict type-aware ESLint rules, and Prettier. Use `PascalCase` for React components, `camelCase` for functions, kebab-case component filenames, and the `@/` alias for `frontend/src/` imports.
+Python 使用四个空格缩进、每行最多 100 个字符和类型提示；函数及模块采用 `snake_case`，类采用 `PascalCase`。Ruff 用于强制执行导入规范和现代 Python 3.12 实践。TypeScript 使用两个空格缩进、分号、双引号、严格且支持类型感知的 ESLint 规则以及 Prettier。React 组件采用 `PascalCase`，函数采用 `camelCase`，组件文件名采用 kebab-case；从 `frontend/src/` 导入模块时使用 `@/` 别名。
 
-## Testing Guidelines
+## 测试指南
 
-Pytest discovers `test_*.py`; Vitest uses jsdom and Testing Library. Add tests for behavior changes and regressions, mock external HTTP boundaries, and keep tests deterministic. Coverage has no enforced minimum, but inspect it with `uv run pytest --cov=app --cov-report=term-missing` or `pnpm test:coverage`.
+Pytest 会发现 `test_*.py` 文件；Vitest 使用 jsdom 和 Testing Library。应为行为变更和回归问题添加测试，对外部 HTTP 边界进行模拟，并确保测试结果具有确定性。目前不强制要求最低覆盖率，但可通过 `uv run pytest --cov=app --cov-report=term-missing` 或 `pnpm test:coverage` 检查测试覆盖率。
 
-## Commit & Pull Request Guidelines
+## 提交与拉取请求指南
 
-Recent commits use an emoji plus Conventional Commit form, usually with a scope: `✨ feat(frontend): ...`, `♻️ refactor(docs): ...`, or `🔧 chore(vscode): ...`. Keep each commit focused. Pull requests should explain the change and validation performed, link relevant issues or design documents, and include screenshots for visible UI changes. Call out configuration, API, or architecture impacts explicitly; never commit `.env` or credentials.
+近期提交采用表情符号加 Conventional Commits 的格式，并且通常包含作用域，例如：`✨ feat(frontend): ...`、`♻️ refactor(docs): ...` 或 `🔧 chore(vscode): ...`。每个提交都应聚焦于一项变更。拉取请求应说明所做的变更和执行的验证，关联相关 Issue 或设计文档，并为可见的 UI 变更附上截图。应明确说明对配置、API 或架构的影响；绝不要提交 `.env` 文件或凭据。
