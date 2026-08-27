@@ -40,12 +40,16 @@ def _public_validation_code(error_type: str) -> str:
     """只根据 Pydantic 稳定错误类型分类，绝不读取可能含原始输入的错误上下文。"""
 
     # 这里只依赖 Pydantic 的机器错误类型，绝不比较本地化 msg，也不读取可能包含输入值的 ctx。
+    if error_type == "camera_source_required":
+        return "SOURCE_REQUIRED"
     if error_type == "extra_forbidden":
         return "UNKNOWN_FIELD"
     if error_type == "missing" or error_type == "string_too_short":
         return "REQUIRED"
     if error_type == "string_too_long":
         return "STRING_TOO_LONG"
+    if error_type == "ip_v4_address":
+        return "INVALID_IP_ADDRESS"
     if error_type.startswith("uuid_") or error_type == "uuid_canonical":
         return "INVALID_UUID"
     if error_type in {
@@ -64,9 +68,11 @@ def _public_validation_code(error_type: str) -> str:
 
 # detail 采用固定文本，不拼接限制值或原始输入；稳定 code 才是前端业务分支的事实来源。
 _PUBLIC_DETAILS = {
+    "SOURCE_REQUIRED": "创建 Camera 至少需要一路 Source。",
     "UNKNOWN_FIELD": "该字段不受支持。",
     "REQUIRED": "该字段不能为空。",
     "STRING_TOO_LONG": "该字段超过允许的最大长度。",
+    "INVALID_IP_ADDRESS": "请输入合法的 IPv4 地址。",
     "INVALID_UUID": "请输入小写、带连字符的标准 UUID v4。",
     "OUT_OF_RANGE": "该字段超出允许范围。",
     "INVALID_VALUE": "该字段值无效。",

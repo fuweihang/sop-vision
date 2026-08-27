@@ -141,6 +141,22 @@ def test_request_schemas_normalize_fields_and_forbid_unknown_input() -> None:
         CameraUpdateRequest.model_validate(update_without_port)
 
 
+def test_create_sources_keeps_min_items_and_uses_dedicated_empty_error() -> None:
+    """运行时空数组 code 不得以移除 OpenAPI 最小条目约束为代价。"""
+
+    sources_schema = CameraCreateRequest.model_json_schema()["properties"]["sources"]
+    assert sources_schema["minItems"] == 1
+
+    invalid = _model_example(CameraCreateRequest).copy()
+    invalid["sources"] = []
+    with pytest.raises(ValidationError) as captured:
+        CameraCreateRequest.model_validate(invalid)
+    safe_errors = captured.value.errors(include_input=False, include_context=False)
+    assert [(error["loc"], error["type"]) for error in safe_errors] == [
+        (("sources",), "camera_source_required")
+    ]
+
+
 @pytest.mark.parametrize(
     "model",
     [CameraCreateRequest, CameraUpdateRequest, SetDefaultPreviewSourceRequest],

@@ -184,8 +184,8 @@ def create_app(
     install_camera_exception_handlers(application)
     # 健康探针描述应用进程及其必要数据库依赖，不经由任何业务或外部服务适配模块注册。
     application.include_router(health_router, prefix="/api/v1")
-    # Cameras 的业务 handler 仍是 Foundation 占位，但必须注册到真实应用，保证应用自身
-    # /openapi.json、导出产物和未来运行时只共享一棵路由树。
+    # Cameras handler 按功能切片逐个原位实现；尚未实现者继续保持 Foundation 纯占位。
+    # 所有路径始终注册到真实应用，保证 /openapi.json、生成产物和运行时共享一棵路由树。
     application.include_router(cameras_router, prefix="/api/v1")
     install_problem_openapi_media_type(application)
     return application

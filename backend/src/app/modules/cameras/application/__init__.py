@@ -1,10 +1,15 @@
-"""Camera 应用服务可直接导入的数据库接口和错误类型。
+"""Camera 用例、状态统计、数据库端口和应用错误的公共导入边界。
 
-此包只公开 Camera/Source 业务对象相关的接口和普通 Python 异常，不导出 FastAPI、
-SQLAlchemy 或 ORM 类型。
-这样后续应用服务可以在不知道数据库实现细节的情况下使用真实 Repository 或测试 Fake。
+此包只公开框架无关的普通 Python 类型，不导出 FastAPI、Pydantic、SQLAlchemy 或 ORM 类型。
+API、后台任务和后续用例因此可以复用同一状态规则与端口，而不依赖具体基础设施。
 """
 
+from app.modules.cameras.application.create import (
+    CreateCameraCommand,
+    CreateCameraResult,
+    CreateCameraSourceCommand,
+    create_camera,
+)
 from app.modules.cameras.application.errors import (
     CameraConstraintViolationError,
     CameraConstraintViolationKind,
@@ -17,6 +22,11 @@ from app.modules.cameras.application.ports import (
     CameraRepository,
     CameraUnitOfWork,
 )
+from app.modules.cameras.application.status import (
+    CameraRuntimeSummary,
+    CameraStatus,
+    summarize_camera_runtime,
+)
 
 __all__ = [
     "CameraConstraintViolationError",
@@ -26,5 +36,12 @@ __all__ = [
     "CameraPersistenceError",
     "CameraPersistenceOperationError",
     "CameraRepository",
+    "CameraRuntimeSummary",
+    "CameraStatus",
     "CameraUnitOfWork",
+    "CreateCameraCommand",
+    "CreateCameraResult",
+    "CreateCameraSourceCommand",
+    "create_camera",
+    "summarize_camera_runtime",
 ]

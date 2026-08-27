@@ -13,6 +13,7 @@ from app.modules.cameras.application.ports import (
     CameraListCriteria,
     CameraUnitOfWork,
 )
+from app.modules.cameras.domain import Clock, IdGenerator, SystemClock, Uuid4Generator
 from app.modules.cameras.persistence.uow import SQLAlchemyCameraUnitOfWork
 
 
@@ -99,3 +100,31 @@ def get_camera_unit_of_work(
 
     # 保持这个函数只做对象组装，便于 FastAPI 测试通过 dependency_overrides 替换整个 UoW。
     return SQLAlchemyCameraUnitOfWork(session)
+
+
+def get_camera_id_generator() -> IdGenerator:
+    """为一次请求提供无状态 UUID v4 生成器，并保留测试覆盖入口。"""
+
+    return Uuid4Generator()
+
+
+def get_camera_clock() -> Clock:
+    """为 Camera 写入和媒体失败投影提供统一 UTC 时钟。"""
+
+    return SystemClock()
+
+
+# 三个别名让 Router 只声明端口，不接触 SQLAlchemy 或生产实现。测试覆盖原始 provider 函数
+# 即可替换整个请求的事务、ID 序列和时间，不需要修改应用级全局状态。
+CameraUnitOfWorkDependency = Annotated[
+    CameraUnitOfWork,
+    Depends(get_camera_unit_of_work),
+]
+CameraIdGeneratorDependency = Annotated[
+    IdGenerator,
+    Depends(get_camera_id_generator),
+]
+CameraClockDependency = Annotated[
+    Clock,
+    Depends(get_camera_clock),
+]

@@ -1,6 +1,6 @@
 # 05.1｜Backend Camera 创建 API
 
-> 状态：待实施
+> 状态：已完成
 >
 > 父方案：[05｜创建 Camera](README.md)
 >

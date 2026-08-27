@@ -20,6 +20,9 @@ from app.modules.cameras.application import (
     CameraConstraintViolationKind,
     CameraListCriteria,
     CameraNotFoundError,
+    CreateCameraCommand,
+    CreateCameraSourceCommand,
+    create_camera,
 )
 from app.modules.cameras.domain import (
     CameraAggregateCorruptedError,
@@ -32,6 +35,7 @@ from app.modules.cameras.persistence.integrity import (
 from app.modules.cameras.persistence.models import CameraRow, CameraSourceRow
 from app.modules.cameras.persistence.repository import SQLAlchemyCameraRepository
 from app.modules.cameras.persistence.uow import SQLAlchemyCameraUnitOfWork
+from app.modules.stream_gateway.ports import RuntimePathSnapshot
 from tests.core.database.test_migrations import (
     BACKEND_ROOT,
     temporary_database,
@@ -44,6 +48,7 @@ from tests.modules.cameras.builders import (
     uuid4_from_index,
 )
 from tests.modules.cameras.constants import CAMERA_LEAK_SENTINEL
+from tests.modules.cameras.fakes import FakeStreamGateway
 from tests.modules.cameras.repository_contract import assert_camera_repository_contract
 
 pytestmark = pytest.mark.anyio
@@ -461,6 +466,51 @@ async def test_uow_converts_deferred_constraint_at_commit_and_restores_session(
         # commit 失败路径已 rollback，同一个 Session 可以继续安全读取原值。
         restored = await uow.cameras.get(camera.camera_id)
         assert restored == camera
+
+
+async def test_create_use_case_rolls_back_flush_collision_before_media(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    """真实 PostgreSQL 主键冲突在 add/flush 失败，创建用例回滚且零媒体调用。"""
+
+    existing = CameraBuilder().build(source_count=1, id_start=350)
+    async with session_factory() as session:
+        existing_uow = SQLAlchemyCameraUnitOfWork(session)
+        await existing_uow.cameras.add(existing)
+        await existing_uow.commit()
+
+    gateway = FakeStreamGateway(RuntimePathSnapshot(paths=(), checked_at=NOW))
+    command = CreateCameraCommand(
+        name="主键冲突 Camera",
+        ip_address="192.0.2.80",
+        rtsp_port=554,
+        username="operator",
+        password=CAMERA_LEAK_SENTINEL,
+        sources=(
+            CreateCameraSourceCommand(
+                name="主码流",
+                url_suffix="Streaming/Channels/101",
+                is_default_preview=True,
+            ),
+        ),
+    )
+    async with session_factory() as session:
+        failing_uow = SQLAlchemyCameraUnitOfWork(session)
+        with pytest.raises(CameraConstraintViolationError) as captured:
+            await create_camera(
+                command,
+                uow=failing_uow,
+                stream_gateway=gateway,
+                id_generator=FixedIdGenerator((existing.camera_id, uuid4_from_index(359))),
+                clock=FixedClock(NOW),
+            )
+
+    assert captured.value.kind is CameraConstraintViolationKind.CAMERA_ID_ALREADY_EXISTS
+    assert gateway.ensure_calls == []
+    assert gateway.runtime_snapshot_count == 0
+    assert await row_counts(session_factory) == (1, 1)
+    async with session_factory() as session:
+        assert await SQLAlchemyCameraRepository(session).get(existing.camera_id) == existing
 
 
 async def test_camera_repository_rejects_corrupted_rows_instead_of_partial_camera(

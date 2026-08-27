@@ -1,8 +1,7 @@
 """Cameras 公共 HTTP 请求与响应 Schema。
 
-本模块是 Camera 配置 API 的唯一 Pydantic Schema 来源。它只描述传输契约，不依赖 ORM、
-Repository 或未来的 Application Service；占位 Router 因而可以生成稳定 OpenAPI，而不会
-提前拥有业务行为。
+本模块是 Camera 配置 API 的唯一 Pydantic Schema 来源。它只描述传输契约，并复用 Application
+定义的框架无关状态枚举；不依赖 ORM、Repository 或业务用例实现。
 """
 
 from enum import StrEnum
@@ -18,8 +17,10 @@ from pydantic import (
     Field,
     StringConstraints,
 )
+from pydantic_core import PydanticCustomError
 
 from app.core.http import CanonicalUUID4
+from app.modules.cameras.application import CameraStatus
 from app.modules.stream_gateway.ports import SourceRuntimeErrorCode, SourceRuntimeStatus
 
 # 契约 example 只使用 RFC 5737 文档网段、example.invalid 域名和明确的测试凭据。固定 ID 与
@@ -65,14 +66,6 @@ UrlSuffix = Annotated[
 ]
 
 
-class CameraStatus(StrEnum):
-    """Camera 聚合状态；混合在线情况固定表示为 ``DEGRADED``。"""
-
-    ONLINE = "ONLINE"
-    OFFLINE = "OFFLINE"
-    DEGRADED = "DEGRADED"
-
-
 class PlaybackProtocol(StrEnum):
     """MVP 唯一支持的浏览器播放协议。"""
 
@@ -103,6 +96,27 @@ class CameraSourceCreateRequest(_RequestModel):
     name: SourceName
     url_suffix: UrlSuffix
     is_default_preview: bool
+
+
+def _require_create_sources(value: Any) -> Any:
+    """为空数组生成创建业务专用错误，同时把其他输入交给 Pydantic 正常校验。
+
+    自定义错误不附加 ``ctx`` 或原始值；公共转换器只读取错误类型和位置。字段仍保留
+    ``min_length=1``，因此 OpenAPI 会继续声明 ``minItems=1``。
+    """
+
+    if isinstance(value, (list, tuple)) and not value:
+        raise PydanticCustomError(
+            "camera_source_required",
+            "创建 Camera 至少需要一路 Source。",
+        )
+    return value
+
+
+CameraCreateSources = Annotated[
+    list[CameraSourceCreateRequest],
+    BeforeValidator(_require_create_sources),
+]
 
 
 class CameraCreateRequest(_RequestModel):
@@ -141,7 +155,7 @@ class CameraCreateRequest(_RequestModel):
     rtsp_port: int = Field(default=554, ge=1, le=65535)
     username: Username
     password: Password
-    sources: list[CameraSourceCreateRequest] = Field(min_length=1)
+    sources: CameraCreateSources = Field(min_length=1)
 
 
 class CameraSourceUpdateRequest(_RequestModel):

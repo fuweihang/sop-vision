@@ -1,12 +1,13 @@
-"""Cameras Foundation 占位 Router 与完整目标 OpenAPI 契约。
+"""Cameras Router 与完整目标 OpenAPI 契约。
 
-七个 handler 在各功能切片实现前故意只有 ``raise NotImplementedError``。路径先注册到真实
-应用，使 OpenAPI、前端生成类型和 MSW 可以并行演进；占位运行时的临时 500 不属于声明契约。
+创建 handler 已由 05.1 实现；其余六个 handler 在对应切片落地前继续保持纯
+``raise NotImplementedError``。全部路径预先注册到真实应用，使 OpenAPI、前端生成类型和 MSW
+共享同一棵路由树；剩余占位的临时 500 不属于声明契约。
 """
 
 from typing import Any
 
-from fastapi import APIRouter, status
+from fastapi import APIRouter, Response, status
 from pydantic import BaseModel
 
 from app.core.http import (
@@ -15,7 +16,13 @@ from app.core.http import (
     problem_responses,
     success_response,
 )
-from app.modules.cameras.api.dependencies import CameraListParametersDependency
+from app.modules.cameras.api.dependencies import (
+    CameraClockDependency,
+    CameraIdGeneratorDependency,
+    CameraListParametersDependency,
+    CameraUnitOfWorkDependency,
+)
+from app.modules.cameras.api.mappers import camera_detail_from_runtime
 from app.modules.cameras.api.schemas import (
     CameraCreateRequest,
     CameraDetail,
@@ -25,6 +32,12 @@ from app.modules.cameras.api.schemas import (
     PlaybackInfo,
     SetDefaultPreviewSourceRequest,
 )
+from app.modules.cameras.application import (
+    CreateCameraCommand,
+    CreateCameraSourceCommand,
+)
+from app.modules.cameras.application import create_camera as execute_create_camera
+from app.modules.stream_gateway.api.dependencies import StreamGatewayDependency
 
 router = APIRouter()
 
@@ -74,8 +87,46 @@ async def list_cameras(_parameters: CameraListParametersDependency) -> CameraPag
         ),
     },
 )
-async def create_camera(_request: CameraCreateRequest) -> CameraDetail:
-    raise NotImplementedError
+async def create_camera(
+    request: CameraCreateRequest,
+    response: Response,
+    uow: CameraUnitOfWorkDependency,
+    stream_gateway: StreamGatewayDependency,
+    id_generator: CameraIdGeneratorDependency,
+    clock: CameraClockDependency,
+) -> CameraDetail:
+    # 创建完整 Camera 聚合；数据库提交后的媒体同步失败只影响本次运行状态投影，不能把已经
+    # 持久化成功的配置伪装成创建失败。
+    result = await execute_create_camera(
+        CreateCameraCommand(
+            name=request.name,
+            ip_address=request.ip_address,
+            rtsp_port=request.rtsp_port,
+            username=request.username,
+            password=request.password,
+            sources=tuple(
+                CreateCameraSourceCommand(
+                    name=source.name,
+                    url_suffix=source.url_suffix,
+                    is_default_preview=source.is_default_preview,
+                )
+                for source in request.sources
+            ),
+        ),
+        uow=uow,
+        stream_gateway=stream_gateway,
+        id_generator=id_generator,
+        clock=clock,
+    )
+    # FastAPI 会把临时 Response 上的 header 复制到 response_model 校验后的最终 JSON 响应。
+    # Location 使用相对 API 路径，no-store 则保护本接口按产品契约返回的凭据和完整 RTSP URL。
+    response.headers["Location"] = f"/api/v1/cameras/{result.camera.camera_id}"
+    response.headers["Cache-Control"] = "no-store"
+    return camera_detail_from_runtime(
+        result.camera,
+        result.source_runtime,
+        result.runtime_summary,
+    )
 
 
 @router.get(

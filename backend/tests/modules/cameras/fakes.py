@@ -1,6 +1,7 @@
 """Cameras 应用层单元测试使用的事务型 Fake Repository 与 UoW。"""
 
 from dataclasses import dataclass, field
+from uuid import UUID
 
 from app.modules.cameras.application.errors import (
     CameraConstraintViolationError,
@@ -13,6 +14,11 @@ from app.modules.cameras.application.ports import (
     validate_camera_list_pagination,
 )
 from app.modules.cameras.domain import Camera, CameraId
+from app.modules.stream_gateway.ports import (
+    ConfiguredPathSnapshot,
+    DesiredSource,
+    RuntimePathSnapshot,
+)
 
 
 @dataclass(slots=True)
@@ -110,13 +116,57 @@ class FakeCameraUnitOfWork:
         self._store = store
         self._state = _FakeWorkingState(store._snapshot())
         self.cameras = FakeCameraRepository(self._state)
+        self.commit_count = 0
+        self.rollback_count = 0
 
     async def commit(self) -> None:
+        self.commit_count += 1
         self._store._publish(self._state.cameras)
 
     async def rollback(self) -> None:
+        self.rollback_count += 1
         # 回滚后继续使用同一 UoW 时，应看到 Store 最新的已提交状态。
         self._state.cameras = self._store._snapshot()
+
+
+class FakeStreamGateway:
+    """Camera 应用测试使用的可控媒体 Port，不模拟 HTTP 协议细节。"""
+
+    def __init__(
+        self,
+        runtime_observation: RuntimePathSnapshot | Exception,
+        *,
+        whep_base_url: str = "https://media.example.invalid",
+    ) -> None:
+        self.runtime_observation = runtime_observation
+        self.whep_base_url = whep_base_url.rstrip("/")
+        self.ensure_failures: dict[UUID, Exception] = {}
+        self.ensure_calls: list[DesiredSource] = []
+        self.runtime_snapshot_count = 0
+        self.whep_source_ids: list[UUID] = []
+
+    async def fetch_runtime_path_snapshot(self) -> RuntimePathSnapshot:
+        self.runtime_snapshot_count += 1
+        if isinstance(self.runtime_observation, Exception):
+            raise self.runtime_observation
+        return self.runtime_observation
+
+    async def ensure_path(self, desired_source: DesiredSource) -> None:
+        self.ensure_calls.append(desired_source)
+        failure = self.ensure_failures.get(desired_source.source_id)
+        if failure is not None:
+            raise failure
+
+    def whep_url_for(self, source_id: UUID) -> str:
+        self.whep_source_ids.append(source_id)
+        return f"{self.whep_base_url}/{source_id}/whep"
+
+    async def fetch_config_path_snapshot(self) -> ConfiguredPathSnapshot:
+        raise AssertionError("Camera 创建用例不应读取 MediaMTX 配置快照。")
+
+    async def release_path(self, source_id: UUID) -> None:
+        del source_id
+        raise AssertionError("Camera 创建用例不应删除 MediaMTX Path。")
 
 
 def _matches(camera: Camera, criteria: CameraListCriteria) -> bool:
