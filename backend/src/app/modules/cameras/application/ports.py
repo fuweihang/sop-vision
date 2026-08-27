@@ -4,6 +4,7 @@
 生产代码和测试代码遵守同一组方法，应用服务因此不需要为两种实现编写不同逻辑。
 """
 
+from contextlib import AbstractAsyncContextManager
 from dataclasses import dataclass
 from typing import Protocol
 
@@ -122,6 +123,26 @@ class CameraUnitOfWork(Protocol):
 
     async def rollback(self) -> None:
         """丢弃本次业务操作尚未提交的全部数据库修改。"""
+
+        ...
+
+
+class CameraMediaStateReader(Protocol):
+    """一次性读取全部 Camera 聚合，供后台媒体恢复构造 Desired State。"""
+
+    async def read_all(self) -> tuple[Camera, ...]:
+        """返回按 Camera ID 排序的完整不可变聚合；任何损坏必须让整次读取失败。"""
+
+        ...
+
+
+class MediaReconciliationLease(Protocol):
+    """为一轮媒体对账提供跨实例互斥和绑定同连接的只读 Reader。"""
+
+    def acquire(
+        self,
+    ) -> AbstractAsyncContextManager[CameraMediaStateReader | None]:
+        """尝试获取租约；竞争失败返回 ``None``，其余数据库失败向调用方抛出。"""
 
         ...
 

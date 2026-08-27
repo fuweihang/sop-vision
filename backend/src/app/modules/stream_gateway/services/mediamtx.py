@@ -8,7 +8,7 @@ import time
 from collections.abc import Callable
 from datetime import UTC, datetime
 from typing import Any, TypeVar
-from uuid import RFC_4122, UUID
+from uuid import UUID
 
 import httpx
 
@@ -22,6 +22,7 @@ from app.modules.stream_gateway.ports import (
     StreamGatewayInvalidResponseError,
     StreamGatewayUnavailableError,
     _validate_uuid4,
+    parse_managed_path_source_id,
 )
 from app.modules.stream_gateway.urls import build_whep_url
 
@@ -318,7 +319,7 @@ class MediaMTXAdapter:
         """受管字段异常保留为未知；非受管 Path 完全不读取无关配置。"""
 
         name = item["name"]
-        if not _is_managed_path_name(name):
+        if parse_managed_path_source_id(name) is None:
             return ConfiguredPath(name=name, source_url=None, source_on_demand=None)
 
         source = item.get("source")
@@ -388,13 +389,3 @@ def _parse_page(payload: Any) -> tuple[int, int, list[Any]]:
     ):
         raise _ControlApiInvalidResponse
     return item_count, page_count, items
-
-
-def _is_managed_path_name(name: str) -> bool:
-    """仅识别小写、带连字符、RFC variant 正确的 UUID v4 Path 名称。"""
-
-    try:
-        source_id = UUID(name)
-    except (ValueError, AttributeError):
-        return False
-    return source_id.version == 4 and source_id.variant == RFC_4122 and str(source_id) == name

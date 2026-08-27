@@ -1,5 +1,6 @@
 """Backend 测试的隔离应用与 ASGI client fixtures。"""
 
+import asyncio
 import os
 from collections.abc import AsyncIterator
 
@@ -19,7 +20,29 @@ UNIT_TEST_DATABASE_URL = "postgresql+psycopg://sop_vision:sop_vision@127.0.0.1:5
 os.environ.setdefault("DATABASE_URL", UNIT_TEST_DATABASE_URL)
 
 from app.core.config import Settings  # noqa: E402
+from app.core.database import DatabaseRuntime  # noqa: E402
+from app.factory import ReconciliationTaskRunner  # noqa: E402
 from app.main import create_app  # noqa: E402
+from app.modules.stream_gateway.ports import StreamGatewayPort  # noqa: E402
+
+
+class ControlledTestReconciliationRunner:
+    """普通 API 测试使用的可取消 Runner，不访问 PostgreSQL 或 MediaMTX。"""
+
+    async def run_forever(self) -> None:
+        """一直等待取消；使用 Event 而非长 sleep，测试关闭可立即完成。"""
+
+        await asyncio.Event().wait()
+
+
+def create_controlled_test_reconciliation_runner(
+    _settings: Settings,
+    _database_runtime: DatabaseRuntime,
+    _stream_gateway: StreamGatewayPort,
+) -> ReconciliationTaskRunner:
+    """应用工厂的窄测试注入点；生产默认值不受影响。"""
+
+    return ControlledTestReconciliationRunner()
 
 
 @pytest.fixture
@@ -45,7 +68,10 @@ def settings() -> Settings:
 def application(settings: Settings) -> FastAPI:
     """每个测试创建独立应用，隔离 app.state 与 dependency_overrides。"""
 
-    return create_app(settings=settings)
+    return create_app(
+        settings=settings,
+        media_reconciliation_runner_factory=create_controlled_test_reconciliation_runner,
+    )
 
 
 @pytest.fixture

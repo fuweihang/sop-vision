@@ -154,3 +154,32 @@ def test_public_webrtc_base_url_accepts_reverse_proxy_path_prefix() -> None:
 
     assert settings.mediamtx_api_url.endswith("/")
     assert settings.public_webrtc_base_url.endswith("/media/webrtc/")
+
+
+def test_media_reconciliation_defaults_and_environment_values(monkeypatch) -> None:
+    """周期配置使用文档默认值，也能从环境按秒解析为浮点数。"""
+
+    defaults = Settings(
+        database_url=SecretStr("postgresql+psycopg://sop_vision:sop_vision@localhost/sop_vision")
+    )
+    assert defaults.media_reconciliation_interval_seconds == 30
+    assert defaults.media_reconciliation_max_backoff_seconds == 300
+
+    monkeypatch.setenv("MEDIA_RECONCILIATION_INTERVAL_SECONDS", "12.5")
+    monkeypatch.setenv("MEDIA_RECONCILIATION_MAX_BACKOFF_SECONDS", "90")
+    loaded = get_settings()
+    assert loaded.media_reconciliation_interval_seconds == 12.5
+    assert loaded.media_reconciliation_max_backoff_seconds == 90
+
+
+def test_media_reconciliation_max_backoff_cannot_be_shorter_than_interval() -> None:
+    """错误退避关系必须在启动前失败，不能让长期故障比正常轮询更频繁。"""
+
+    with pytest.raises(ValidationError, match="不能小于正常周期"):
+        Settings(
+            database_url=SecretStr(
+                "postgresql+psycopg://sop_vision:sop_vision@localhost/sop_vision"
+            ),
+            media_reconciliation_interval_seconds=60,
+            media_reconciliation_max_backoff_seconds=30,
+        )

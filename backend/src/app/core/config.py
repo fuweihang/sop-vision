@@ -1,10 +1,10 @@
 """应用级配置定义及敏感数据库连接串校验。"""
 
 from functools import lru_cache
-from typing import Annotated, Any
+from typing import Annotated, Any, Self
 from urllib.parse import SplitResult, urlsplit
 
-from pydantic import AfterValidator, BeforeValidator, Field, SecretStr
+from pydantic import AfterValidator, BeforeValidator, Field, SecretStr, model_validator
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 from sqlalchemy import make_url
 from sqlalchemy.exc import ArgumentError
@@ -109,9 +109,22 @@ class Settings(BaseSettings):
     mediamtx_api_url: MediaMTXApiUrl = "http://mediamtx:9997"
     mediamtx_api_timeout: float = Field(default=5.0, gt=0)
     public_webrtc_base_url: PublicWebRTCBaseUrl = "http://localhost:8889"
+    media_reconciliation_interval_seconds: float = Field(default=30.0, gt=0)
+    media_reconciliation_max_backoff_seconds: float = Field(default=300.0, gt=0)
     backend_cors_origins: CommaSeparatedList = Field(
         default_factory=lambda: ["http://localhost:8000"]
     )
+
+    @model_validator(mode="after")
+    def validate_media_reconciliation_backoff(self) -> Self:
+        """最大退避不得短于正常周期，否则连续失败反而会加快请求。"""
+
+        if (
+            self.media_reconciliation_max_backoff_seconds
+            < self.media_reconciliation_interval_seconds
+        ):
+            raise ValueError("MEDIA_RECONCILIATION_MAX_BACKOFF_SECONDS 不能小于正常周期")
+        return self
 
 
 @lru_cache

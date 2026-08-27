@@ -4,7 +4,11 @@ from uuid import UUID
 
 import pytest
 
-from app.modules.stream_gateway.ports import DesiredSource, RuntimePath
+from app.modules.stream_gateway.ports import (
+    DesiredSource,
+    RuntimePath,
+    parse_managed_path_source_id,
+)
 
 SOURCE_ID = UUID("8f14e45f-ea9d-4a7d-9b6d-8c9f0a1b2c3d")
 
@@ -37,3 +41,25 @@ def test_runtime_path_requires_strict_booleans(available: object, online: object
 
     with pytest.raises(TypeError, match="严格布尔值"):
         RuntimePath(name=str(SOURCE_ID), available=available, online=online)  # type: ignore[arg-type]
+
+
+@pytest.mark.parametrize(
+    "name",
+    [
+        str(SOURCE_ID).upper(),
+        str(SOURCE_ID).replace("-", ""),
+        "00000000-0000-1000-8000-000000000001",
+        "all_others",
+        "",
+    ],
+)
+def test_managed_path_parser_rejects_noncanonical_or_non_v4_names(name: str) -> None:
+    """宽松 UUID 可解析的别名也不能取得 Cameras Path 所有权。"""
+
+    assert parse_managed_path_source_id(name) is None
+
+
+def test_managed_path_parser_returns_canonical_uuid4() -> None:
+    """标准小写 UUID v4 Path 与 Source ID 一一对应。"""
+
+    assert parse_managed_path_source_id(str(SOURCE_ID)) == SOURCE_ID

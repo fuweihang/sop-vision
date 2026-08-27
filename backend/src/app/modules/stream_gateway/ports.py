@@ -14,6 +14,25 @@ def _validate_uuid4(source_id: UUID) -> None:
         raise ValueError("Source ID 必须是标准 UUID v4。")
 
 
+def parse_managed_path_source_id(name: str) -> UUID | None:
+    """把受 Cameras 管理的标准 UUID v4 Path 名称解析为 Source ID。
+
+    MediaMTX 允许任意 Path 名称，Cameras 只能删除自己拥有的 UUID Path。这里同时要求
+    小写、连字符和 RFC variant 的标准文本形式，避免宽松 UUID 解析把其他业务创建的名称
+    误判为受管资源。
+    """
+
+    if not isinstance(name, str):
+        return None
+    try:
+        source_id = UUID(name)
+    except ValueError:
+        return None
+    if source_id.version != 4 or source_id.variant != RFC_4122 or str(source_id) != name:
+        return None
+    return source_id
+
+
 def _validate_utc(value: datetime) -> None:
     """拒绝无时区或非 UTC 时间，防止跨批次投影出现不可比较的观察时刻。"""
 

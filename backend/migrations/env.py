@@ -16,7 +16,10 @@ config = context.config
 
 # alembic.ini 只保存非敏感日志配置，不保存 sqlalchemy.url。
 if config.config_file_name is not None:
-    fileConfig(config.config_file_name)
+    # Alembic 集成测试会在 Backend pytest 进程内多次加载本模块。logging.fileConfig 默认
+    # 禁用配置文件未列出的既有应用 Logger，导致迁移完成后的后台对账和 Adapter 日志永久
+    # 消失；保留这些 Logger 既不改变独立 Alembic 进程的输出，也不会破坏运行时可观测性。
+    fileConfig(config.config_file_name, disable_existing_loggers=False)
 
 # 后续 ORM 表统一挂到此 metadata，autogenerate 才能看到完整应用 Schema。
 target_metadata = Base.metadata

@@ -27,6 +27,7 @@ from app.modules.cameras.domain import (
     CameraFieldError,
     CameraValidationError,
 )
+from tests.conftest import create_controlled_test_reconciliation_runner
 from tests.modules.cameras.constants import CAMERA_LEAK_RTSP_URL, CAMERA_LEAK_SENTINEL
 
 pytestmark = pytest.mark.anyio
@@ -144,7 +145,10 @@ async def probe_http_error(status_code: int) -> None:
 def probe_application(settings: Settings) -> FastAPI:
     """每例创建隔离应用；测试路由不会污染生产应用或 OpenAPI。"""
 
-    application = create_app(settings=settings)
+    application = create_app(
+        settings=settings,
+        media_reconciliation_runner_factory=create_controlled_test_reconciliation_runner,
+    )
     application.include_router(probe_router)
     return application
 
