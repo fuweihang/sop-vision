@@ -17,14 +17,14 @@
 - Control API 只允许 Backend 和运维网络访问；Frontend 永不访问 `:9997`。
 - 本 MVP 只依赖以下 v3 能力：
 
-| 用途           | MediaMTX 接口                                        |
-| -------------- | ---------------------------------------------------- |
-| 配置快照       | `GET /v3/config/paths/list`                          |
-| 单项配置       | `GET /v3/config/paths/get/{name}`                    |
-| 幂等覆盖 Path  | `POST /v3/config/paths/replace/{name}`               |
-| 删除 Path      | `DELETE /v3/config/paths/delete/{name}`              |
-| 运行态完整快照 | `GET /v3/paths/list`                                 |
-| 浏览器读取     | `{PUBLIC_WEBRTC_BASE_URL}/{path_name}/whep`          |
+| 用途           | MediaMTX 接口                               |
+| -------------- | ------------------------------------------- |
+| 配置快照       | `GET /v3/config/paths/list`                 |
+| 单项配置       | `GET /v3/config/paths/get/{name}`           |
+| 幂等覆盖 Path  | `POST /v3/config/paths/replace/{name}`      |
+| 删除 Path      | `DELETE /v3/config/paths/delete/{name}`     |
+| 运行态完整快照 | `GET /v3/paths/list`                        |
+| 浏览器读取     | `{PUBLIC_WEBRTC_BASE_URL}/{path_name}/whep` |
 
 受控协议输入保存在 `contracts/mediamtx-openapi.json`，来源固定为 MediaMTX `v1.20.1` 官方
 `api/openapi.yaml` 的最小子集。Compose 与 `.env.example` 使用同一精确 tag；升级必须同时审查
@@ -57,16 +57,16 @@ release_path(source_id)
 whep_url_for(source_id)
 ```
 
-状态快照、播放准备和删除清理分别遵守 `500ms`、`3s` 和 `2s` 总等待上限；共享 HTTP Client 的
-默认 timeout 不能覆盖用例级总预算。只有幂等且安全的读取/覆盖/删除允许有限重试，所有重试都
-必须计入总预算。
+运行态和配置快照均由 Adapter 执行 `500ms` 总等待上限；共享 HTTP Client 的默认 timeout 只是
+单次请求安全上限，不能覆盖外层预算。Adapter 不自动重试：播放准备的 `3s` 和删除全部 Path 的
+`2s` 总预算分别由对应 Application Service 控制，周期恢复与退避由 Reconciler 跨轮处理。
 
 `app/modules/stream_gateway/ports.py` 保存框架无关 Port 与最小数据形状；
 `app/modules/stream_gateway/urls.py` 保存 RTSP 组件编码和 WHEP 地址规则。具体 `httpx`、分页聚合、
-重试、错误转换、状态投影和可观测性仍由[下一切片](../03-stream-gateway-adapter/README.md)实现。
+预算、错误转换、状态投影和结构化日志仍由[下一切片](../03-stream-gateway-adapter/README.md)实现。
 
 MediaMTX 故障不能令 Backend 配置 API 整体失去就绪状态。由 `app/api/health.py` 提供的现有
-`/api/v1/health/ready` 只检查 PostgreSQL；媒体不可用由 03 的投影、指标和日志降级表达，
+`/api/v1/health/ready` 只检查 PostgreSQL；媒体不可用由 03 的投影和结构化日志降级表达，
 `stream_gateway` 不拥有也不新增公共健康路由。
 
 ## 安全与验收
@@ -76,7 +76,7 @@ MediaMTX 故障不能令 Backend 配置 API 整体失去就绪状态。由 `app/
   [媒体对账](../04-media-reconciliation/README.md)验收。
 - 覆盖 RTSP 用户名/密码包含 `@`、`:`、`%`、`#` 和空白时的组件编码。
 - Backend 能访问 Control API，浏览器只能访问部署公开的 WHEP 地址。
-- Control API 请求/响应、异常、访问日志和指标不包含密码或完整 RTSP URL。
+- Control API 请求/响应、异常和结构化日志不包含密码或完整 RTSP URL。
 - Codec、HTTPS、ICE 地址和局域网浏览器可达性进入[发布门禁](../11-release-gates/README.md)，不由
   Control API 连通性代替。
 

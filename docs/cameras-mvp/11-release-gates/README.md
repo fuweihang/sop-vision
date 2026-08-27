@@ -9,7 +9,7 @@
 
 ## 契约与静态门禁
 
-- 锁定的 MediaMTX 版本、受控 OpenAPI、Adapter Fixture 和运行镜像完全一致。
+- 锁定的 MediaMTX 版本、受控 OpenAPI、Adapter Fixture、真实 Adapter 门禁和运行镜像完全一致。
 - Router、Backend Schema、`contracts/openapi.json`、Frontend 类型、Client、MSW 与 Fixture 无
   漂移；Playback 只暴露 `POST prepareCameraSourcePlayback`，没有含义重叠的安全读取操作。
 - 七个公共 handler 都有真实 Application Service 和依赖装配，零占位。
@@ -39,7 +39,7 @@
 ## 安全与数据边界
 
 - RTSP 凭据中的 URI 保留字符正确编码，MediaMTX 能连接且日志不回显明文。
-- CameraDetail 之外的列表、Playback、Problem、日志、指标、追踪和错误上报不存在用户名、密码、
+- CameraDetail 之外的列表、Playback、Problem、结构化日志、追踪和错误上报不存在用户名、密码、
   后缀或完整 RTSP URL。
 - Control API 不暴露给浏览器网络；WHEP 使用部署要求的 HTTPS 与来源限制。
 - CameraDetail 和 PlaybackInfo 不进入浏览器持久化存储；播放器释放后不保留媒体对象。
@@ -57,6 +57,8 @@ bash scripts/check-cameras-sensitive-data.sh
 uv run --env-file .env.local pytest
 uv run ruff check .
 uv run ruff format --check .
+uv run python scripts/check_mediamtx_contract.py
+uv run python scripts/check_mediamtx_adapter.py
 uv run python scripts/check_camera_placeholders.py mvp
 
 # frontend/
@@ -66,5 +68,5 @@ pnpm format:check
 pnpm build
 ```
 
-PostgreSQL 集成测试必须使用独立 `TEST_DATABASE_URL`；MediaMTX Adapter 和端到端测试必须使用
-锁定版本的隔离实例。依赖未配置导致的跳过不能算作发布验收通过。
+PostgreSQL 集成测试必须使用独立 `TEST_DATABASE_URL`；MediaMTX 契约、Adapter 和端到端测试必须
+使用锁定版本的隔离实例。依赖未配置导致的跳过不能算作发布验收通过。

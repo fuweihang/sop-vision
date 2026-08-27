@@ -72,6 +72,8 @@ Browser ◀────────────── WHEP ───────
 16. 删除只校验资源存在性；数据库提交后立即尽力释放 Path，后台对账继续清理遗留映射。
 17. 预览启停只影响浏览器播放器，不改变 PostgreSQL 配置或删除 MediaMTX Path。
 18. Backend 配置读写不能因 MediaMTX 故障整体失去服务；媒体依赖健康与 API 进程就绪分开表达。
+19. Cameras MVP 使用脱敏结构化日志观察媒体链路，不单独引入指标框架、指标注册表或 `/metrics`
+    路由。
 
 字段、事务、HTTP、缓存和敏感数据公共规则见 [Foundation](01-foundation/README.md)。外部协议、
 状态映射、恢复和播放器资源生命周期分别由 02、03、04、07 的唯一契约负责。
@@ -85,7 +87,8 @@ Browser ◀────────────── WHEP ───────
 - 列表每页只获取一次 Path 快照；正常 Card 预览不产生逐 Card FastAPI 请求。
 - OpenAPI、Frontend 类型、Client 和 Fixture 同源；Playback 只暴露具有准备/恢复语义的 `POST`。
 - 凭据、完整 RTSP URL 和 MediaMTX 原始响应不越过 Foundation 定义的边界。
-- 单元、PostgreSQL 集成、Adapter、Frontend、契约、敏感数据和端到端发布门禁全部通过。
+- 单元、PostgreSQL 集成、Adapter Fixture、真实 Adapter、Frontend、契约、敏感数据和端到端发布
+  门禁全部通过。
 
 发布前运行：
 

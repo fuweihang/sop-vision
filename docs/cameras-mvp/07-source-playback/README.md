@@ -42,8 +42,9 @@ handler 仍是 Foundation 占位，只有完成本切片的 Backend 行为和测
    Camera，也不能让 MediaMTX 反向成为配置事实源。
 2. 使用数据库最新连接字段构造 Desired Source；Source 已删除时在任何远端写入前返回 `404`。
 3. 幂等调用 `ensure_path`。重复 POST 只收敛同一个 Path，不创建数据库 Session 或播放记录。
-4. 在 `3s` 总预算内检查运行态；严格在线返回 `200 PlaybackInfo`，未就绪返回可重试 `409`。
-5. 响应、Problem、日志、指标和追踪不包含凭据、后缀、完整 RTSP URL 或 MediaMTX 原始错误体。
+4. Application Service 拥有 `3s` 总预算，覆盖 `ensure_path` 和后续运行态检查；Adapter 不自动
+   重试。严格在线返回 `200 PlaybackInfo`，未就绪返回可重试 `409`。
+5. 响应、Problem、结构化日志和追踪不包含凭据、后缀、完整 RTSP URL 或 MediaMTX 原始错误体。
 
 同一 Source 的进程内并发请求应 single-flight 以减少重复重载，但不能依赖进程锁保证跨实例正确；
 跨实例重复 replace 必须保持相同 Desired State，后台对账最终处理与更新/删除交错产生的漂移。

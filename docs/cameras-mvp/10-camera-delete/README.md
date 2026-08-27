@@ -11,7 +11,8 @@ MediaMTX 映射都不阻止删除。本阶段没有软删除、恢复、批量�
 
 后端锁定最新 Camera 并记录 Source ID，在同一事务中先显式删除全部 Source，再删除 Camera。
 任一步失败完整回滚。数据库提交成功后，对每个 Source 尽力调用 `release_path`，清理总等待上限
-`2s`；失败或进程崩溃不改变无 body 的 `204`，后台对账继续清理数据库已不存在的受管 UUID Path。
+`2s`；该预算属于整个 Application Service 清理阶段，不是每个 Path 各 `2s`，到期时取消仍在进行
+的释放。失败或进程崩溃不改变无 body 的 `204`，后台对账继续清理数据库已不存在的受管 UUID Path。
 
 已不存在 Camera 返回 `404 CAMERA_NOT_FOUND`；数据库不可用返回
 `503 DATABASE_UNAVAILABLE`。本切片不返回占用冲突或“删除中”状态。
@@ -25,7 +26,7 @@ Path，下一轮对账也必须识别为孤儿并删除，不能复活数据库 
 - 取消、关闭或 Escape 不删除；提交期间禁用确认和关闭，防止重复请求。
 - 发请求前正常停止当前播放器；失败保留详情并允许重试。
 - 成功后移除当前 `camera` 和所属 `playback` 内存数据，失效 `cameras`，再导航 `/cameras`。
-- 日志和指标记录 trace ID、Camera ID、Source 数、数据库结果和释放结果，不记录凭据、RTSP URL
+- 结构化日志记录 trace ID、Camera ID、Source 数、数据库结果和释放结果，不记录凭据、RTSP URL
   或媒体敏感响应。
 
 ## 验收
