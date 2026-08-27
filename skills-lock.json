@@ -1,6 +1,12 @@
 {
   "version": 1,
   "skills": {
+    "code-explain": {
+      "source": "fuweihang/skills",
+      "sourceType": "github",
+      "skillPath": "skills/code-explain/SKILL.md",
+      "computedHash": "a7e09dbf12138ee65c91ee3831bb1e2f0aae2400c4784ecc6956adb147cab5f9"
+    },
     "data-loading": {
       "source": "TanStack/router",
       "sourceType": "github",

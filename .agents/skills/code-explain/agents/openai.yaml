@@ -1,0 +1,7 @@
+interface:
+  display_name: "代码讲解"
+  short_description: "解释已实现代码的运作原理"
+  default_prompt: "使用 $code-explain 来解释所实现功能的工作原理。"
+
+policy:
+  allow_implicit_invocation: false
