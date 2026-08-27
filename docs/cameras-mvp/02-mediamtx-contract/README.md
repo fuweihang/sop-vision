@@ -63,11 +63,13 @@ whep_url_for(source_id)
 
 `app/modules/stream_gateway/ports.py` 保存框架无关 Port 与最小数据形状；
 `app/modules/stream_gateway/urls.py` 保存 RTSP 组件编码和 WHEP 地址规则。具体 `httpx`、分页聚合、
-预算、错误转换、状态投影和结构化日志仍由[下一切片](../03-stream-gateway-adapter/README.md)实现。
+预算、错误转换、状态投影和 Adapter I/O 日志仍由
+[下一切片](../03-stream-gateway-adapter/README.md)实现；投影结果汇总日志由消费投影的 Cameras
+Application 切片负责。
 
 MediaMTX 故障不能令 Backend 配置 API 整体失去就绪状态。由 `app/api/health.py` 提供的现有
-`/api/v1/health/ready` 只检查 PostgreSQL；媒体不可用由 03 的投影和结构化日志降级表达，
-`stream_gateway` 不拥有也不新增公共健康路由。
+`/api/v1/health/ready` 只检查 PostgreSQL；媒体不可用由 03 的投影和消费投影的 Application
+结构化日志降级表达，`stream_gateway` 不拥有也不新增公共健康路由。
 
 ## 安全与验收
 
@@ -76,7 +78,8 @@ MediaMTX 故障不能令 Backend 配置 API 整体失去就绪状态。由 `app/
   [媒体对账](../04-media-reconciliation/README.md)验收。
 - 覆盖 RTSP 用户名/密码包含 `@`、`:`、`%`、`#` 和空白时的组件编码。
 - Backend 能访问 Control API，浏览器只能访问部署公开的 WHEP 地址。
-- Control API 请求/响应、异常和结构化日志不包含密码或完整 RTSP URL。
+- Control API 在线路上必须发送编码后的上游 RTSP URL；HTTP 调试日志、结构化日志、异常、追踪和
+  错误上报不得记录请求/响应正文、凭据或完整 RTSP URL。
 - Codec、HTTPS、ICE 地址和局域网浏览器可达性进入[发布门禁](../11-release-gates/README.md)，不由
   Control API 连通性代替。
 

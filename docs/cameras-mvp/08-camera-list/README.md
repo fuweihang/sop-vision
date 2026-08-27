@@ -44,5 +44,7 @@
 - `%/_/\` 按普通字符搜索，额外查询参数不改变固定顺序。
 - 无数据与搜索无结果界面不同，URL 可恢复搜索和分页。
 - 一页无论多少 Source 只取一次 Path 快照；Control API 故障仍返回配置和确定降级状态。
+- 列表批量组装复用 Cameras Application 共享状态聚合，并覆盖全在线、全离线和混合 Camera，不在
+  Stream Gateway 或列表 Router 复制聚合规则。
 - 在线 Cards 直接使用列表 URL；Path 丢失只恢复可见默认 Source；离线 Cards 不循环请求。
 - 列表不泄密；不可见 Card 和卸载组件不保留播放器会话。

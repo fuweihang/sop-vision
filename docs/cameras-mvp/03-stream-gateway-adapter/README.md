@@ -14,7 +14,9 @@ Application Service 组装的 Desired Source，只负责协议转换、超时、
 运行态和配置快照固定使用 `itemsPerPage=100`，始终先请求 0-based 的第 `0` 页取得计数。顶层必须
 是 JSON object；每页的 `itemCount/pageCount` 必须是非负严格整数，`bool` 不能冒充整数，`items`
 必须是数组。`itemCount=0` 时只接受 `pageCount=0` 和空 `items`；非空快照继续读取到
-`pageCount - 1`。第一页冻结计数，后续每页必须保持一致，最终收集条数必须等于 `itemCount`。
+`pageCount - 1`，且要求 `pageCount >= 1`。`pageCount` 声明的每一页都必须非空；最后一页可以少于
+`itemsPerPage`，其他页也不依赖“恰好 100 条”的额外假设。第一页冻结计数，后续每页必须保持
+一致，最终收集条数必须等于 `itemCount`。
 
 每个 Path 的 `name` 必须是非空字符串，整份快照内不得重复。读取期间发生页数或计数变化、提前
 空页、最终条数不一致或名称无法可信解析时，整份快照无效。未知额外字段可以忽略；异常页数由
@@ -91,15 +93,27 @@ available 与 online 同时不为 true 时优先 `MTX_PATH_NOT_AVAILABLE`。`las
 成功或失败的完成时间。快照不可用时，本次响应的全部 Source 使用相同 Control API error；原始
 MediaMTX 错误体不公开。
 
-投影层只增加一个框架无关的 `SourceRuntimeProjection` 数据形状，包含 Source ID、状态、
-`last_checked_at`、稳定 error code 和可空 WHEP URL。批量投影使用纯函数：输入 Source ID 集合、
-不可变快照或上述错误类别、显式失败完成时间以及 `whep_url_for` callable，输出同一观察时刻的
-Source 投影；它不读取 PostgreSQL、不发起第二次 Control API 请求，也不创建自己的 Clock 抽象。
-成功快照使用自身 `checked_at`，失败时间由调用方使用项目现有 Clock 生成并显式传入。
+投影层在 Stream Gateway Port 定义框架无关的 `SourceRuntimeStatus`、
+`SourceRuntimeErrorCode` 和不可变 `SourceRuntimeProjection`。Cameras API Schema 直接复用前两个
+`StrEnum`，不重复维护同值字符串；Stream Gateway 不依赖 Pydantic Camera Schema。
 
-Camera 聚合留在 Cameras Application：全在线 `ONLINE`、全离线 `OFFLINE`、混合 `DEGRADED`；
-`online_source_count` 只统计 ONLINE，`source_count` 来自 PostgreSQL。Stream Gateway 不依赖
-Pydantic Camera Schema，API 响应组装只消费框架无关投影。
+`SourceRuntimeProjection` 包含 Source ID、状态、`last_checked_at`、稳定 error code 和可空 WHEP
+URL，并保持以下不变量：
+
+- Source ID 必须是标准 UUID v4；所有完成时间必须是带时区 UTC。
+- `ONLINE` 必须同时满足 `error=null` 和非空 `whep_url`。
+- `OFFLINE` 必须包含一个稳定 error code，且 `whep_url=null`。
+
+批量投影使用一个纯函数：输入有序且不重复的 Source ID 序列、不可变快照或上述两个 Adapter 错误
+类别、失败时显式提供的完成时间以及 `whep_url_for` callable，返回与输入同序的不可变投影元组。
+重复 Source ID 或不满足上述互斥组合的参数属于调用方错误并立即拒绝。成功使用快照自身的
+`checked_at`，不得另造观察时间；失败时间由调用方使用项目现有 Clock 生成并显式传入。函数只在
+Source 严格在线时调用 `whep_url_for`，不读取 PostgreSQL、不发起第二次 Control API 请求、不写
+日志，也不创建自己的 Clock 抽象。
+
+Camera 聚合留在 Cameras Application，并遵循
+[MVP 冻结决策](../README.md#冻结决策)；API 响应组装只消费框架无关 Source 投影。共享 Camera 聚合
+函数及其状态组合测试从 05 开始由 Cameras Application 切片负责，不进入 03。
 
 ## Path 写入和释放
 
@@ -130,13 +144,18 @@ HTTP(S) URL，仅允许尾 `/`；WHEP 基础地址必须是无凭据、query 和
 
 - 协议 Fixture 覆盖运行态与配置快照的 0-based 多页、计数变化、提前空页、重复/空名称、超时、
   网络/HTTP 错误和无效 JSON；配置快照额外覆盖受管字段未知以及非受管 Path 隔离。
-- 纯投影测试覆盖严格布尔组合、错误优先级、成功/失败检查时间、批量同一观察时刻和 Camera 聚合
-  边界；测试直接传入固定时间，不新增投影时钟实现。
-- 写 Adapter 覆盖新增、重复覆盖、配置变化、删除、重复删除、MediaMTX 无效响应、`500ms` 总预算
+- 纯投影测试覆盖严格布尔组合、错误优先级、成功/失败检查时间、UTC 时间约束、批量同一观察时刻、
+  输入顺序、重复 ID 和投影字段不变量；测试直接传入固定时间，不新增投影时钟实现。
+- Adapter 测试覆盖新增、重复覆盖、配置变化、删除、重复删除、MediaMTX 无效响应、`500ms` 总预算
   和不自动重试。
-- 使用结构化日志记录稳定 `operation/outcome`、耗时、Path 数、离线数和按稳定 error code 汇总的
-  OFFLINE 原因；单 Path 写入/释放可以记录 Source ID，trace ID 由现有日志 Filter 注入。快照和
-  投影按操作及原因汇总，禁止逐 Path 输出日志。
+- 03 只记录 Adapter I/O 汇总：稳定 `operation/outcome`、耗时、Path 数和 Adapter 错误类别；单
+  Path 写入/释放可以记录 Source ID，禁止为快照逐 Path 输出日志。Source 离线数和按稳定 error
+  code 汇总的 OFFLINE 原因由后续消费投影的 Cameras Application Service 记录，纯投影函数不写
+  日志。
+- MVP 不引入 `structlog`、JSON Formatter 或全局日志重构。Adapter 使用标准 `logging`，在默认
+  控制台可见的稳定 `key=value` 消息中输出已批准字段，同时通过 `extra` 保存同值字段供测试；
+  trace ID 直接读取现有请求上下文，非 HTTP 后台任务固定输出 `trace_id=-`，不依赖尚未装配到生产
+  Handler 的 Filter。
 - 日志中的资源标识只允许 Source ID 或等值的 UUID Path 名称；其他字段必须是上述低基数结果、计数、
   耗时、稳定 error code 和 trace ID，不包含凭据、RTSP URL 或 MediaMTX 原始敏感响应。
 - MediaMTX 版本升级必须先通过生成 Client 或协议 Fixture 契约，字段变化不得运行时猜测兼容。

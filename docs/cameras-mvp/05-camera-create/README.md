@@ -71,4 +71,7 @@
 - 无 Source、多个默认源、重复后缀、非法 IPv4/端口得到准确字段错误。
 - 数据库失败完整回滚；数据库提交后 MTX 失败仍返回 `201` 且下一轮对账可恢复。
 - 在线 Path 返回 WHEP URL；离线、缺失或 Control API 故障返回确定状态和 `whep_url=null`。
+- Cameras Application 的共享纯聚合函数覆盖全在线 `ONLINE`、全离线 `OFFLINE`、混合
+  `DEGRADED` 及在线数/配置总数；06、08 和后续响应组装复用该函数，不在 Stream Gateway 重复
+  Camera 规则。
 - 表单成功、字段错误、数据库失败和未知提交结果均可独立演示；日志和错误没有测试密码。
