@@ -1,0 +1,6 @@
+interface:
+  display_name: "方案执行审核"
+  short_description: "审核方案边界、MVP 和可执行性"
+
+policy:
+  allow_implicit_invocation: false

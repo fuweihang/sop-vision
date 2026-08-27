@@ -19,6 +19,12 @@
       "skillPath": "skills/docs-cleanup/SKILL.md",
       "computedHash": "41a7ab983894c6ef3b7a8166652ad491b3be9985021823c332f0d98cbe667dd1"
     },
+    "plan-gate": {
+      "source": "fuweihang/skills",
+      "sourceType": "github",
+      "skillPath": "skills/plan-gate/SKILL.md",
+      "computedHash": "6e65e0aabc3fd82d186fb2dd6bbefcc0b1b9fbe396981fafe3c95f337bcc7ba0"
+    },
     "plan-split": {
       "source": "fuweihang/skills",
       "sourceType": "github",
