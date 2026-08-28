@@ -202,10 +202,11 @@ LEVEL_NAMES: dict[int, str] = {
     logging.CRITICAL: "CRIT",
 }
 
-# 只给固定宽度的级别列着色，正文和业务字段保持终端默认颜色，连续查看多行时更容易定位
-# 严重程度。颜色不做 TTY 判断：console 格式的用途就是人读输出，因此 Docker 和重定向文件
-# 也会原样包含这些 ANSI 转义码；JSON 格式完全不引用这张表。
+# console 使用 ANSI 颜色弱化时间并区分级别。颜色不做 TTY 判断：console 格式的用途就是
+# 人读输出，因此 Docker 和重定向文件也会原样包含转义码；JSON 格式完全不引用这些常量。
 ANSI_RESET = "\x1b[0m"
+CONSOLE_TIMESTAMP_COLOR = "\x1b[94m"  # 高亮蓝色保证时间清晰可见。
+CONSOLE_COMPONENT_COLOR = "\x1b[36m"  # 青色标识日志来源，保持组件原有的可见度。
 LEVEL_COLORS: dict[int, str] = {
     logging.DEBUG: "\x1b[90m",  # 灰色，弱化开发诊断信息。
     logging.INFO: "\x1b[32m",  # 绿色，表示正常业务事件。
@@ -249,14 +250,20 @@ def resolve_component(logger_name: str) -> str:
 
 
 def _timestamp(record: logging.LogRecord) -> str:
-    """按进程所在地区格式化 LogRecord 创建时间。
+    """按进程所在地区格式化 JSON 使用的完整 LogRecord 创建时间。
 
     容器通过 ``TZ`` 选择地区，Python 会根据系统 zoneinfo 自动处理当地偏移和夏令时。
-    这里只输出人读格式，不附加毫秒和时区后缀；日志采集端需要结合部署的 ``TZ`` 解释时间。
-    数据库、API 和业务快照继续显式使用 UTC，不受这个展示函数影响。
+    JSON 不附加毫秒和时区后缀，日志采集端需要结合部署的 ``TZ`` 解释时间；console 由
+    ``_console_timestamp`` 省略年份。数据库、API 和业务快照继续显式使用 UTC。
     """
 
     return datetime.fromtimestamp(record.created).strftime("%Y-%m-%d %H:%M:%S")
+
+
+def _console_timestamp(record: logging.LogRecord) -> str:
+    """输出省略年份的终端时间；JSON 继续使用包含年份的稳定时间。"""
+
+    return datetime.fromtimestamp(record.created).strftime("%m-%d %H:%M:%S")
 
 
 def _level_name(record: logging.LogRecord) -> str:
@@ -266,16 +273,14 @@ def _level_name(record: logging.LogRecord) -> str:
 
 
 def _colored_console_level(record: logging.LogRecord) -> str:
-    """返回固定五列的级别文本，并仅为标准日志级别添加 ANSI 颜色。"""
+    """返回方括号包裹的级别文本，并仅为标准日志级别添加 ANSI 颜色。"""
 
-    # 必须先补齐可见字符宽度再包颜色；若把 ANSI 序列放进格式化表达式，Python 会把不可见
-    # 的转义字符也计入列宽，导致 component 列随级别颜色长度左右漂移。
-    padded_level = f"{_level_name(record):<5}"
+    bracketed_level = f"[{_level_name(record)}]"
     color = LEVEL_COLORS.get(record.levelno)
     if color is None:
         # 第三方库可能注册自定义级别。没有明确颜色含义时保留文本，避免误导排障人员。
-        return padded_level
-    return f"{color}{padded_level}{ANSI_RESET}"
+        return bracketed_level
+    return f"{color}{bracketed_level}{ANSI_RESET}"
 
 
 def _visible_text(value: str) -> str:
@@ -368,18 +373,22 @@ def _record_fields(record: logging.LogRecord) -> dict[str, object]:
 
 
 class ConsoleFormatter(logging.Formatter):
-    """输出级别固定带 ANSI 颜色、适合终端阅读的单行日志。"""
+    """单行输出时间、级别、组件、消息和结构化参数。"""
 
     def format(self, record: logging.LogRecord) -> str:
-        """按固定列输出 message、事件字段和当前 trace。"""
+        """使用弱化时间、彩色级别和青色组件，正文保持终端默认前景色。"""
 
-        timestamp = _timestamp(record)
+        timestamp = _console_timestamp(record)
         level = _colored_console_level(record)
         component = _visible_text(resolve_component(record.name))
         message = _visible_text(record.getMessage())
-        # level 后保留一个分隔空格；component 自身补齐到 22 列后直接接 message，正好与
-        # 设计示例中的 ``WARN  media.reconciliation  message`` 对齐。
-        rendered = f"{timestamp} {level} {component:<22}{message}"
+        # 时间、级别和组件组成紧凑前缀：时间使用高亮蓝色，级别表达严重程度，组件使用青色
+        # 标识来源。每段颜色都在消息前重置，正文和参数因此保持终端默认前景色。
+        header = (
+            f"{CONSOLE_TIMESTAMP_COLOR}[{timestamp}]{ANSI_RESET}{level}"
+            f"{CONSOLE_COMPONENT_COLOR}[{component}]{ANSI_RESET}"
+        )
+        body = message
 
         field_parts = [
             self._format_field(name, value) for name, value in _record_fields(record).items()
@@ -388,8 +397,10 @@ class ConsoleFormatter(logging.Formatter):
         if trace_id is not None:
             field_parts.append(self._format_field("trace_id", trace_id))
         if field_parts:
-            rendered = f"{rendered}  {' '.join(field_parts)}"
-        return rendered
+            # 冒号只在确有参数时出现，避免普通 Uvicorn 生命周期消息留下无意义的尾部标点。
+            # 正文不添加 ANSI 颜色，因此 component、message 和参数都使用终端默认前景色。
+            body = f"{body}: {' '.join(field_parts)}"
+        return f"{header}{body}"
 
     @staticmethod
     def _format_field(name: str, value: object) -> str:

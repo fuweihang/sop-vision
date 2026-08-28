@@ -61,10 +61,10 @@ def set_process_timezone() -> Iterator[Callable[[str], None]]:
         time.tzset()
 
 
-def test_console_formatter_uses_local_columns_event_order_and_visible_controls(
+def test_console_formatter_keeps_colored_prefix_and_plain_body_on_one_line(
     set_process_timezone: Callable[[str], None],
 ) -> None:
-    """console 使用容器地区时间，固定列和控制字符转义保持不变。"""
+    """console 前缀着色、正文无颜色，并继续转义可能伪造日志行的控制字符。"""
 
     set_process_timezone("Asia/Shanghai")
 
@@ -81,8 +81,9 @@ def test_console_formatter_uses_local_columns_event_order_and_visible_controls(
     rendered = ConsoleFormatter().format(record)
 
     assert rendered == (
-        "2026-08-28 16:49:08 \x1b[33mWARN \x1b[0m camera.create         "
-        "Camera 已保存\\n但媒体操作\\t未全部成功  "
+        "\x1b[94m[08-28 16:49:08]\x1b[0m\x1b[33m[WARN]\x1b[0m"
+        "\x1b[36m[camera.create]\x1b[0m"
+        "Camera 已保存\\n但媒体操作\\t未全部成功: "
         "operation=post_commit_media_sync result=degraded camera=camera-1 failed=0 "
         "trace=tr_abc123"
     )
@@ -92,17 +93,17 @@ def test_console_formatter_uses_local_columns_event_order_and_visible_controls(
 def test_console_and_json_formatters_follow_the_same_container_timezone(
     set_process_timezone: Callable[[str], None],
 ) -> None:
-    """两种输出必须读取同一个 ``TZ``，且不显示毫秒、偏移或时区缩写。"""
+    """两种输出读取同一个 ``TZ``，console 省略年份而 JSON 保留完整日期。"""
 
     set_process_timezone("Asia/Shanghai")
     record = make_record()
 
-    console_timestamp = ConsoleFormatter().format(record)[:19]
+    console_header = ConsoleFormatter().format(record).splitlines()[0]
     json_timestamp = json.loads(JsonFormatter().format(record))["timestamp"]
 
-    assert console_timestamp == "2026-08-28 16:49:08"
-    assert json_timestamp == console_timestamp
-    assert all(marker not in console_timestamp for marker in (".431", "Z", "+08:00", "CST"))
+    assert console_header.startswith("\x1b[94m[08-28 16:49:08]\x1b[0m")
+    assert json_timestamp == "2026-08-28 16:49:08"
+    assert all(marker not in console_header for marker in (".431", "Z", "+08:00", "CST"))
 
 
 @pytest.mark.parametrize(
@@ -127,8 +128,10 @@ def test_console_colors_standard_levels_but_json_remains_plain(
     console = ConsoleFormatter().format(record)
     json_output = JsonFormatter().format(record)
 
-    assert f" {color}{name:<5}\x1b[0m " in console
-    assert console.count("\x1b[0m") == 1
+    assert f"{color}[{name}]\x1b[0m\x1b[36m[camera.create]\x1b[0m" in console
+    # console 的时间、级别和组件各自重置颜色，后续正文不能继承任何 ANSI 样式。
+    assert console.count("\x1b[0m") == 3
+    assert "\x1b" not in console.rsplit("\x1b[0m", maxsplit=1)[1]
     assert "\x1b" not in json_output
     assert json.loads(json_output)["level"] == name
 

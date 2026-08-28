@@ -45,11 +45,13 @@ Runtime 通过 `python -m app.server` 启动。该入口先加载配置和安装
 console 示例：
 
 ```text
-2026-08-28 16:48:45 INFO  media.reconciliation  MediaMTX 已恢复，对账完成  result=success desired=4 managed=4 ensured=1 released=0 failures=7 degraded=1033.1s duration=12ms
-2026-08-28 16:49:01 INFO  http.access           HTTP 请求完成  method=GET path=/api/v1/cameras status=200 result=completed duration=18ms trace=tr_abc123
+[08-28 16:48:45][INFO][media.reconciliation]MediaMTX 已恢复，对账完成: result=success desired=4 managed=4 ensured=1 released=0 failures=7 degraded=1033.1s duration=12ms
+[08-28 16:49:01][INFO][http.access]HTTP 请求完成: method=GET path=/api/v1/cameras status=200 result=completed duration=18ms trace=tr_abc123
 ```
 
-console 的级别列包含 ANSI 颜色，适合人工阅读。采集器应使用 JSON：
+console 的时间使用 ANSI 高亮蓝色；级别沿用不同严重程度的颜色，component
+使用青色；
+紧随其后的 message 和参数使用终端默认前景色。该格式适合人工阅读，采集器应使用 JSON：
 
 ```json
 {
@@ -68,8 +70,8 @@ console 的级别列包含 ANSI 颜色，适合人工阅读。采集器应使用
 }
 ```
 
-`timestamp` 按进程 `TZ` 输出 `YYYY-MM-DD HH:mm:ss`，不附带毫秒或时区偏移。该设置只影响日志展示；
-数据库、API 和媒体快照仍按各自规则使用 UTC。
+时间按进程 `TZ` 输出，不附带毫秒或时区偏移。console 使用 `MM-DD HH:mm:ss`，JSON 的 `timestamp`
+保留 `YYYY-MM-DD HH:mm:ss`。该设置只影响日志展示；数据库、API 和媒体快照仍按各自规则使用 UTC。
 
 ## 公共规则
 
@@ -78,8 +80,8 @@ console 的级别列包含 ANSI 颜色，适合人工阅读。采集器应使用
 - trace 只由统一 Filter 从请求上下文读取。非 HTTP 日志直接省略，不输出 `trace=-`。
 - Formatter 只输出白名单字段；`None`、空字符串和 `-` 被省略。数值 `0` 是否有意义由事件调用方
   决定，Formatter 不自行删除。
-- console 会转义换行、制表符、C0 控制字符和 DEL；每个 LogRecord 只占一个物理行。JSON 同样是
-  紧凑单行，并保留中文和数值类型。
+- console 会转义消息和字段值中的换行、制表符、C0 控制字符和 DEL；每条记录固定占一个物理行。
+  JSON 仍是紧凑单行，并保留中文和数值类型。
 - 第三方异常只保留异常类型和最多 20 个最内层 `文件名:函数:行号`。不得记录异常文本、绝对路径、
   局部变量或源码行；应用未知异常使用统一安全 helper，不能改回 `logger.exception()`。
 - 不记录密码、Token、数据库连接串、完整 RTSP URL、MediaMTX 原始响应、HTTP query、headers、

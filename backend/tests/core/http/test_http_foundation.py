@@ -471,6 +471,7 @@ async def test_access_log_omits_query_and_escapes_path_controls(
     json_output = JsonFormatter().format(records[0])
     assert RTSP_LEAK_SENTINEL not in console
     assert RTSP_LEAK_SENTINEL not in json_output
+    # console 每条记录只占一行；path 中解码出的换行必须仍然转义成可见文本，不能伪造第二行。
     assert len(console.splitlines()) == 1
     assert len(json_output.splitlines()) == 1
 
