@@ -14,6 +14,7 @@ from app.api.health import router as health_router
 from app.core.config import Settings, get_settings
 from app.core.database import DatabaseRuntime, create_database_runtime
 from app.core.http import (
+    HttpAccessLogMiddleware,
     TraceIdMiddleware,
     install_http_exception_handlers,
     install_problem_openapi_media_type,
@@ -185,8 +186,9 @@ def create_app(
             media_reconciliation_runner_factory,
         ),
     )
-    # CORS 先注册、Trace 后注册是有意的：Starlette 后添加的 middleware 位于更外层。若顺序
-    # 反过来，CORSMiddleware 可直接返回 OPTIONS 预检响应，Trace 将没有机会补充关联 ID。
+    # Starlette 后添加的 middleware 位于更外层。注册顺序固定为 CORS → Access → Trace，最终
+    # 请求链就是 Trace（最外）→ Access → CORS。这样预检等 CORS 提前响应仍有 trace 和 access
+    # 记录，并且 Access 写日志时 Trace ContextVar 还没有 reset。
     application.add_middleware(
         CORSMiddleware,
         allow_origins=settings.backend_cors_origins,
@@ -194,8 +196,9 @@ def create_app(
         allow_methods=["*"],
         allow_headers=["*"],
     )
-    # Starlette 后添加的 middleware 位于更外层；Trace 必须包住 CORS，确保预检等提前响应也
-    # 带有请求关联 ID，并让成功、框架错误和领域错误使用同一个值。
+    application.add_middleware(HttpAccessLogMiddleware)
+    # Trace 必须保持最外层用户 middleware：它先绑定 ContextVar，最后再清理，让 Access、路由、
+    # Problem handler 和响应头使用同一个请求关联 ID。
     application.add_middleware(TraceIdMiddleware)
     # 框架异常与 Cameras 已知异常分开注册，保持 core 不反向依赖业务模块；二者最终都使用
     # 同一个 Problem 工厂，所以媒体类型、trace 和脱敏规则不会分叉。

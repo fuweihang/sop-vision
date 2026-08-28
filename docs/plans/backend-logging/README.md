@@ -189,7 +189,9 @@ ServerError/Uvicorn 错误日志报告。HTTP access log 不记录异常类型�
 通过 `app.server` 启动的 Backend 记录最终进入同一个 level=`NOTSET` 的 `stderr` Handler，级别只由
 下表 Logger 决定；已列 Logger 不保留自己的 Handler，避免重复输出。pytest 或嵌入式宿主已有
 Handler 时必须保留，由对应任务的测试单独验证。
-所有已列非 root Logger 使用 `propagate=True`；不得同时传播并挂自己的输出 Handler。
+除任务 3 明确禁用的 `uvicorn.access` 外，所有已列非 root Logger 使用 `propagate=True`；不得同时
+传播并挂自己的输出 Handler。`uvicorn.access` 在任务 3 后清空 Handler、设置 `propagate=False`
+并由 Uvicorn `access_log=False` 停止输出。
 
 | Logger | 级别规则 |
 | --- | --- |

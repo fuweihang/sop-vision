@@ -1,3 +1,5 @@
+import logging
+
 import httpx
 import pytest
 from fastapi import FastAPI
@@ -5,6 +7,7 @@ from fastapi import FastAPI
 from app.core.database.session import get_database_runtime
 
 pytestmark = pytest.mark.anyio
+ACCESS_LOGGER_NAME = "app.core.http.access"
 
 
 class StubDatabaseRuntime:
@@ -21,18 +24,24 @@ class StubDatabaseRuntime:
         return self._ready
 
 
-async def test_liveness(client: httpx.AsyncClient) -> None:
+async def test_liveness(
+    client: httpx.AsyncClient,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
     """存活探针只表达应用进程可响应，不依赖数据库或 MediaMTX。"""
 
-    response = await client.get("/api/v1/health/live")
+    with caplog.at_level(logging.INFO, logger=ACCESS_LOGGER_NAME):
+        response = await client.get("/api/v1/health/live")
 
     assert response.status_code == 200
     assert response.json() == {"status": "ok"}
+    assert not [record for record in caplog.records if record.name == ACCESS_LOGGER_NAME]
 
 
 async def test_readiness_when_database_is_available(
     client: httpx.AsyncClient,
     application: FastAPI,
+    caplog: pytest.LogCaptureFixture,
 ) -> None:
     """数据库可用时 readiness 返回成功，不读取 MediaMTX 状态。"""
 
@@ -43,15 +52,18 @@ async def test_readiness_when_database_is_available(
 
     application.dependency_overrides[get_database_runtime] = override_runtime
 
-    response = await client.get("/api/v1/health/ready")
+    with caplog.at_level(logging.INFO, logger=ACCESS_LOGGER_NAME):
+        response = await client.get("/api/v1/health/ready")
 
     assert response.status_code == 200
     assert response.json() == {"status": "ok"}
+    assert not [record for record in caplog.records if record.name == ACCESS_LOGGER_NAME]
 
 
 async def test_readiness_when_database_is_unavailable(
     client: httpx.AsyncClient,
     application: FastAPI,
+    caplog: pytest.LogCaptureFixture,
 ) -> None:
     """数据库不可用时由公共 HTTP 边界返回统一 Problem 503。"""
 
@@ -62,7 +74,8 @@ async def test_readiness_when_database_is_unavailable(
 
     application.dependency_overrides[get_database_runtime] = override_runtime
 
-    response = await client.get("/api/v1/health/ready")
+    with caplog.at_level(logging.INFO, logger=ACCESS_LOGGER_NAME):
+        response = await client.get("/api/v1/health/ready")
 
     assert response.status_code == 503
     assert response.headers["content-type"] == "application/problem+json"
@@ -72,3 +85,8 @@ async def test_readiness_when_database_is_unavailable(
     assert problem["code"] == "SERVICE_UNAVAILABLE"
     assert problem["instance"] == "/api/v1/health/ready"
     assert problem["trace_id"] == response.headers["x-trace-id"]
+    records = [record for record in caplog.records if record.name == ACCESS_LOGGER_NAME]
+    assert len(records) == 1
+    assert records[0].levelno == logging.ERROR
+    assert records[0].status_code == 503
+    assert records[0].outcome == "completed"

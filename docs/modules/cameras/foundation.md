@@ -91,6 +91,11 @@ PostgreSQL 使用原生 `uuid`、`inet` 和 `timestamptz`。两个 Camera 表不
 - 列表参数：`page >= 1`，`1 <= page_size <= 100`，`q` trim 后最长 100，空白等同未提供。
 - 额外查询参数被忽略；请求 DTO 的未知字段返回 `422 UNKNOWN_FIELD`。
 - 成功和错误响应均带 `X-Trace-Id`；Problem body 使用同一 `trace_id`。
+- 每个 HTTP 请求在响应完整发送或中断时最多记录一条应用级 access log，只包含 method、path、
+  实际状态码、`completed|failed|response_interrupted`、完整耗时和 trace；query string、正文、
+  headers、客户端 IP 和 User-Agent 不进入日志。
+- 响应头已经发送后发生流式中断时保留真实状态码，并用 `ERROR/response_interrupted` 表示正文未
+  完整发送，不能把已经发送的 2xx 伪造为 500。成功的 live/ready 探针不输出 access log。
 
 Problem 的稳定分支字段是 `status/code/errors/context`。Frontend 不比较可变的 `title/detail`：
 

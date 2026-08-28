@@ -88,6 +88,21 @@ IANA 名称，例如 `UTC`。该变量只改变进程本地时间展示，数据
 `DATABASE_URL` 以 Secret 保存，配置校验、日志和 SQL 输出不得回显密码。`TEST_DATABASE_URL`
 只供集成测试使用，绝不回退到应用数据库。
 
+每个 HTTP 请求在响应完整发送或发生中断时最多记录一条应用级 access log，包含 method、path、
+实际状态码、结果、完整耗时和 trace。日志只读取 ASGI `path`，不记录 query string、请求/响应正文、
+headers、客户端 IP 或 User-Agent。Uvicorn 原生 access log 已关闭，避免同一请求重复输出以及 query
+进入 request line。
+
+HTTP 结果分为：
+
+- `completed`：响应正文已经完整发送；100–499 使用 `INFO`，500–599 使用 `ERROR`。
+- `failed`：响应头发送前发生未处理异常，记录 `status=500` 和 `ERROR`。
+- `response_interrupted`：响应头已经发送、正文尚未完整发送时发生未处理异常；保留已经发送的真实
+  状态码，并使用 `ERROR`，不能把已发送的 200 改写成 500。
+
+成功的 `/api/v1/health/live` 和 `/api/v1/health/ready` 不输出 access log；失败状态或响应中断仍会
+输出。access log 不保存异常内容，具体异常继续由 ServerError/Uvicorn 错误日志报告。
+
 ## 数据库与事务
 
 Alembic 当前包含运行时基线和 Camera 关系模型。容器启动不会自动迁移数据库：

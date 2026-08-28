@@ -100,6 +100,7 @@ EVENT_FIELD_ORDER: dict[str, tuple[str, ...]] = {
         "method",
         "path",
         "status_code",
+        "outcome",
         "duration_ms",
     ),
 }
@@ -466,8 +467,10 @@ def build_logging_config(
             },
             "uvicorn.access": {
                 "handlers": [],
-                "level": application_level,
-                "propagate": True,
+                # 应用级 middleware 已接管 access log。这里同时关闭传播，确保直接调用统一
+                # logging 配置、尚未进入 Uvicorn Config 时也不会泄漏含 query 的 request line。
+                "level": "CRITICAL",
+                "propagate": False,
             },
             "httpx": {"handlers": [], "level": "WARNING", "propagate": True},
             "httpcore": {"handlers": [], "level": "WARNING", "propagate": True},

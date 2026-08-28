@@ -60,7 +60,9 @@ def main(arguments: Sequence[str] | None = None) -> None:
         workers=parsed.workers,
         log_config=log_config,
         log_level=settings.backend_log_level,
-        access_log=True,
+        # 应用 middleware 已记录脱敏 path、trace、真实状态和完整耗时；关闭 Uvicorn 原生
+        # request line，避免同一请求重复输出以及 query string 进入日志。
+        access_log=False,
     )
 
 

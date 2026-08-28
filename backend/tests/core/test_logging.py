@@ -187,6 +187,41 @@ def test_json_formatter_keeps_types_order_zero_and_ignores_unknown_fields() -> N
     assert "trace_id" not in payload
 
 
+def test_http_access_event_keeps_real_status_outcome_and_field_order() -> None:
+    """HTTP 状态和最终结果必须同时保留，避免把流式中断的 200 伪装成 500。"""
+
+    record = make_record(
+        name="app.core.http.access",
+        message="HTTP 响应发送中断",
+        level=logging.ERROR,
+        event="http.request_completed",
+        method="GET",
+        path="/api/v1/export",
+        status_code=200,
+        outcome="response_interrupted",
+        duration_ms=320,
+        trace_id="tr_stream",
+    )
+
+    console = ConsoleFormatter().format(record)
+    payload = json.loads(JsonFormatter().format(record))
+
+    assert (
+        "method=GET path=/api/v1/export status=200 result=response_interrupted "
+        "duration=320ms trace=tr_stream"
+    ) in console
+    assert list(payload)[-6:] == [
+        "trace_id",
+        "method",
+        "path",
+        "status_code",
+        "outcome",
+        "duration_ms",
+    ]
+    assert payload["status_code"] == 200
+    assert payload["outcome"] == "response_interrupted"
+
+
 @pytest.mark.parametrize(
     ("logger_name", "component"),
     [
@@ -322,6 +357,8 @@ def test_configure_logging_preserves_host_handler_and_is_idempotent(
     assert logging.getLogger("httpx").level == logging.WARNING
     assert logging.getLogger("sqlalchemy").level == logging.WARNING
     assert all(not logging.getLogger(name).handlers for name in ("app", "uvicorn"))
+    assert logging.getLogger("uvicorn.access").level == logging.CRITICAL
+    assert logging.getLogger("uvicorn.access").propagate is False
 
     logging.getLogger("app.test").debug("重复初始化检查")
     assert [record.message for record in caplog.records].count("重复初始化检查") == 1

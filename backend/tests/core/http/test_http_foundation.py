@@ -6,16 +6,26 @@ Foundation 明确禁止新增 Camera CRUD handler，因此本文件使用不进�
 """
 
 import logging
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Iterator
 from uuid import UUID
 
 import httpx
 import pytest
 from fastapi import APIRouter, FastAPI, HTTPException
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
+from starlette.middleware.cors import CORSMiddleware
+from starlette.responses import StreamingResponse
+from starlette.types import Message
 
 from app.core.config import Settings
-from app.core.http import CanonicalUUID4, TraceIdLogFilter, get_trace_id
+from app.core.http import (
+    CanonicalUUID4,
+    HttpAccessLogMiddleware,
+    TraceIdLogFilter,
+    TraceIdMiddleware,
+    get_trace_id,
+)
+from app.core.logging import ConsoleFormatter, JsonFormatter
 from app.main import create_app
 from app.modules.cameras.api.dependencies import (
     CameraListParameters,
@@ -38,6 +48,7 @@ CANONICAL_UUID4 = "8f14e45f-ea9d-4a7d-9b6d-8c9f0a1b2c3d"
 # HTTP 层与领域、ORM、生成契约共用敏感数据门禁的唯一 sentinel；RTSP 形式专门覆盖完整 URL 泄漏。
 LEAK_SENTINEL = CAMERA_LEAK_SENTINEL
 RTSP_LEAK_SENTINEL = CAMERA_LEAK_RTSP_URL
+ACCESS_LOGGER_NAME = "app.core.http.access"
 
 
 class ProbeSource(BaseModel):
@@ -141,6 +152,24 @@ async def probe_http_error(status_code: int) -> None:
     raise HTTPException(status_code=status_code, detail=RTSP_LEAK_SENTINEL)
 
 
+@probe_router.get("/unhandled-error")
+async def probe_unhandled_error() -> None:
+    """在响应头发送前抛错，用于验证 access 记录 500 后仍把异常交给 ServerError。"""
+
+    raise RuntimeError(RTSP_LEAK_SENTINEL)
+
+
+@probe_router.get("/stream")
+async def probe_stream() -> StreamingResponse:
+    """返回两段正常流，证明 access 必须等待最后一段正文发送后才记录完成。"""
+
+    async def chunks() -> AsyncIterator[bytes]:
+        yield b"first-"
+        yield b"second"
+
+    return StreamingResponse(chunks(), media_type="text/plain")
+
+
 @pytest.fixture
 def probe_application(settings: Settings) -> FastAPI:
     """每例创建隔离应用；测试路由不会污染生产应用或 OpenAPI。"""
@@ -163,8 +192,28 @@ async def probe_client(probe_application: FastAPI) -> AsyncIterator[httpx.AsyncC
             yield client
 
 
+@pytest.fixture
+def access_caplog(caplog: pytest.LogCaptureFixture) -> Iterator[pytest.LogCaptureFixture]:
+    """让 pytest Handler 模拟生产 Handler 的 trace Filter，并捕获 INFO access 事件。"""
+
+    trace_filter = TraceIdLogFilter()
+    caplog.handler.addFilter(trace_filter)
+    caplog.set_level(logging.INFO, logger=ACCESS_LOGGER_NAME)
+    try:
+        yield caplog
+    finally:
+        caplog.handler.removeFilter(trace_filter)
+
+
+def access_records(caplog: pytest.LogCaptureFixture) -> list[logging.LogRecord]:
+    """只返回应用级 access 事件，排除同一请求内其他业务或框架日志。"""
+
+    return [record for record in caplog.records if record.name == ACCESS_LOGGER_NAME]
+
+
 async def test_success_response_uses_one_trace_id_for_header_context_and_logs(
     probe_client: httpx.AsyncClient,
+    access_caplog: pytest.LogCaptureFixture,
 ) -> None:
     """成功响应的 header、请求 ContextVar 和日志字段必须使用同一个 trace ID。"""
 
@@ -176,6 +225,12 @@ async def test_success_response_uses_one_trace_id_for_header_context_and_logs(
         "request_trace_id": trace_id,
         "log_trace_id": trace_id,
     }
+    records = access_records(access_caplog)
+    assert len(records) == 1
+    assert records[0].event == "http.request_completed"
+    assert records[0].outcome == "completed"
+    assert records[0].status_code == 200
+    assert records[0].trace_id == trace_id
 
 
 async def test_valid_incoming_trace_id_is_forwarded(probe_client: httpx.AsyncClient) -> None:
@@ -190,7 +245,10 @@ async def test_valid_incoming_trace_id_is_forwarded(probe_client: httpx.AsyncCli
     assert response.json()["request_trace_id"] == "gateway.trace-123"
 
 
-async def test_cors_preflight_response_also_has_trace_id(probe_client: httpx.AsyncClient) -> None:
+async def test_cors_preflight_response_also_has_trace_id_and_one_access_log(
+    probe_client: httpx.AsyncClient,
+    access_caplog: pytest.LogCaptureFixture,
+) -> None:
     """CORS 提前返回的 OPTIONS 响应也必须经过外层 Trace 中间件。"""
 
     response = await probe_client.options(
@@ -204,6 +262,10 @@ async def test_cors_preflight_response_also_has_trace_id(probe_client: httpx.Asy
     assert response.status_code == 200
     assert response.headers["access-control-allow-origin"] == "http://localhost:8000"
     assert response.headers["x-trace-id"].startswith("tr_")
+    records = access_records(access_caplog)
+    assert len(records) == 1
+    assert records[0].method == "OPTIONS"
+    assert records[0].trace_id == response.headers["x-trace-id"]
 
 
 @pytest.mark.parametrize("incoming", ["contains spaces", "x" * 65, "bad/trace"])
@@ -225,6 +287,7 @@ async def test_untrusted_trace_id_text_is_replaced(
 
 async def test_problem_trace_matches_header_and_instance_excludes_query(
     probe_client: httpx.AsyncClient,
+    access_caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Problem trace 必须与 header 一致，instance 只能包含不会泄密的 path。"""
 
@@ -241,6 +304,187 @@ async def test_problem_trace_matches_header_and_instance_excludes_query(
     assert problem["instance"] == "/_http-foundation-probe/http-error/409"
     assert "password" not in problem["instance"]
     assert RTSP_LEAK_SENTINEL not in response.text
+    records = access_records(access_caplog)
+    assert len(records) == 1
+    assert records[0].path == "/_http-foundation-probe/http-error/409"
+    assert records[0].status_code == 409
+    assert records[0].outcome == "completed"
+    assert records[0].trace_id == response.headers["x-trace-id"]
+
+
+@pytest.mark.parametrize(
+    ("status_code", "expected_level"),
+    [(409, logging.INFO), (503, logging.ERROR)],
+)
+async def test_completed_problem_uses_status_based_level(
+    probe_client: httpx.AsyncClient,
+    access_caplog: pytest.LogCaptureFixture,
+    status_code: int,
+    expected_level: int,
+) -> None:
+    """完整发送的 4xx 保持 INFO，完整发送的 5xx 使用 ERROR，但都属于 completed。"""
+
+    response = await probe_client.get(f"/_http-foundation-probe/http-error/{status_code}")
+
+    assert response.status_code == status_code
+    records = access_records(access_caplog)
+    assert len(records) == 1
+    assert records[0].levelno == expected_level
+    assert records[0].outcome == "completed"
+    assert records[0].status_code == status_code
+
+
+async def test_normal_stream_logs_only_after_last_body(
+    probe_client: httpx.AsyncClient,
+    access_caplog: pytest.LogCaptureFixture,
+) -> None:
+    """正常流式响应完整发送两段正文后只记录一条 completed。"""
+
+    response = await probe_client.get("/_http-foundation-probe/stream")
+
+    assert response.status_code == 200
+    assert response.content == b"first-second"
+    records = access_records(access_caplog)
+    assert len(records) == 1
+    assert records[0].outcome == "completed"
+    assert records[0].status_code == 200
+
+
+async def test_unhandled_error_before_response_start_logs_failed_with_request_trace(
+    probe_client: httpx.AsyncClient,
+    access_caplog: pytest.LogCaptureFixture,
+) -> None:
+    """响应头前的未知异常记录 500/failed，随后仍由现有 ServerError 链抛给测试客户端。"""
+
+    with pytest.raises(RuntimeError, match=RTSP_LEAK_SENTINEL):
+        await probe_client.get(
+            "/_http-foundation-probe/unhandled-error",
+            headers={"X-Trace-Id": "gateway.unhandled-123"},
+        )
+
+    records = access_records(access_caplog)
+    assert len(records) == 1
+    assert records[0].levelno == logging.ERROR
+    assert records[0].message == "HTTP 请求处理失败"
+    assert records[0].status_code == 500
+    assert records[0].outcome == "failed"
+    assert records[0].trace_id == "gateway.unhandled-123"
+    assert RTSP_LEAK_SENTINEL not in ConsoleFormatter().format(records[0])
+    assert RTSP_LEAK_SENTINEL not in JsonFormatter().format(records[0])
+
+
+async def test_stream_interruption_keeps_sent_status_and_logs_once(
+    access_caplog: pytest.LogCaptureFixture,
+) -> None:
+    """已经发送 200 后中断只能标记 response_interrupted，不能伪造为 500。"""
+
+    async def interrupted_app(_scope, _receive, send) -> None:
+        await send({"type": "http.response.start", "status": 200, "headers": []})
+        await send({"type": "http.response.body", "body": b"partial", "more_body": True})
+        raise RuntimeError(RTSP_LEAK_SENTINEL)
+
+    clock_values = iter([10.0, 10.32])
+    middleware = HttpAccessLogMiddleware(interrupted_app, clock=lambda: next(clock_values))
+    sent_messages: list[Message] = []
+
+    async def receive() -> Message:
+        return {"type": "http.request", "body": b"", "more_body": False}
+
+    async def send(message: Message) -> None:
+        sent_messages.append(message)
+
+    with pytest.raises(RuntimeError, match=RTSP_LEAK_SENTINEL):
+        await middleware(
+            {
+                "type": "http",
+                "method": "GET",
+                "path": "/api/v1/export",
+                "query_string": b"password=must-not-be-read",
+            },
+            receive,
+            send,
+        )
+
+    assert [message["type"] for message in sent_messages] == [
+        "http.response.start",
+        "http.response.body",
+    ]
+    records = access_records(access_caplog)
+    assert len(records) == 1
+    assert records[0].levelno == logging.ERROR
+    assert records[0].message == "HTTP 响应发送中断"
+    assert records[0].status_code == 200
+    assert records[0].outcome == "response_interrupted"
+    assert records[0].duration_ms == 320
+
+
+async def test_exception_after_completed_body_does_not_duplicate_access_log(
+    access_caplog: pytest.LogCaptureFixture,
+) -> None:
+    """正文已完成后的异常继续抛出，但不能把已记录的 completed 改写或再记录一次。"""
+
+    async def completed_then_failed_app(_scope, _receive, send) -> None:
+        await send({"type": "http.response.start", "status": 204, "headers": []})
+        await send({"type": "http.response.body", "body": b"", "more_body": False})
+        raise RuntimeError(RTSP_LEAK_SENTINEL)
+
+    clock_values = iter([20.0, 20.012])
+    middleware = HttpAccessLogMiddleware(
+        completed_then_failed_app, clock=lambda: next(clock_values)
+    )
+
+    async def receive() -> Message:
+        return {"type": "http.request", "body": b"", "more_body": False}
+
+    async def send(_message: Message) -> None:
+        return None
+
+    with pytest.raises(RuntimeError, match=RTSP_LEAK_SENTINEL):
+        await middleware(
+            {"type": "http", "method": "DELETE", "path": "/resource"},
+            receive,
+            send,
+        )
+
+    records = access_records(access_caplog)
+    assert len(records) == 1
+    assert records[0].levelno == logging.INFO
+    assert records[0].status_code == 204
+    assert records[0].outcome == "completed"
+    assert records[0].duration_ms == 12
+
+
+async def test_access_log_omits_query_and_escapes_path_controls(
+    probe_client: httpx.AsyncClient,
+    access_caplog: pytest.LogCaptureFixture,
+) -> None:
+    """URL query 不能进入事件，解码后的换行 path 也不能伪造第二行日志。"""
+
+    await probe_client.get(
+        "/_http-foundation-probe/not-found/%0Aforged",
+        params={"password": RTSP_LEAK_SENTINEL},
+    )
+
+    records = access_records(access_caplog)
+    assert len(records) == 1
+    console = ConsoleFormatter().format(records[0])
+    json_output = JsonFormatter().format(records[0])
+    assert RTSP_LEAK_SENTINEL not in console
+    assert RTSP_LEAK_SENTINEL not in json_output
+    assert len(console.splitlines()) == 1
+    assert len(json_output.splitlines()) == 1
+
+
+def test_application_middleware_order_keeps_trace_around_access_and_cors(
+    probe_application: FastAPI,
+) -> None:
+    """Trace 最外、Access 居中、CORS 最内，确保预检日志也带请求 trace。"""
+
+    assert [item.cls for item in probe_application.user_middleware] == [
+        TraceIdMiddleware,
+        HttpAccessLogMiddleware,
+        CORSMiddleware,
+    ]
 
 
 @pytest.mark.parametrize(

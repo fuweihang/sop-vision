@@ -5,6 +5,7 @@
 略有差异的响应规则。
 """
 
+from app.core.http.access import HttpAccessLogMiddleware
 from app.core.http.errors import add_http_exception_handler, install_http_exception_handlers
 from app.core.http.middleware import TraceIdMiddleware
 from app.core.http.openapi import (
@@ -20,6 +21,7 @@ from app.core.http.types import CanonicalUUID4
 __all__ = [
     "CanonicalUUID4",
     "FieldError",
+    "HttpAccessLogMiddleware",
     "ProblemDetails",
     "TraceIdLogFilter",
     "TraceIdMiddleware",

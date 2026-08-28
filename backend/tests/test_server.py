@@ -44,7 +44,7 @@ def test_main_configures_logging_before_starting_uvicorn(monkeypatch) -> None:
                 "workers": 3,
                 "log_config": logging_config,
                 "log_level": "debug",
-                "access_log": True,
+                "access_log": False,
             },
         )
     ]

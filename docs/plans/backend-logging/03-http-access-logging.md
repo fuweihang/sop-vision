@@ -80,8 +80,9 @@ HTTP 事件字段固定为：
    记录时 trace 仍有效，且预检响应也能记录。
 6. 在任务 1 的 HTTP 事件字段顺序中加入 `outcome`，固定为
    `method,path,status_code,outcome,duration_ms`；console 显示为 `result`，JSON 保留 `outcome`。
-7. `app.server` 向 Uvicorn 传 `access_log=False`，并确保统一配置不再为 `uvicorn.access` 安装独立
-   Handler；不能只提高级别后留下可被其他配置重新开启的第二条 access line。
+7. `app.server` 向 Uvicorn 传 `access_log=False`；统一配置同时清空 `uvicorn.access` Handler、设置
+   `propagate=False` 并停止其输出，确保直接使用统一配置时也不会向 root 泄漏原生 request line。
+   不能只提高级别后留下可被其他配置重新开启的第二条 access line。
 8. 更新 HTTP Foundation 测试和文档。
 
 ## 验证方式
