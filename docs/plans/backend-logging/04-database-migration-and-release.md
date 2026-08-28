@@ -68,7 +68,7 @@
 7. 更新 README、环境变量示例和设计文档：
    - 默认格式与级别。
    - `BACKEND_LOG_FORMAT` 用法。
-   - `BACKEND_LOG_LEVEL` 优先于兼容变量 `UVICORN_LOG_LEVEL`，后者只作为未设置新变量时的回退。
+   - `BACKEND_LOG_LEVEL` 是应用与 Uvicorn 唯一支持的日志级别变量。
    - `DATABASE_ECHO` 通过统一 Logger 输出。
    - 持续故障、恢复和 HTTP access 规则。
 8. 执行 Backend 全量检查并人工检查 Compose 启动输出。

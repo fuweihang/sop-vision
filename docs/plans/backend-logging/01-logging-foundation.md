@@ -45,8 +45,7 @@
 - `BACKEND_LOG_FORMAT=console|json`，默认 `console`。
 - Backend 容器使用 `TZ=Asia/Shanghai` 作为默认地区；Formatter 根据进程 `TZ` 输出
   `YYYY-MM-DD HH:mm:ss`，console 与 JSON 不显示毫秒或时区后缀。
-- `BACKEND_LOG_LEVEL` 优先；仅当它未设置时，兼容读取已有 `UVICORN_LOG_LEVEL`。示例和文档不再
-  主动使用旧变量，但本轮不让现有部署静默退回 `info`；旧变量也只接受同一组五个合法值。
+- `BACKEND_LOG_LEVEL` 是唯一日志级别变量；未设置时使用 `info`。
 - 总览规定的地区时间 console Formatter、JSON Formatter、字段白名单、组件映射、单行转义和安全异常
   堆栈。
 - 一个只返回纯字符串 `error_type/error_frames` 的安全异常 helper，供应用捕获未知异常时使用；
@@ -82,7 +81,7 @@
    替换本模块自己安装的旧 Handler，但不得删除 pytest/caplog 或宿主进程 Handler。重复配置不得
    增加 Handler 或重复输出。
 4. 修改现有 `TraceIdLogFilter`，非 HTTP 上下文写入 `None` 而不是 `-`；增加 Settings 字段、枚举
-   合法值、`UVICORN_LOG_LEVEL` 回退优先级和配置测试。
+   合法值和配置测试。
 5. 实现 `app.server`：
    - 在服务器启动入口加载 Settings 和日志配置。
    - 保持 `app.main` 可被测试和 OpenAPI 导出安全导入。
@@ -93,8 +92,7 @@
      子进程也应用它。重复应用必须由步骤 3 的测试证明不会叠加 Handler。
    - 向 Uvicorn 传入字符串应用路径、解析后的 log level 和 `access_log=True`；任务 1 仍启用
      Uvicorn access log。
-6. Docker 改用 `app.server`；Compose 直接传 `BACKEND_LOG_LEVEL/BACKEND_LOG_FORMAT/TZ`，不再只设置
-   `UVICORN_LOG_LEVEL`。
+6. Docker 改用 `app.server`；Compose 直接传 `BACKEND_LOG_LEVEL/BACKEND_LOG_FORMAT/TZ`。
 7. 更新环境变量示例、Backend README、根 README 和 `AGENTS.md`，所有受支持的 Backend
    启动命令都经过 `app.server`。
 
@@ -118,8 +116,7 @@ docker compose config
 - 未知 `extra` 和敏感测试哨兵不会出现在 console 或 JSON。
 - 本地参数保留 `127.0.0.1:3001 + reload`，Docker 参数为 `0.0.0.0:3001`；非法
   `--reload --workers 2` 在调用 Uvicorn 前失败。
-- 只设置旧 `UVICORN_LOG_LEVEL=debug` 仍能得到应用 DEBUG；同时设置两个变量时以
-  `BACKEND_LOG_LEVEL` 为准。
+- 未设置 `BACKEND_LOG_LEVEL` 时使用默认 `info`，不读取其他日志级别变量。
 
 ## 完成标准
 

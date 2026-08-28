@@ -6,7 +6,6 @@ from urllib.parse import SplitResult, urlsplit
 
 from pydantic import (
     AfterValidator,
-    AliasChoices,
     BeforeValidator,
     Field,
     SecretStr,
@@ -103,8 +102,6 @@ class Settings(BaseSettings):
         hide_input_in_errors=True,
         # 部署默认值也必须经过同一校验，避免后续修改默认地址时绕过启动门禁。
         validate_default=True,
-        # 日志级别使用 validation_alias 兼容旧变量；保留字段名初始化方便测试和显式注入。
-        populate_by_name=True,
     )
 
     app_name: str = "SOP Vision 后端"
@@ -117,11 +114,7 @@ class Settings(BaseSettings):
     database_pool_recycle: int = Field(default=1800, ge=-1)
     database_connect_timeout: int = Field(default=10, ge=1)
     database_echo: bool = False
-    # AliasChoices 按顺序读取：新变量存在时永远优先，只有缺失时才尝试旧 Uvicorn 变量。
-    backend_log_level: BackendLogLevel = Field(
-        default="info",
-        validation_alias=AliasChoices("BACKEND_LOG_LEVEL", "UVICORN_LOG_LEVEL"),
-    )
+    backend_log_level: BackendLogLevel = "info"
     backend_log_format: BackendLogFormat = "console"
     mediamtx_api_url: MediaMTXApiUrl = "http://mediamtx:9997"
     mediamtx_api_timeout: float = Field(default=5.0, gt=0)

@@ -23,7 +23,7 @@
 ## 当前问题
 
 - Uvicorn 默认配置主要处理 `uvicorn.*` Logger，`app.*` 告警可能只显示裸 `message`。
-- `BACKEND_LOG_LEVEL` 当前只通过 `UVICORN_LOG_LEVEL` 影响 Uvicorn，不能完整控制应用 Logger。
+- Backend 原本缺少一个能同时控制 Uvicorn 与 `app.*` Logger 的日志级别配置。
 - MediaMTX Adapter 和对账 Runner 把相同字段同时写入 `message` 与 `extra`。
 - 缺失字段仍显示为 `trace_id=-`、`source_id=-`，无意义的零计数占用主要位置。
 - 同一次 MediaMTX 故障由 Adapter 和 Runner 各打印一条 WARNING，并在持续故障时反复出现。
@@ -38,7 +38,7 @@
 ```text
 2026-08-28 16:31:12 WARN  media.reconciliation  MediaMTX 不可用，本轮对账已跳过  result=gateway_unavailable retry=257.0s failures=1 duration=5ms
 2026-08-28 16:48:45 INFO  media.reconciliation  MediaMTX 已恢复，对账完成  result=success desired=4 managed=4 ensured=1 released=0 failures=7 degraded=1033.1s duration=12ms
-2026-08-28 16:49:01 INFO  http.access           HTTP 请求完成  method=GET path=/api/v1/cameras status=200 duration=18ms trace=tr_abc123
+2026-08-28 16:49:01 INFO  http.access           HTTP 请求完成  method=GET path=/api/v1/cameras status=200 result=completed duration=18ms trace=tr_abc123
 2026-08-28 16:49:08 WARN  camera.create         Camera 已保存，但媒体操作未全部成功  result=degraded camera=... failed=2 trace=tr_abc123
 2026-08-28 16:50:22 ERROR camera.integrity      Camera 引用完整性异常  kind=ORPHAN_SOURCE camera=... source=...
 ```
@@ -157,7 +157,18 @@ console 不重复显示 `logger` 和 `event`；稳定事件由 JSON 或 LogRecor
 | `media_reconciliation.runner_exit` | `媒体对账任务停止异常` | `ERROR` | `outcome`；超时时加 `timeout_seconds`；有安全异常栈时加 `error_type,error_frames` |
 | `camera.media_sync_degraded` | `Camera 已保存，但媒体操作未全部成功` | `WARNING` | `operation=post_commit_media_sync,outcome=degraded,camera_id,failed_count` |
 | `camera.reference_integrity_failed` | `Camera 引用完整性异常` | `ERROR` | `integrity_issue_kind,camera_id`；有 Source 时加 `source_id` |
-| `http.request_completed` | `HTTP 请求完成` | 100–499 `INFO`，500–599/未处理异常 `ERROR` | `method,path,status_code,duration_ms`；trace 由 Filter 增加 |
+| `http.request_completed` | 根据 outcome 使用 `HTTP 请求完成`、`HTTP 请求处理失败` 或 `HTTP 响应发送中断` | `completed` 的 100–499 为 `INFO`、500–599 为 `ERROR`；`failed/response_interrupted` 始终为 `ERROR` | `method,path,status_code,outcome,duration_ms`；trace 由 Filter 增加 |
+
+HTTP outcome 固定规则：
+
+| outcome | 使用条件 | status_code |
+| --- | --- | --- |
+| `completed` | 最后一个响应正文消息已成功发送，包括完整的 4xx/5xx 响应 | 实际发送状态 |
+| `failed` | 响应头发送前发生未处理异常 | 现有 ServerError 将生成的 `500` |
+| `response_interrupted` | 响应头已发送、正文未完整发送时发生未处理异常 | 已发送的真实状态，不得改写成 `500` |
+
+正文已经完整发送并记录 `completed` 后再发生异常时，不生成第二条 access log；异常继续由现有
+ServerError/Uvicorn 错误日志报告。HTTP access log 不记录异常类型、异常文本或堆栈。
 
 对账失败 message 固定映射：
 
@@ -203,9 +214,11 @@ Handler 时必须保留，由对应任务的测试单独验证。
 | Camera 提交后媒体操作未全部成功 | 每个请求一条 `WARNING` |
 | Runner 停止超时、异常退出 | `ERROR` |
 | Camera 引用完整性异常 | `ERROR` |
-| HTTP 100–499 | `INFO` |
-| HTTP 500–599、未处理异常 | `ERROR` |
-| 成功的 live/ready 探针 | 不输出；失败仍输出 |
+| 完整发送的 HTTP 100–499 | `INFO`，`outcome=completed` |
+| 完整发送的 HTTP 500–599 | `ERROR`，`outcome=completed` |
+| 响应头发送前发生未处理异常 | `ERROR`，`status_code=500/outcome=failed` |
+| 响应头已发送、正文未完成时发生未处理异常 | `ERROR`，保留真实 status，`outcome=response_interrupted` |
+| 成功的 live/ready 探针 | `completed` 且状态为 200–399 时不输出；其他结果仍输出 |
 
 ### 安全规则
 

@@ -77,10 +77,9 @@ uv run --env-file .env.local python -m app.server \
 | `MEDIA_RECONCILIATION_MAX_BACKOFF_SECONDS` | `300`                   | 连续失败时指数退避的上限秒数                       |
 | `BACKEND_CORS_ORIGINS`                     | `http://localhost:8000` | 允许的 Origin，多个值使用逗号分隔                  |
 
-`BACKEND_LOG_LEVEL` 支持 `debug`、`info`、`warning`、`error` 和 `critical`。只在新变量未设置时，
-应用才会兼容读取旧 `UVICORN_LOG_LEVEL`；新部署不应继续使用旧变量。`BACKEND_PORT` 只控制
-Compose 发布到宿主机的端口，容器内仍监听 `3001`；本地直接启动如需改端口使用 `--port`。
-`REDIS_URL` 已在运行环境中预留，但当前代码不会读取它。
+`BACKEND_LOG_LEVEL` 支持 `debug`、`info`、`warning`、`error` 和 `critical`，并同时控制应用与
+Uvicorn Logger。`BACKEND_PORT` 只控制 Compose 发布到宿主机的端口，容器内仍监听 `3001`；本地
+直接启动如需改端口使用 `--port`。`REDIS_URL` 已在运行环境中预留，但当前代码不会读取它。
 
 console 与 JSON 的 `timestamp` 都按 Backend 进程的 `TZ` 输出 `YYYY-MM-DD HH:mm:ss`，不包含
 毫秒、时区偏移或缩写。默认镜像和 Compose 使用 `Asia/Shanghai`；修改地区时应填写系统支持的
