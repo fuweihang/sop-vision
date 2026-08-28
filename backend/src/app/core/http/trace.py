@@ -34,7 +34,8 @@ class TraceIdLogFilter(logging.Filter):
     """为日志记录补充当前请求的 ``trace_id`` 字段。
 
     Filter 只读取 ContextVar，不接受调用方传入另一个 trace ID，因此应用日志、响应头和
-    Problem body 可以保持同源。未处于请求上下文时使用 ``-``，便于 formatter 稳定输出。
+    Problem body 可以保持同源。未处于请求上下文时写入 ``None``，由 Formatter 直接省略，
+    避免大量非请求日志重复显示无意义的 ``trace=-``。
     """
 
     def filter(self, record: logging.LogRecord) -> bool:
@@ -44,5 +45,5 @@ class TraceIdLogFilter(logging.Filter):
         从机制上避免同一请求产生多个不一致的关联 ID。
         """
 
-        record.trace_id = get_trace_id() or "-"
+        record.trace_id = get_trace_id()
         return True

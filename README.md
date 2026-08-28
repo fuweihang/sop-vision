@@ -115,8 +115,8 @@ pnpm install --frozen-lockfile
 
 ```bash
 cd backend
-uv run --env-file .env.local uvicorn app.main:app \
-  --app-dir src --host 127.0.0.1 --port 3001 --reload
+uv run --env-file .env.local python -m app.server \
+  --host 127.0.0.1 --port 3001 --reload
 
 cd frontend
 pnpm dev

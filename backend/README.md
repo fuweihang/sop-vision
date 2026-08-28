@@ -43,8 +43,8 @@ docker compose -f compose.yaml -f compose.dev.yaml \
 uv sync --locked
 cp .env.local.example .env.local
 uv run --env-file .env.local alembic upgrade head
-uv run --env-file .env.local uvicorn app.main:app \
-  --app-dir src --host 127.0.0.1 --port 3001 --reload
+uv run --env-file .env.local python -m app.server \
+  --host 127.0.0.1 --port 3001 --reload
 ```
 
 启动后访问：
@@ -67,6 +67,8 @@ uv run --env-file .env.local uvicorn app.main:app \
 | `DATABASE_POOL_RECYCLE`                    | `1800`                  | 连接回收秒数；`-1` 表示禁用按时回收                |
 | `DATABASE_CONNECT_TIMEOUT`                 | `10`                    | 建立 PostgreSQL 连接超时秒数                       |
 | `DATABASE_ECHO`                            | `false`                 | 是否输出 SQL；参数始终隐藏                         |
+| `BACKEND_LOG_LEVEL`                        | `info`                  | 应用与 Uvicorn 日志级别                            |
+| `BACKEND_LOG_FORMAT`                       | `console`               | 日志格式：`console` 或单行 `json`                  |
 | `MEDIAMTX_API_URL`                         | `http://mediamtx:9997`  | MediaMTX Control API 地址                          |
 | `MEDIAMTX_API_TIMEOUT`                     | `5`                     | Control API 请求超时秒数                           |
 | `PUBLIC_WEBRTC_BASE_URL`                   | `http://localhost:8889` | WHEP 公网基础地址；当前播放 handler 尚未使用       |
@@ -74,8 +76,10 @@ uv run --env-file .env.local uvicorn app.main:app \
 | `MEDIA_RECONCILIATION_MAX_BACKOFF_SECONDS` | `300`                   | 连续失败时指数退避的上限秒数                       |
 | `BACKEND_CORS_ORIGINS`                     | `http://localhost:8000` | 允许的 Origin，多个值使用逗号分隔                  |
 
-`BACKEND_PORT`、`BACKEND_LOG_LEVEL` 和 `UVICORN_LOG_LEVEL` 由 Compose/Uvicorn 读取，不属于
-应用 Settings。`REDIS_URL` 已在运行环境中预留，但当前代码不会读取它。
+`BACKEND_LOG_LEVEL` 支持 `debug`、`info`、`warning`、`error` 和 `critical`。只在新变量未设置时，
+应用才会兼容读取旧 `UVICORN_LOG_LEVEL`；新部署不应继续使用旧变量。`BACKEND_PORT` 只控制
+Compose 发布到宿主机的端口，容器内仍监听 `3001`；本地直接启动如需改端口使用 `--port`。
+`REDIS_URL` 已在运行环境中预留，但当前代码不会读取它。
 
 `DATABASE_URL` 以 Secret 保存，配置校验、日志和 SQL 输出不得回显密码。`TEST_DATABASE_URL`
 只供集成测试使用，绝不回退到应用数据库。

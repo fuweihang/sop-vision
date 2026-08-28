@@ -8,7 +8,7 @@
 
 - `cp .env.example .env && docker compose up --build --wait` 用于构建并启动完整的本地技术栈。
 - `docker compose config` 用于验证 Compose 配置和环境变量插值；`docker compose down` 用于停止该技术栈。
-- 在 `backend/` 中，先运行 `uv sync`，再运行 `uv run --env-file ../.env uvicorn app.main:app --app-dir src --reload --port 3001` 进行本地 API 开发。
+- 在 `backend/` 中，先运行 `uv sync`，再运行 `uv run --env-file ../.env python -m app.server --host 127.0.0.1 --port 3001 --reload` 进行本地 API 开发。
 - 在 `frontend/` 中使用 Node 24 和 pnpm 11：通过 `pnpm install`、`pnpm dev` 和 `pnpm build` 分别安装依赖、启动开发服务以及执行类型检查并构建应用。
 - 在 `backend/` 中常规运行 `uv run pytest`；如果测试依赖配置在 `backend/.env.local` 中的环境变量（尤其是 `TEST_DATABASE_URL`），必须运行 `uv run --env-file .env.local pytest`，否则相关 PostgreSQL 测试会被跳过。后端静态检查使用 `uv run ruff check .` 和 `uv run ruff format --check .`；在 `frontend/` 中运行 `pnpm test`、`pnpm lint` 和 `pnpm format:check`。
 

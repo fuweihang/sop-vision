@@ -183,3 +183,58 @@ def test_media_reconciliation_max_backoff_cannot_be_shorter_than_interval() -> N
             media_reconciliation_interval_seconds=60,
             media_reconciliation_max_backoff_seconds=30,
         )
+
+
+def test_backend_logging_defaults_are_console_info(monkeypatch) -> None:
+    """Backend 日志默认适合人工查看，并避免默认输出 DEBUG 噪声。"""
+
+    monkeypatch.delenv("BACKEND_LOG_LEVEL", raising=False)
+    monkeypatch.delenv("UVICORN_LOG_LEVEL", raising=False)
+    monkeypatch.delenv("BACKEND_LOG_FORMAT", raising=False)
+    settings = Settings(
+        database_url=SecretStr("postgresql+psycopg://sop_vision:sop_vision@localhost/sop_vision")
+    )
+
+    assert settings.backend_log_level == "info"
+    assert settings.backend_log_format == "console"
+
+
+def test_backend_log_level_prefers_new_environment_variable(monkeypatch) -> None:
+    """新变量优先于旧 Uvicorn 变量，避免迁移期间出现两个有效值时行为不确定。"""
+
+    monkeypatch.setenv("BACKEND_LOG_LEVEL", "error")
+    monkeypatch.setenv("UVICORN_LOG_LEVEL", "debug")
+
+    assert get_settings().backend_log_level == "error"
+
+
+def test_backend_log_level_falls_back_to_legacy_uvicorn_variable(monkeypatch) -> None:
+    """未设置新变量的旧部署继续沿用原级别，不会静默退回 info。"""
+
+    monkeypatch.delenv("BACKEND_LOG_LEVEL", raising=False)
+    monkeypatch.setenv("UVICORN_LOG_LEVEL", "warning")
+
+    assert get_settings().backend_log_level == "warning"
+
+
+@pytest.mark.parametrize(
+    ("environment_name", "value"),
+    [
+        ("BACKEND_LOG_LEVEL", "trace"),
+        ("UVICORN_LOG_LEVEL", "verbose"),
+        ("BACKEND_LOG_FORMAT", "pretty"),
+    ],
+)
+def test_backend_logging_rejects_unsupported_environment_values(
+    environment_name: str,
+    value: str,
+    monkeypatch,
+) -> None:
+    """非法日志配置在服务器启动前失败，不能由不同 Logger 各自猜测回退值。"""
+
+    monkeypatch.delenv("BACKEND_LOG_LEVEL", raising=False)
+    monkeypatch.delenv("UVICORN_LOG_LEVEL", raising=False)
+    monkeypatch.setenv(environment_name, value)
+
+    with pytest.raises(ValidationError):
+        get_settings()

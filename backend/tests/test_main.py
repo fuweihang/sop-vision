@@ -1,6 +1,8 @@
 """应用工厂与 lifespan 数据库资源清理测试。"""
 
 import asyncio
+import importlib
+import logging
 
 import pytest
 
@@ -11,6 +13,21 @@ from app.main import create_app
 from app.modules.stream_gateway.ports import StreamGatewayPort
 
 pytestmark = pytest.mark.anyio
+
+
+def test_importing_main_does_not_replace_host_logging_handlers() -> None:
+    """OpenAPI、pytest 等普通导入 app.main 时不得触发进程级日志重配。"""
+
+    import app.main
+
+    root = logging.getLogger()
+    handler = logging.NullHandler()
+    root.addHandler(handler)
+    try:
+        importlib.reload(app.main)
+        assert handler in root.handlers
+    finally:
+        root.removeHandler(handler)
 
 
 class StubDatabaseRuntime:
