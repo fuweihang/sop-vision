@@ -1,7 +1,7 @@
 interface:
-  display_name: "代码讲解"
-  short_description: "解释已实现代码的运作原理"
-  default_prompt: "使用 $code-explain 来解释所实现功能的工作原理。"
+  display_name: "Code Explain"
+  short_description: "沿真实调用链解释代码运行、数据变化和测试覆盖情况"
+  default_prompt: "使用 $code-explain 解释这个功能的运行流程和关键实现依据。"
 
 policy:
   allow_implicit_invocation: false

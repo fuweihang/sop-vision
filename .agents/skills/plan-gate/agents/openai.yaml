@@ -1,6 +1,7 @@
 interface:
-  display_name: "方案执行审核"
-  short_description: "审核方案边界、MVP 和可执行性"
+  display_name: "Plan Gate"
+  short_description: "实施前检查方案范围、关键决策、当前代码和验证方法"
+  default_prompt: "使用 $plan-gate 审核这个实施方案是否可以开始执行。"
 
 policy:
   allow_implicit_invocation: false

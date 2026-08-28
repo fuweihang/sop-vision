@@ -1,11 +1,13 @@
 ---
-name: develop-fastapi-endpoint
-description: 以项目现有约定为基础，设计、实现、重构或审查生产级 FastAPI 接口，覆盖 API 契约、分层与依赖注入、鉴权、事务、Repository、SQLAlchemy/Alembic、并发、外部服务、错误处理、可观测性和测试。用于新增或修改 FastAPI Router、Schema、Service、Repository、ORM、迁移、依赖装配及接口行为；不用于纯前端、通用 Python 脚本或仅编辑文档的任务。
+name: develop-fastapi
+description: 按目标仓库现有约定设计、实现或重构生产级 FastAPI 接口，处理 API Schema、业务逻辑、持久化、迁移、鉴权、事务、并发、外部服务和测试；不用于只读代码评审、纯前端、通用 Python 脚本或仅编辑文档的任务。
 ---
 
-# 开发 FastAPI 接口
+# 开发 FastAPI
 
 先适配目标仓库，再选择最小且完整的实现。不要把某个模板的层级、目录或技术栈机械复制到项目中。
+
+用户只要求评审现有代码或 diff 时保持只读，不进入本 skill 的实施流程。用户要求实现或重构时，修改范围仍以其指定任务为准。
 
 ## 必读资料
 

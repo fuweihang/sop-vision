@@ -1,2 +1,7 @@
+interface:
+  display_name: "Docs Cleanup"
+  short_description: "清理失效和重复记录，保留后续开发需要的当前信息"
+  default_prompt: "使用 $docs-cleanup 整理这个开发阶段留下的项目文档。"
+
 policy:
   allow_implicit_invocation: false

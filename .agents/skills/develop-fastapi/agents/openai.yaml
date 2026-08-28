@@ -1,0 +1,4 @@
+interface:
+  display_name: "Develop FastAPI"
+  short_description: "按项目现有约定设计、实现、重构并验证 FastAPI 接口"
+  default_prompt: "使用 $develop-fastapi 按当前项目约定实现或重构这个 FastAPI 接口。"

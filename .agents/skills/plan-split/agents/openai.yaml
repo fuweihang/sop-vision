@@ -1,3 +1,4 @@
 interface:
-  display_name: "方案拆分"
-  short_description: "将过大的实施方案拆分为可独立交付的任务"
+  display_name: "Plan Split"
+  short_description: "检查方案规模并拆成可独立实现和验证的顺序任务"
+  default_prompt: "使用 $plan-split 检查这个实施方案是否需要拆分。"

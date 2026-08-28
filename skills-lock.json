@@ -5,7 +5,7 @@
       "source": "fuweihang/skills",
       "sourceType": "github",
       "skillPath": "skills/code-explain/SKILL.md",
-      "computedHash": "a7e09dbf12138ee65c91ee3831bb1e2f0aae2400c4784ecc6956adb147cab5f9"
+      "computedHash": "eddc6f8792c5006daf63f8618e379bc7195518aebb5af326d8f9731022ed0052"
     },
     "data-loading": {
       "source": "TanStack/router",
@@ -13,29 +13,29 @@
       "skillPath": "packages/router-core/skills/router-core/data-loading/SKILL.md",
       "computedHash": "8e38170db8d7ef196cc3f4fe54face009690f92aff81cc7244e6834e138f41dc"
     },
-    "develop-fastapi-endpoint": {
+    "develop-fastapi": {
       "source": "fuweihang/skills",
       "sourceType": "github",
-      "skillPath": "skills/develop-fastapi-endpoint/SKILL.md",
-      "computedHash": "f74a0f630cc840376134ccec4ad027336ff9c7e43e2997a12a7777f6c5c551cb"
+      "skillPath": "skills/develop-fastapi/SKILL.md",
+      "computedHash": "67146a8bac551a79238dbdc383480420066cde8e97a3a2599e5bcbd6b5d98ec0"
     },
     "docs-cleanup": {
       "source": "fuweihang/skills",
       "sourceType": "github",
       "skillPath": "skills/docs-cleanup/SKILL.md",
-      "computedHash": "41a7ab983894c6ef3b7a8166652ad491b3be9985021823c332f0d98cbe667dd1"
+      "computedHash": "314dd72774a2933047ff003546e7ce46aed4766da7424c5c873e4a484545996b"
     },
     "plan-gate": {
       "source": "fuweihang/skills",
       "sourceType": "github",
       "skillPath": "skills/plan-gate/SKILL.md",
-      "computedHash": "6e65e0aabc3fd82d186fb2dd6bbefcc0b1b9fbe396981fafe3c95f337bcc7ba0"
+      "computedHash": "09687669bd17bb4d8db40c4c9d880939099bee051a9f83cd5b40ce1fa0c5fa91"
     },
     "plan-split": {
       "source": "fuweihang/skills",
       "sourceType": "github",
       "skillPath": "skills/plan-split/SKILL.md",
-      "computedHash": "d1fdd9f07c6daef6ea8ff3a83501656c6980737ee0fc14d5ba07da1cb3b53243"
+      "computedHash": "45319a49740c2306015aa340698ade6f074ebb76633a0b6dd708994de94091f9"
     },
     "react-router": {
       "source": "TanStack/router",
