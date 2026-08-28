@@ -1,6 +1,7 @@
 """Camera 创建 Application 用例的事务与媒体编排测试。"""
 
 import asyncio
+import logging
 from datetime import UTC, datetime
 
 import pytest
@@ -107,7 +108,9 @@ async def test_create_camera_commits_complete_aggregate_before_media(
     assert await reader.cameras.get(result.camera.camera_id) == result.camera
 
 
-async def test_create_camera_continues_after_one_ensure_failure_and_uses_one_snapshot() -> None:
+async def test_create_camera_continues_after_one_ensure_failure_and_uses_one_snapshot(
+    caplog,
+) -> None:
     """单路即时同步失败不会阻塞后续 Source，状态只使用同步后的同一份快照。"""
 
     first_source_id = uuid4_from_index(2)
@@ -120,13 +123,14 @@ async def test_create_camera_continues_after_one_ensure_failure_and_uses_one_sna
     )
     gateway.ensure_failures[first_source_id] = StreamGatewayUnavailableError()
 
-    result = await create_camera(
-        make_command(2),
-        uow=FakeCameraUnitOfWork(FakeCameraStore()),
-        stream_gateway=gateway,
-        id_generator=fixed_ids(2),
-        clock=FixedClock(CREATED_AT),
-    )
+    with caplog.at_level(logging.WARNING, logger="app.modules.cameras.application.create"):
+        result = await create_camera(
+            make_command(2),
+            uow=FakeCameraUnitOfWork(FakeCameraStore()),
+            stream_gateway=gateway,
+            id_generator=fixed_ids(2),
+            clock=FixedClock(CREATED_AT),
+        )
 
     assert tuple(item.source_id for item in gateway.ensure_calls) == (
         first_source_id,
@@ -139,6 +143,18 @@ async def test_create_camera_continues_after_one_ensure_failure_and_uses_one_sna
     assert result.source_runtime[1].whep_url == (
         f"https://media.example.invalid/{second_source_id}/whep"
     )
+    record = next(
+        record
+        for record in caplog.records
+        if record.name == "app.modules.cameras.application.create"
+    )
+    assert record.message == "Camera 已保存，但媒体操作未全部成功"
+    assert record.event == "camera.media_sync_degraded"
+    assert record.operation == "post_commit_media_sync"
+    assert record.outcome == "degraded"
+    assert record.camera_id == str(uuid4_from_index(1))
+    assert record.failed_count == 1
+    assert not hasattr(record, "trace_id")
 
 
 @pytest.mark.parametrize(

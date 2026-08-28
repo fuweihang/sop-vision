@@ -1,6 +1,7 @@
 """创建 Camera 聚合并在提交后尽力同步媒体运行态。"""
 
 import asyncio
+import logging
 from dataclasses import dataclass, field
 from ipaddress import IPv4Address
 
@@ -15,6 +16,8 @@ from app.modules.stream_gateway.ports import (
     StreamGatewayUnavailableError,
 )
 from app.modules.stream_gateway.projection import project_source_runtime
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True, slots=True, repr=False)
@@ -100,12 +103,14 @@ async def create_camera(
         await uow.rollback()
         raise
 
+    failed_media_operation_count = 0
     for desired_source in build_camera_desired_sources(camera):
         try:
             await stream_gateway.ensure_path(desired_source)
         except (StreamGatewayUnavailableError, StreamGatewayInvalidResponseError):
             # 单路失败不阻塞其余 Source，也不在这里记录异常或 DesiredSource；Adapter 已负责
             # 脱敏 I/O 日志，后台对账会在后续轮次重试当前数据库事实。
+            failed_media_operation_count += 1
             continue
 
     failed_at = None
@@ -113,9 +118,24 @@ async def create_camera(
         observation = await stream_gateway.fetch_runtime_path_snapshot()
     except (StreamGatewayUnavailableError, StreamGatewayInvalidResponseError) as error:
         observation = error
+        failed_media_operation_count += 1
         # 失败投影需要同一次完成时间。Clock 由调用方注入，使全部 Source 共享确定且可测的
         # UTC 时刻；成功快照则直接使用 Adapter 在完成全部分页后记录的 checked_at。
         failed_at = clock.now()
+
+    if failed_media_operation_count:
+        # Adapter DEBUG 保留单次 I/O；这里只输出一次请求级业务影响，避免多 Source 失败刷出
+        # 多条默认告警。Camera 已经提交，因此该告警不能暗示数据库会回滚。
+        logger.warning(
+            "Camera 已保存，但媒体操作未全部成功",
+            extra={
+                "event": "camera.media_sync_degraded",
+                "operation": "post_commit_media_sync",
+                "outcome": "degraded",
+                "camera_id": str(camera.camera_id),
+                "failed_count": failed_media_operation_count,
+            },
+        )
 
     source_runtime = project_source_runtime(
         tuple(source.source_id for source in camera.sources),

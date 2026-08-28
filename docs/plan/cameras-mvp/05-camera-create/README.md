@@ -108,6 +108,11 @@
 降级投影；后台对账负责最终恢复映射。创建用例不调用 GET 详情 handler，也不把媒体调用放入数据库
 事务。
 
+提交后的每个受支持 `ensure_path` 或 Runtime 快照失败各计一次。一次创建请求无论累计多少次失败，
+最多输出一条 `camera.media_sync_degraded` WARNING，记录 Camera ID 和失败调用数；Adapter 的单次
+诊断保留在 DEBUG。告警不记录 Camera、Source 列表、凭据、URL 或异常文本，trace 由统一 Handler
+从当前请求上下文补充。
+
 共享投影放在 Cameras Application：把当前只存在于 API Schema 的 `CameraStatus` 移到该模块，
 Schema 直接复用同一枚举，不能复制一套同值类型。纯函数返回包含状态和两个计数的不可变结果；创建
 用例返回 Camera、按序 Source 投影和该聚合结果的有类型结果对象，API 层再映射为 Pydantic
@@ -163,7 +168,7 @@ Schema 直接复用同一枚举，不能复制一套同值类型。纯函数返�
 - `add`、flush 或 commit 失败完整回滚且零 MediaMTX 调用；数据库错误、Problem 和日志不含 SQL、
   约束名、测试密码或完整 RTSP URL。
 - 提交后按顺序为全部 Source 尽力 `ensure_path`；单项失败继续其余项；运行快照只读取一次，媒体失败
-  仍返回 `201`，下一轮对账能够恢复。
+  仍返回 `201`，下一轮对账能够恢复；多个受支持媒体错误只产生一条带 trace 的请求级 WARNING。
 - 在线 Path 返回 WHEP URL；离线、缺失、未就绪或 Control API 故障返回确定状态和
   `whep_url=null`。
 - 共享纯聚合函数覆盖全在线 `ONLINE`、全离线 `OFFLINE`、混合 `DEGRADED`、计数以及 Source

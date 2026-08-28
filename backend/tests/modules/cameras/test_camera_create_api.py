@@ -1,5 +1,6 @@
 """真实 FastAPI Router 的 Camera 创建请求、响应和错误协议测试。"""
 
+import logging
 from datetime import UTC, datetime
 
 import httpx
@@ -7,6 +8,7 @@ import pytest
 from fastapi import FastAPI
 
 from app.core.http.middleware import TRACE_ID_HEADER
+from app.core.http.trace import TraceIdLogFilter
 from app.modules.cameras.api.dependencies import (
     get_camera_clock,
     get_camera_id_generator,
@@ -126,14 +128,25 @@ async def test_create_camera_router_returns_complete_detail_and_protocol_headers
 async def test_create_camera_router_returns_201_when_runtime_snapshot_fails(
     application: FastAPI,
     client: httpx.AsyncClient,
+    caplog,
 ) -> None:
     """数据库提交后的 MediaMTX 无效响应只能令全部 Source 降级。"""
 
     uow = FakeCameraUnitOfWork(FakeCameraStore())
     gateway = FakeStreamGateway(StreamGatewayInvalidResponseError())
+    gateway.ensure_failures[uuid4_from_index(2)] = StreamGatewayInvalidResponseError()
+    gateway.ensure_failures[uuid4_from_index(3)] = StreamGatewayInvalidResponseError()
     install_create_overrides(application, uow=uow, gateway=gateway)
 
-    response = await client.post("/api/v1/cameras", json=request_body())
+    # 生产统一 Handler 已安装 Trace Filter；测试应用不会执行 app.server，因此在 caplog Handler
+    # 安装同一个 Filter，验证业务代码无需手工读取或传递 trace。
+    trace_filter = TraceIdLogFilter()
+    caplog.handler.addFilter(trace_filter)
+    try:
+        with caplog.at_level(logging.WARNING, logger="app.modules.cameras.application.create"):
+            response = await client.post("/api/v1/cameras", json=request_body())
+    finally:
+        caplog.handler.removeFilter(trace_filter)
 
     assert response.status_code == 201
     body = response.json()
@@ -143,6 +156,16 @@ async def test_create_camera_router_returns_201_when_runtime_snapshot_fails(
     assert all(item["whep_url"] is None for item in body["sources"])
     assert uow.commit_count == 1
     assert gateway.runtime_snapshot_count == 1
+    records = [
+        record
+        for record in caplog.records
+        if record.name == "app.modules.cameras.application.create"
+    ]
+    assert len(records) == 1
+    assert records[0].event == "camera.media_sync_degraded"
+    assert records[0].failed_count == 3
+    assert records[0].trace_id == response.headers[TRACE_ID_HEADER]
+    assert TEST_PASSWORD not in caplog.text
 
 
 @pytest.mark.sensitive_data

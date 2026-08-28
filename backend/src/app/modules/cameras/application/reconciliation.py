@@ -9,7 +9,6 @@ from dataclasses import dataclass
 from enum import StrEnum
 from uuid import UUID
 
-from app.core.http import get_trace_id
 from app.modules.cameras.application.media import build_camera_desired_sources
 from app.modules.cameras.application.ports import MediaReconciliationLease
 from app.modules.stream_gateway.ports import (
@@ -26,6 +25,7 @@ logger = logging.getLogger(__name__)
 Sleep = Callable[[float], Awaitable[None]]
 Jitter = Callable[[float, float], float]
 MonotonicClock = Callable[[], float]
+LOG_FAILURE_REMINDER_SECONDS = 30 * 60
 
 
 class ReconciliationOutcome(StrEnum):
@@ -69,6 +69,41 @@ class ReconciliationResult:
             ReconciliationOutcome.SUCCESS,
             ReconciliationOutcome.SKIPPED_LOCK,
         }
+
+
+@dataclass(slots=True)
+class _ReconciliationLoggingState:
+    """只服务日志提醒的进程内状态，不参与锁、退避或对账结果计算。"""
+
+    degraded_started_at: float | None = None
+    failure_count: int = 0
+    last_failure_outcome: ReconciliationOutcome | None = None
+    last_warning_at: float | None = None
+
+    def clear(self) -> None:
+        """真正成功后清空本次降级；锁竞争不得调用该方法。"""
+
+        self.degraded_started_at = None
+        self.failure_count = 0
+        self.last_failure_outcome = None
+        self.last_warning_at = None
+
+
+FAILURE_MESSAGES: dict[ReconciliationOutcome, str] = {
+    ReconciliationOutcome.PARTIAL_FAILURE: "部分媒体路径处理失败",
+    ReconciliationOutcome.DATABASE_ERROR: "数据库不可用，本轮对账已跳过",
+    ReconciliationOutcome.GATEWAY_UNAVAILABLE: "MediaMTX 不可用，本轮对账已跳过",
+    ReconciliationOutcome.GATEWAY_INVALID_RESPONSE: "MediaMTX 响应无效，本轮对账已跳过",
+    ReconciliationOutcome.UNEXPECTED_ERROR: "媒体对账发生未知错误",
+}
+
+RECOVERY_MESSAGES: dict[ReconciliationOutcome, str] = {
+    ReconciliationOutcome.GATEWAY_UNAVAILABLE: "MediaMTX 已恢复，对账完成",
+    ReconciliationOutcome.GATEWAY_INVALID_RESPONSE: "MediaMTX 已恢复，对账完成",
+    ReconciliationOutcome.DATABASE_ERROR: "数据库已恢复，对账完成",
+    ReconciliationOutcome.PARTIAL_FAILURE: "媒体对账已恢复",
+    ReconciliationOutcome.UNEXPECTED_ERROR: "媒体对账已恢复",
+}
 
 
 def calculate_reconciliation_plan(
@@ -241,6 +276,7 @@ class MediaReconciliationRunner:
         """顺序执行无限轮次；取消不记录成故障，也不启动下一轮。"""
 
         consecutive_failures = 0
+        logging_state = _ReconciliationLoggingState()
         while True:
             started_at = self._monotonic()
             try:
@@ -261,10 +297,13 @@ class MediaReconciliationRunner:
                 consecutive_failures = 0
                 next_delay = self._interval_seconds
 
+            ended_at = self._monotonic()
             self._log_round(
                 result=result,
-                duration_ms=max(0, round((self._monotonic() - started_at) * 1000)),
+                duration_ms=max(0, round((ended_at - started_at) * 1000)),
                 next_delay_seconds=next_delay,
+                ended_at=ended_at,
+                state=logging_state,
             )
             await self._sleep(next_delay)
 
@@ -284,38 +323,94 @@ class MediaReconciliationRunner:
         result: ReconciliationResult,
         duration_ms: int,
         next_delay_seconds: float,
+        ended_at: float,
+        state: _ReconciliationLoggingState,
     ) -> None:
-        """每轮只记录脱敏汇总；extra 字段便于日志采集与确定性测试。"""
+        """按轮次结果更新独立日志状态，并只附加事件允许的字段。"""
 
-        trace_id = get_trace_id() or "-"
+        if result.is_failure:
+            if state.degraded_started_at is None:
+                state.degraded_started_at = ended_at
+            state.failure_count += 1
+            outcome_changed = state.last_failure_outcome is not result.outcome
+            warning_due = (
+                state.last_warning_at is None
+                or outcome_changed
+                or ended_at - state.last_warning_at >= LOG_FAILURE_REMINDER_SECONDS
+            )
+            if warning_due:
+                state.last_warning_at = ended_at
+            state.last_failure_outcome = result.outcome
+
+            extra: dict[str, object] = {
+                "event": "media_reconciliation.round_failed",
+                "outcome": result.outcome.value,
+            }
+            if result.outcome is ReconciliationOutcome.PARTIAL_FAILURE:
+                extra.update(
+                    {
+                        "desired_count": result.desired_count,
+                        "managed_path_count": result.managed_path_count,
+                        "ensured_count": result.ensured_count,
+                        "released_count": result.released_count,
+                        "failed_count": result.failed_count,
+                    }
+                )
+            extra["retry_in_seconds"] = next_delay_seconds
+            extra["consecutive_failures"] = state.failure_count
+            degraded_duration = max(0.0, ended_at - state.degraded_started_at)
+            if degraded_duration > 0:
+                extra["degraded_duration_seconds"] = degraded_duration
+            extra["duration_ms"] = duration_ms
+            logger.log(
+                logging.WARNING if warning_due else logging.DEBUG,
+                FAILURE_MESSAGES[result.outcome],
+                extra=extra,
+            )
+            return
+
+        if result.outcome is ReconciliationOutcome.SKIPPED_LOCK:
+            logger.debug(
+                "未取得对账锁，本轮已跳过",
+                extra={
+                    "event": "media_reconciliation.round_completed",
+                    "outcome": result.outcome.value,
+                    "duration_ms": duration_ms,
+                },
+            )
+            return
+
+        if state.last_failure_outcome is not None:
+            # success 是唯一能证明依赖恢复的结果。恢复事件保留 0 次 ensure/release，因为 0
+            # 能区分“依赖恢复且无需写入”与“字段漏记”。
+            degraded_started_at = state.degraded_started_at
+            assert degraded_started_at is not None
+            logger.info(
+                RECOVERY_MESSAGES[state.last_failure_outcome],
+                extra={
+                    "event": "media_reconciliation.recovered",
+                    "outcome": result.outcome.value,
+                    "desired_count": result.desired_count,
+                    "managed_path_count": result.managed_path_count,
+                    "ensured_count": result.ensured_count,
+                    "released_count": result.released_count,
+                    "consecutive_failures": state.failure_count,
+                    "degraded_duration_seconds": max(0.0, ended_at - degraded_started_at),
+                    "duration_ms": duration_ms,
+                },
+            )
+            state.clear()
+            return
+
+        changed = result.ensured_count + result.released_count > 0
         extra = {
-            "operation": "media_reconciliation",
+            "event": "media_reconciliation.round_completed",
             "outcome": result.outcome.value,
-            "duration_ms": duration_ms,
             "desired_count": result.desired_count,
             "managed_path_count": result.managed_path_count,
-            "ensured_count": result.ensured_count,
-            "released_count": result.released_count,
-            "failed_count": result.failed_count,
-            "next_delay_seconds": next_delay_seconds,
-            "trace_id": trace_id,
+            "duration_ms": duration_ms,
         }
-        level = logging.INFO if not result.is_failure else logging.WARNING
-        logger.log(
-            level,
-            (
-                "media_reconciliation operation=media_reconciliation outcome=%s "
-                "duration_ms=%d desired_count=%d managed_path_count=%d ensured_count=%d "
-                "released_count=%d failed_count=%d next_delay_seconds=%.3f trace_id=%s"
-            ),
-            result.outcome.value,
-            duration_ms,
-            result.desired_count,
-            result.managed_path_count,
-            result.ensured_count,
-            result.released_count,
-            result.failed_count,
-            next_delay_seconds,
-            trace_id,
-            extra=extra,
-        )
+        if changed:
+            extra["ensured_count"] = result.ensured_count
+            extra["released_count"] = result.released_count
+        logger.log(logging.INFO if changed else logging.DEBUG, "媒体对账完成", extra=extra)

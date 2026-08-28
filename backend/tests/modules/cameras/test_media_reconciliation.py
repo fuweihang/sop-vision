@@ -390,10 +390,209 @@ async def test_runner_summary_log_does_not_contain_credentials_or_full_urls(capl
         max_backoff_seconds=300,
         sleep=stop_after_first,
     )
-    with caplog.at_level(logging.INFO), pytest.raises(asyncio.CancelledError):
+    with caplog.at_level(logging.DEBUG), pytest.raises(asyncio.CancelledError):
         await runner.run_forever()
 
     desired_url = build_camera_desired_sources(camera)[0].source_url
-    assert "operation=media_reconciliation" in caplog.text
+    record = next(
+        record for record in caplog.records if record.name == reconciliation_module.__name__
+    )
+    assert record.event == "media_reconciliation.round_completed"
+    assert record.message == "媒体对账完成"
+    assert record.levelno == logging.INFO
+    assert not hasattr(record, "trace_id")
     assert CAMERA_LEAK_SENTINEL not in caplog.text
     assert desired_url not in caplog.text
+
+
+async def run_logged_results(
+    monkeypatch,
+    caplog,
+    results: tuple[ReconciliationResult, ...],
+    ended_at: tuple[float, ...],
+) -> tuple[list[logging.LogRecord], list[float]]:
+    """用指定轮次结果和结束时刻驱动 Runner，避免降噪测试依赖真实时间。"""
+
+    result_iterator = iter(results)
+
+    async def fake_reconcile_once(_lease, _gateway) -> ReconciliationResult:
+        return next(result_iterator)
+
+    delays: list[float] = []
+
+    async def stop_after_results(delay: float) -> None:
+        delays.append(delay)
+        if len(delays) == len(results):
+            raise asyncio.CancelledError
+
+    # 每轮各读取一次开始和结束时刻。开始值与结束值相同，让 duration 固定为 0，并把测试注意力
+    # 放在跨轮提醒时间而非单轮运行耗时。
+    monotonic_values = iter(value for end in ended_at for value in (end, end))
+    monkeypatch.setattr(reconciliation_module, "reconcile_once", fake_reconcile_once)
+    runner = MediaReconciliationRunner(
+        lease=object(),  # type: ignore[arg-type]
+        stream_gateway=object(),  # type: ignore[arg-type]
+        interval_seconds=30,
+        max_backoff_seconds=300,
+        sleep=stop_after_results,
+        jitter=lambda _lower, upper: upper,
+        monotonic=lambda: next(monotonic_values),
+    )
+
+    with caplog.at_level(logging.DEBUG, logger=reconciliation_module.__name__):
+        with pytest.raises(asyncio.CancelledError):
+            await runner.run_forever()
+
+    records = [record for record in caplog.records if record.name == reconciliation_module.__name__]
+    return records, delays
+
+
+async def test_repeated_failure_warns_once_and_keeps_backoff_behavior(
+    monkeypatch,
+    caplog,
+) -> None:
+    """七轮同类故障仅首次为 WARNING，其余 DEBUG，同时保留原退避上限。"""
+
+    records, delays = await run_logged_results(
+        monkeypatch,
+        caplog,
+        tuple(ReconciliationResult(ReconciliationOutcome.GATEWAY_UNAVAILABLE) for _ in range(7)),
+        tuple(float(index) for index in range(7)),
+    )
+
+    assert [record.levelno for record in records] == [logging.WARNING] + [logging.DEBUG] * 6
+    assert {record.event for record in records} == {"media_reconciliation.round_failed"}
+    assert {record.message for record in records} == {"MediaMTX 不可用，本轮对账已跳过"}
+    assert [record.consecutive_failures for record in records] == list(range(1, 8))
+    assert all(not hasattr(record, "desired_count") for record in records)
+    assert all(not hasattr(record, "trace_id") for record in records)
+    assert delays == [60, 120, 240, 300, 300, 300, 300]
+
+
+async def test_failure_change_reminder_and_recovery_use_one_degradation_state(
+    monkeypatch,
+    caplog,
+) -> None:
+    """类型变化立即告警，30 分钟提醒重新计时，成功只输出一条恢复事件。"""
+
+    success = ReconciliationResult(
+        ReconciliationOutcome.SUCCESS,
+        desired_count=4,
+        managed_path_count=4,
+        ensured_count=0,
+        released_count=0,
+    )
+    records, _ = await run_logged_results(
+        monkeypatch,
+        caplog,
+        (
+            ReconciliationResult(ReconciliationOutcome.GATEWAY_UNAVAILABLE),
+            ReconciliationResult(ReconciliationOutcome.GATEWAY_UNAVAILABLE),
+            ReconciliationResult(ReconciliationOutcome.GATEWAY_UNAVAILABLE),
+            ReconciliationResult(ReconciliationOutcome.DATABASE_ERROR),
+            ReconciliationResult(ReconciliationOutcome.DATABASE_ERROR),
+            success,
+        ),
+        (0.0, 1799.0, 1800.0, 1801.0, 3601.0, 3602.0),
+    )
+
+    assert [record.levelno for record in records] == [
+        logging.WARNING,
+        logging.DEBUG,
+        logging.WARNING,
+        logging.WARNING,
+        logging.WARNING,
+        logging.INFO,
+    ]
+    recovered = records[-1]
+    assert recovered.event == "media_reconciliation.recovered"
+    assert recovered.message == "数据库已恢复，对账完成"
+    assert recovered.outcome == "success"
+    assert recovered.consecutive_failures == 5
+    assert recovered.degraded_duration_seconds == 3602.0
+    assert recovered.ensured_count == 0
+    assert recovered.released_count == 0
+    assert sum(record.event == "media_reconciliation.recovered" for record in records) == 1
+
+
+async def test_skipped_lock_does_not_clear_failure_state_or_count_as_recovery(
+    monkeypatch,
+    caplog,
+) -> None:
+    """锁竞争只记录 DEBUG；后续真实成功才报告包含实际失败轮数的恢复。"""
+
+    records, delays = await run_logged_results(
+        monkeypatch,
+        caplog,
+        (
+            ReconciliationResult(ReconciliationOutcome.GATEWAY_INVALID_RESPONSE),
+            ReconciliationResult(ReconciliationOutcome.SKIPPED_LOCK),
+            ReconciliationResult(
+                ReconciliationOutcome.SUCCESS,
+                desired_count=2,
+                managed_path_count=2,
+            ),
+        ),
+        (10.0, 20.0, 30.0),
+    )
+
+    assert [record.event for record in records] == [
+        "media_reconciliation.round_failed",
+        "media_reconciliation.round_completed",
+        "media_reconciliation.recovered",
+    ]
+    assert records[1].message == "未取得对账锁，本轮已跳过"
+    assert records[1].levelno == logging.DEBUG
+    assert records[2].message == "MediaMTX 已恢复，对账完成"
+    assert records[2].consecutive_failures == 1
+    assert records[2].degraded_duration_seconds == 20.0
+    # 锁竞争继续按原逻辑清空退避，因此 success 前后的 sleep 都是正常周期。
+    assert delays == [60, 30, 30]
+
+
+async def test_success_levels_and_partial_failure_fields_follow_event_table(
+    monkeypatch,
+    caplog,
+) -> None:
+    """无变更成功为 DEBUG，有写入为 INFO；只有部分失败携带五个计数字段。"""
+
+    records, _ = await run_logged_results(
+        monkeypatch,
+        caplog,
+        (
+            ReconciliationResult(
+                ReconciliationOutcome.SUCCESS,
+                desired_count=2,
+                managed_path_count=2,
+            ),
+            ReconciliationResult(
+                ReconciliationOutcome.SUCCESS,
+                desired_count=2,
+                managed_path_count=1,
+                ensured_count=1,
+            ),
+            ReconciliationResult(
+                ReconciliationOutcome.PARTIAL_FAILURE,
+                desired_count=2,
+                managed_path_count=1,
+                ensured_count=1,
+                released_count=0,
+                failed_count=1,
+            ),
+        ),
+        (0.0, 1.0, 2.0),
+    )
+
+    assert [record.levelno for record in records] == [
+        logging.DEBUG,
+        logging.INFO,
+        logging.WARNING,
+    ]
+    assert not hasattr(records[0], "ensured_count")
+    assert records[1].ensured_count == 1
+    assert records[1].released_count == 0
+    assert records[2].desired_count == 2
+    assert records[2].managed_path_count == 1
+    assert records[2].ensured_count == 1
+    assert records[2].released_count == 0
+    assert records[2].failed_count == 1

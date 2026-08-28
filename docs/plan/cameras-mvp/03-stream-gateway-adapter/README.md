@@ -123,9 +123,11 @@ Port 只暴露两个不含原始请求上下文的错误类别：
 时校验：Control API 地址禁止凭据、query、fragment 和路径前缀；公开 WHEP 基础地址允许反向代理
 路径前缀，但同样禁止凭据、query 和 fragment。
 
-Adapter 只记录一次 I/O 的汇总日志，包括稳定 operation/outcome、耗时、Path 数、错误类别、Source
-UUID 和 trace ID。快照不逐 Path 记录日志，纯投影函数不记录日志；Source 离线原因汇总留给消费
-投影的 Cameras Application。
+Adapter 每次 I/O 记录一个 `stream_gateway.io` DEBUG 事件，使用固定中文消息和稳定
+`operation/outcome/duration_ms` 字段。失败时增加 `error_type`，单 Source 操作增加 `source_id`，成功
+快照增加 `path_count`；ensure/release 不记录固定为 1 的 Path 数，失败快照不记录无意义的 0。
+trace 由统一日志 Handler 从请求上下文补充，Adapter 不手工读取或制造 `-` 占位。快照不逐 Path
+记录日志，纯投影函数不记录日志；默认级别的业务影响由 Cameras Application 表达。
 
 ## 接入约束
 

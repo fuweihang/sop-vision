@@ -18,6 +18,7 @@ from app.core.http import (
     install_http_exception_handlers,
     install_problem_openapi_media_type,
 )
+from app.core.logging import safe_exception_fields
 from app.modules.cameras.api.error_handlers import install_camera_exception_handlers
 from app.modules.cameras.api.router import router as cameras_router
 from app.modules.cameras.application.reconciliation import MediaReconciliationRunner
@@ -26,6 +27,7 @@ from app.modules.stream_gateway.ports import StreamGatewayPort
 from app.modules.stream_gateway.services.mediamtx import MediaMTXAdapter
 
 logger = logging.getLogger(__name__)
+RECONCILIATION_SHUTDOWN_TIMEOUT_SECONDS = 5.0
 
 DatabaseRuntimeFactory = Callable[[Settings], DatabaseRuntime]
 # FastAPI lifespan 接收应用实例，并返回由框架进入/退出的异步上下文管理器。
@@ -64,7 +66,7 @@ async def _stop_reconciliation_task(task: asyncio.Task[None]) -> None:
 
     task.cancel()
     try:
-        async with asyncio.timeout(5.0):
+        async with asyncio.timeout(RECONCILIATION_SHUTDOWN_TIMEOUT_SECONDS):
             await task
     except asyncio.CancelledError:
         # 正常关闭时 Runner 应传播我们刚发出的取消；若是当前 shutdown 自身被取消，则继续
@@ -72,10 +74,24 @@ async def _stop_reconciliation_task(task: asyncio.Task[None]) -> None:
         if not task.cancelled():
             raise
     except TimeoutError:
-        logger.error("media_reconciliation_runner outcome=shutdown_timeout timeout_seconds=5")
-    except Exception:
-        # 不记录异常文本或 traceback；测试替身和未来 Runner 回归都可能间接携带敏感配置。
-        logger.error("media_reconciliation_runner outcome=shutdown_error")
+        logger.error(
+            "媒体对账任务停止异常",
+            extra={
+                "event": "media_reconciliation.runner_exit",
+                "outcome": "shutdown_timeout",
+                "timeout_seconds": RECONCILIATION_SHUTDOWN_TIMEOUT_SECONDS,
+            },
+        )
+    except Exception as error:
+        # helper 只返回异常类型和代码位置，不读取异常文本；不能改用 logger.exception()。
+        logger.error(
+            "媒体对账任务停止异常",
+            extra={
+                "event": "media_reconciliation.runner_exit",
+                "outcome": "shutdown_error",
+                **safe_exception_fields(error),
+            },
+        )
 
 
 def _report_reconciliation_task_exit(task: asyncio.Task[None]) -> None:
@@ -84,13 +100,16 @@ def _report_reconciliation_task_exit(task: asyncio.Task[None]) -> None:
     if task.cancelled():
         return
     try:
-        failed = task.exception() is not None
+        error = task.exception()
     except asyncio.CancelledError:
         return
-    logger.error(
-        "media_reconciliation_runner outcome=%s",
-        "crashed" if failed else "unexpected_exit",
-    )
+    extra: dict[str, object] = {
+        "event": "media_reconciliation.runner_exit",
+        "outcome": "crashed" if error is not None else "unexpected_exit",
+    }
+    if error is not None:
+        extra.update(safe_exception_fields(error))
+    logger.error("媒体对账任务停止异常", extra=extra)
 
 
 def create_lifespan(

@@ -11,7 +11,6 @@ import httpx
 import pytest
 import respx
 
-from app.core.http.trace import bind_trace_id, reset_trace_id
 from app.modules.stream_gateway.ports import (
     DesiredSource,
     StreamGatewayInvalidResponseError,
@@ -290,15 +289,11 @@ async def test_ensure_replace_release_and_logs_are_idempotent_and_redacted(
     )
     first_url = f"rtsp://user:{LEAK_SENTINEL}@192.0.2.1:554/main"
     second_url = f"rtsp://user:{LEAK_SENTINEL}@192.0.2.2:554/updated"
-    trace_token = bind_trace_id("tr_adapter_test")
-    try:
-        with caplog.at_level(logging.INFO, logger="app.modules.stream_gateway.services.mediamtx"):
-            await adapter.ensure_path(DesiredSource(source_id=SOURCE_ID, source_url=first_url))
-            await adapter.ensure_path(DesiredSource(source_id=SOURCE_ID, source_url=second_url))
-            await adapter.release_path(SOURCE_ID)
-            await adapter.release_path(SOURCE_ID)
-    finally:
-        reset_trace_id(trace_token)
+    with caplog.at_level(logging.DEBUG, logger="app.modules.stream_gateway.services.mediamtx"):
+        await adapter.ensure_path(DesiredSource(source_id=SOURCE_ID, source_url=first_url))
+        await adapter.ensure_path(DesiredSource(source_id=SOURCE_ID, source_url=second_url))
+        await adapter.release_path(SOURCE_ID)
+        await adapter.release_path(SOURCE_ID)
 
     assert replace.call_count == 2
     assert delete.call_count == 2
@@ -309,9 +304,13 @@ async def test_ensure_replace_release_and_logs_are_idempotent_and_redacted(
     assert json.loads(replace.calls[1].request.content)["source"] == second_url
     assert LEAK_SENTINEL not in caplog.text
     adapter_records = [record for record in caplog.records if record.name.endswith("mediamtx")]
-    assert adapter_records
-    assert {record.trace_id for record in adapter_records} == {"tr_adapter_test"}
+    assert len(adapter_records) == 4
+    assert {record.levelno for record in adapter_records} == {logging.DEBUG}
+    assert {record.message for record in adapter_records} == {"MediaMTX 调用完成"}
+    assert {record.event for record in adapter_records} == {"stream_gateway.io"}
     assert {record.source_id for record in adapter_records} == {str(SOURCE_ID)}
+    assert all(not hasattr(record, "path_count") for record in adapter_records)
+    assert all(not hasattr(record, "trace_id") for record in adapter_records)
 
 
 @pytest.mark.sensitive_data
@@ -330,7 +329,7 @@ async def test_public_error_and_failure_log_do_not_retain_response_body(
         source_url=f"rtsp://user:{LEAK_SENTINEL}@192.0.2.1:554/main",
     )
 
-    with caplog.at_level(logging.WARNING, logger="app.modules.stream_gateway.services.mediamtx"):
+    with caplog.at_level(logging.DEBUG, logger="app.modules.stream_gateway.services.mediamtx"):
         with pytest.raises(StreamGatewayUnavailableError) as error:
             await adapter.ensure_path(desired)
 
@@ -340,6 +339,39 @@ async def test_public_error_and_failure_log_do_not_retain_response_body(
     assert LEAK_SENTINEL not in caplog.text
     assert "rtsp://" not in caplog.text
     assert route.call_count == 1
+    record = next(record for record in caplog.records if record.name.endswith("mediamtx"))
+    assert record.levelno == logging.DEBUG
+    assert record.message == "MediaMTX 调用失败"
+    assert record.event == "stream_gateway.io"
+    assert record.operation == "ensure_path"
+    assert record.outcome == "unavailable"
+    assert record.error_type == "StreamGatewayUnavailableError"
+    assert record.source_id == str(SOURCE_ID)
+    assert not hasattr(record, "path_count")
+    assert not hasattr(record, "trace_id")
+
+
+@respx.mock
+async def test_successful_snapshot_log_keeps_meaningful_zero_path_count(
+    adapter: MediaMTXAdapter,
+    caplog,
+) -> None:
+    """成功空快照的 paths=0 有诊断价值；缺失 Source 和错误字段则直接省略。"""
+
+    respx.get(CONFIG_LIST_URL).mock(
+        return_value=httpx.Response(200, json={"itemCount": 0, "pageCount": 0, "items": []})
+    )
+
+    with caplog.at_level(logging.DEBUG, logger="app.modules.stream_gateway.services.mediamtx"):
+        await adapter.fetch_config_path_snapshot()
+
+    record = next(record for record in caplog.records if record.name.endswith("mediamtx"))
+    assert record.event == "stream_gateway.io"
+    assert record.operation == "fetch_config_snapshot"
+    assert record.outcome == "success"
+    assert record.path_count == 0
+    assert not hasattr(record, "source_id")
+    assert not hasattr(record, "error_type")
 
 
 async def test_whep_url_preserves_reverse_proxy_prefix(adapter: MediaMTXAdapter) -> None:

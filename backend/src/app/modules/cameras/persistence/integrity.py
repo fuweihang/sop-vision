@@ -1,8 +1,8 @@
 """无外键 Camera 表的只读引用完整性巡检。"""
 
+import logging
 from dataclasses import dataclass
 from enum import StrEnum
-from logging import Logger
 from uuid import UUID
 
 from sqlalchemy import select
@@ -10,6 +10,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased
 
 from app.modules.cameras.persistence.models import CameraRow, CameraSourceRow
+
+logger = logging.getLogger(__name__)
 
 
 class ReferenceIntegrityIssueKind(StrEnum):
@@ -109,16 +111,16 @@ async def scan_reference_integrity(session: AsyncSession) -> tuple[ReferenceInte
 
 def report_reference_integrity_issues(
     issues: tuple[ReferenceIntegrityIssue, ...],
-    logger: Logger,
 ) -> None:
     """把巡检结果接入日志告警；只记录非敏感 ID 和稳定异常类型。"""
 
     for issue in issues:
         logger.error(
-            "检测到 Camera 引用完整性异常",
+            "Camera 引用完整性异常",
             extra={
+                "event": "camera.reference_integrity_failed",
                 "camera_id": str(issue.camera_id),
-                "source_id": None if issue.source_id is None else str(issue.source_id),
                 "integrity_issue_kind": issue.kind.value,
+                **({"source_id": str(issue.source_id)} if issue.source_id is not None else {}),
             },
         )

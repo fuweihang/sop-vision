@@ -12,7 +12,6 @@ from uuid import UUID
 
 import httpx
 
-from app.core.http import get_trace_id
 from app.modules.stream_gateway.ports import (
     ConfiguredPath,
     ConfiguredPathSnapshot,
@@ -89,7 +88,7 @@ class MediaMTXAdapter:
                 operation="fetch_runtime_snapshot",
                 outcome="unavailable",
                 started_at=started_at,
-                error_category=StreamGatewayUnavailableError.__name__,
+                error_type=StreamGatewayUnavailableError.__name__,
             )
         except _ControlApiInvalidResponse:
             invalid_response = True
@@ -97,7 +96,7 @@ class MediaMTXAdapter:
                 operation="fetch_runtime_snapshot",
                 outcome="invalid_response",
                 started_at=started_at,
-                error_category=StreamGatewayInvalidResponseError.__name__,
+                error_type=StreamGatewayInvalidResponseError.__name__,
             )
         else:
             self._log_io(
@@ -130,7 +129,7 @@ class MediaMTXAdapter:
                 operation="fetch_config_snapshot",
                 outcome="unavailable",
                 started_at=started_at,
-                error_category=StreamGatewayUnavailableError.__name__,
+                error_type=StreamGatewayUnavailableError.__name__,
             )
         except _ControlApiInvalidResponse:
             invalid_response = True
@@ -138,7 +137,7 @@ class MediaMTXAdapter:
                 operation="fetch_config_snapshot",
                 outcome="invalid_response",
                 started_at=started_at,
-                error_category=StreamGatewayInvalidResponseError.__name__,
+                error_type=StreamGatewayInvalidResponseError.__name__,
             )
         else:
             self._log_io(
@@ -173,8 +172,7 @@ class MediaMTXAdapter:
                 operation="ensure_path",
                 outcome="unavailable",
                 started_at=started_at,
-                path_count=1,
-                error_category=StreamGatewayUnavailableError.__name__,
+                error_type=StreamGatewayUnavailableError.__name__,
                 source_id=desired_source.source_id,
             )
         else:
@@ -182,7 +180,6 @@ class MediaMTXAdapter:
                 operation="ensure_path",
                 outcome="success",
                 started_at=started_at,
-                path_count=1,
                 source_id=desired_source.source_id,
             )
             return
@@ -206,8 +203,7 @@ class MediaMTXAdapter:
                 operation="release_path",
                 outcome="unavailable",
                 started_at=started_at,
-                path_count=1,
-                error_category=StreamGatewayUnavailableError.__name__,
+                error_type=StreamGatewayUnavailableError.__name__,
                 source_id=source_id,
             )
         else:
@@ -215,7 +211,6 @@ class MediaMTXAdapter:
                 operation="release_path",
                 outcome="success",
                 started_at=started_at,
-                path_count=1,
                 source_id=source_id,
             )
             return
@@ -336,38 +331,27 @@ class MediaMTXAdapter:
         operation: str,
         outcome: str,
         started_at: float,
-        path_count: int = 0,
-        error_category: str = "-",
+        path_count: int | None = None,
+        error_type: str | None = None,
         source_id: UUID | None = None,
     ) -> None:
-        """同时输出控制台可见 key=value 文本和可供测试读取的结构化字段。"""
+        """记录一次脱敏 I/O 事件；业务影响由 Application 层另行表达。"""
 
         duration_ms = max(0, round((time.monotonic() - started_at) * 1000))
-        source_id_text = str(source_id) if source_id is not None else "-"
-        trace_id = get_trace_id() or "-"
         extra = {
+            "event": "stream_gateway.io",
             "operation": operation,
             "outcome": outcome,
             "duration_ms": duration_ms,
-            "path_count": path_count,
-            "error_category": error_category,
-            "source_id": source_id_text,
-            "trace_id": trace_id,
         }
-        level = logging.INFO if outcome == "success" else logging.WARNING
-        logger.log(
-            level,
-            (
-                "stream_gateway operation=%s outcome=%s duration_ms=%d path_count=%d "
-                "error_category=%s source_id=%s trace_id=%s"
-            ),
-            operation,
-            outcome,
-            duration_ms,
-            path_count,
-            error_category,
-            source_id_text,
-            trace_id,
+        if error_type is not None:
+            extra["error_type"] = error_type
+        if source_id is not None:
+            extra["source_id"] = str(source_id)
+        if path_count is not None:
+            extra["path_count"] = path_count
+        logger.debug(
+            "MediaMTX 调用完成" if outcome == "success" else "MediaMTX 调用失败",
             extra=extra,
         )
 

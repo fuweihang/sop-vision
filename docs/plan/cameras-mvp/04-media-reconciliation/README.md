@@ -88,11 +88,19 @@ FastAPI lifespan 在 Database Runtime 和共享 MediaMTX Client 创建后启动 
 
 ## 日志与安全
 
-Runner 每轮只记录一次脱敏汇总，包括稳定结果、耗时、Desired/受管 Path 数、成功恢复/释放数、
-失败数、下次等待和 Trace ID。Adapter 单独记录每次 MediaMTX I/O 的脱敏结果。
+Runner 使用稳定事件记录脱敏汇总：成功无变更和锁竞争为 DEBUG，有 ensure/release 为 INFO；失败
+首次出现、类型变化或距离上次 WARNING 达到 30 分钟时为 WARNING，其余同类持续故障为 DEBUG。
+真正 `success` 后只输出一条恢复 INFO，`skipped_lock` 不清除日志故障状态，也不计入恢复事件的失败
+轮数。日志提醒状态与现有退避计数分开，因此锁竞争仍按原行为清零退避，但不会伪装成依赖恢复。
+
+整轮依赖故障省略五个无意义零计数，只有 `partial_failure` 记录处理计数；恢复事件保留有意义的
+ensure/release 0。Adapter 单次 I/O 使用 `stream_gateway.io` DEBUG，默认级别只保留 Runner 业务影响。
+停止超时和异常退出使用 `media_reconciliation.runner_exit` ERROR，并通过统一 helper 仅记录异常类型
+和代码位置。
 
 对账日志不得记录用户名、密码、Source 后缀、期望或远端 `source`、完整 RTSP URL、完整配置快照、
-原始异常文本或响应正文。后台任务没有请求 Trace ID 时使用 `-`。
+原始异常文本或响应正文。trace 由统一 Handler 自动补充；后台任务没有 HTTP 上下文时直接省略，
+不使用 `-` 占位。
 
 ## 长期验证
 
