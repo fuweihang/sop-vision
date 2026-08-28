@@ -46,7 +46,7 @@
       "detailStack": { "$value": "901px" },
       "sidebarSheet": { "$value": "768px" },
       "formStack": { "$value": "640px" },
-      "cameraSingle": { "$value": "520px" },
+      "cardGridSingle": { "$value": "520px" },
       "reflowRequired": { "$value": "640px" },
       "reflowProgressive": { "$value": "320px" }
     },

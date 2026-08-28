@@ -7,19 +7,16 @@
       "kind": "interactive-html-prototype",
       "path": "../../prototype/v1.0.html",
       "classification": "prototype",
-      "supports": [
-        "shell layout",
-        "Cameras flows",
-        "Detection Tasks flows",
-        "responsive intent",
-        "ROI business interaction"
-      ],
+      "supports": ["shell layout", "responsive intent"],
       "doesNotSupport": [
         "React structure",
         "primitive behavior",
         "focus management",
         "routing implementation",
-        "icons"
+        "icons",
+        "business fields",
+        "business actions",
+        "business state transitions"
       ]
     }
   ]

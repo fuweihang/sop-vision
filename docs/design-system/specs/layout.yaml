@@ -60,19 +60,19 @@ page:
   section_gap: "{layout.space.section}"
 
 grid:
-  camera_cards:
+  resource_cards:
     wide:
       min_width: "{layout.breakpoint.wide}"
       columns: "repeat(4, minmax(0, 1fr))"
     medium:
-      min_width: "{layout.breakpoint.cameraSingle}"
+      min_width: "{layout.breakpoint.cardGridSingle}"
       max_width: "calc({layout.breakpoint.wide} - 1px)"
       columns: "repeat(2, minmax(0, 1fr))"
     compact:
-      max_width: "calc({layout.breakpoint.cameraSingle} - 1px)"
+      max_width: "calc({layout.breakpoint.cardGridSingle} - 1px)"
       columns: "minmax(0, 1fr)"
     gap: "{layout.space.component}"
-  detail_preview:
+  detail_split:
     columns: "minmax(0, 1.65fr) minmax(18rem, 0.75fr)"
     collapse_below: "{layout.breakpoint.detailStack}"
     gap: "{layout.space.component}"
@@ -80,7 +80,7 @@ grid:
     columns: "repeat(2, minmax(0, 1fr))"
     collapse_below: "{layout.breakpoint.formStack}"
     gap: "{layout.space.component}"
-  roi:
+  canvas_with_side_panel:
     columns: "minmax(0, 1fr) 14rem"
     collapse_below: "{layout.breakpoint.formStack}"
 
@@ -88,13 +88,13 @@ responsive:
   desktop:
     min_width: "{layout.breakpoint.sidebarSheet}"
     sidebar: expanded_or_icon
-    task_list: semantic_table
+    data_list: semantic_table
   compact:
     max_width: "calc({layout.breakpoint.sidebarSheet} - 1px)"
     sidebar: Sheet
-    task_list: stacked_rows_or_local_scroll
+    data_list: stacked_rows_or_local_scroll
     forms: single_column
-    roi: canvas_then_list
+    canvas_with_side_panel: canvas_then_panel
   rules:
     - Respond to CSS viewport width; do not detect browser zoom with JavaScript.
     - Page content must not create global horizontal scrolling.
@@ -114,7 +114,7 @@ reflow:
       - Non-exempt content follows one reading direction.
       - Text and controls do not overlap.
   local_overflow:
-    allowed_for: [video, roi_canvas, semantic_data_table]
+    allowed_for: [media, interactive_canvas, semantic_data_table]
     containment: component
     page_level_overflow: prohibited
 

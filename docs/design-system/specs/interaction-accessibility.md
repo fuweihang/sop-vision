@@ -59,15 +59,6 @@
 - 折叠菜单项使用 Tooltip，应用根节点挂载 TooltipProvider。
 - 关闭的移动 Sidebar 不得继续参与 Tab 顺序。
 
-## ROI MVP
-
-- ROI 定义来自算法接口；ID、Label 和数量不可编辑。
-- 已保存多边形通过“重绘”修改，不支持顶点拖拽。
-- 草稿完成前不得覆盖保存值；取消保留原数据。
-- Undo 只影响当前草稿。
-- Action 和 ROI 列表必须键盘可达。
-- 点位输入暂只支持指针，不宣称完整键盘几何编辑。
-
 ## Reflow 与 Motion
 
 - Reflow 目标、断点和局部滚动例外由 `layout.yaml` 定义。

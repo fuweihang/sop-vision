@@ -4,13 +4,13 @@
 
 1. 读取 `catalog.json`、本文件和任务相关规格。
 2. 检查现有 `frontend/src/components/ui/`，确认能否直接组合。
-3. 在 `page-patterns.md` 中选择页面模式。
+3. 在 `page-patterns.md` 中选择可复用页面模式，并从对应模块文档读取业务内容。
 4. 冲突按 `catalog.json#sourceOfTruthOrder` 处理。
 
 ## Design
 
 - 先定义信息层级、页面模式和状态，再处理视觉细节。
-- 沿用原型的 Shell、Cameras/Tasks 信息结构和响应式意图。
+- 原型只参考布局和响应式意图，不从中提取字段、操作或业务流程。
 - 使用 Foundations 的中性、紧凑、工程工具化原则。
 - 输出覆盖 Catalog Baseline、窄屏降级、Empty、Loading、Error 和 Disabled。
 - 不复制历史参考中的商标、账号数据或产品身份。
@@ -37,7 +37,7 @@
 
 - Shell 使用 SidebarProvider 组合，移动端沿用 Sidebar 的 Sheet。
 - 折叠菜单项提供 Tooltip，并在应用根节点挂载 TooltipProvider。
-- 路由使用 TanStack Router；具体路由由 Page Patterns 定义。
+- 路由使用 TanStack Router；具体路由、字段和操作由模块文档或实施计划定义。
 - 不复制原型的 Sidebar 状态或 Hash Router。
 
 ### 表单与反馈
@@ -50,7 +50,7 @@
 ## 可以
 
 - 组合现有组件实现页面模式。
-- 添加业务组合组件和局部布局 class。
+- 按业务文档组合现有组件，并添加局部布局 class。
 - 为严格类型、Lint 或可访问性做最小组件调整。
 - 在改变项目级决策时同步本目录。
 
@@ -61,6 +61,7 @@
 - 绕过 Base UI 的键盘、焦点和 ARIA 行为。
 - 为单一页面修改全局主题或组件 API。
 - 在多个规格中重复维护相同数值。
+- 在本目录记录具体路由、业务字段、状态机或功能流程。
 
 ## 验收
 

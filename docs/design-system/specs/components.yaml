@@ -35,7 +35,7 @@ components:
       - Do not replace with Dialog or window.confirm.
 
   aspect_ratio:
-    use_for: [camera_preview, task_preview]
+    use_for: [media_preview, fixed_ratio_content]
     application_ratio: "16 / 9"
     rules:
       - Loading, empty, and error states preserve the ratio.
@@ -44,28 +44,20 @@ components:
     api:
       variants: [default, secondary, destructive, outline, ghost, link]
     use_for: [resource_status, concise_label]
-    resource_status:
-      online:
-        label: 在线
-        color: green
-        prototype_rule: status-success 12% background, status-success text and dot
+    status_roles:
+      success:
         tokens: [status-online, status-online-foreground, status-online-dot]
-      degraded:
-        label: 部分离线
-        color: yellow
-        prototype_rule: status-warning 14% background, mixed warning text and dot
+      warning:
         tokens:
           [status-degraded, status-degraded-foreground, status-degraded-dot]
-      offline:
-        label: 离线
-        color: red
-        prototype_rule: destructive 10% background, destructive text and dot
+      destructive:
         tokens: [status-offline, status-offline-foreground, status-offline-dot]
     rules:
       - Do not use for sentence-length content.
       - Resource status uses the registered background, foreground, and dot token set in Light and Dark modes.
       - Resource status includes a decorative dot before the text and uses the registered dot token.
       - Resource status always includes its text label and never relies on color alone.
+      - Business modules own enum-to-role mapping and exact labels.
 
   breadcrumb:
     use_for: [header_route_context]
@@ -204,7 +196,7 @@ components:
       - State remains Base UI managed.
 
   table:
-    use_for: [task_list, structured_records]
+    use_for: [data_list, structured_records]
     responsive: layout.responsive
     rules:
       - Preserve semantic table markup when rendered as a table.

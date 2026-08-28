@@ -50,30 +50,29 @@
     "componentGeometryAndPrimitiveBehavior": "frontend runtime source",
     "visualPrinciples": "specs/foundations.md",
     "shellBreakpointsAndGrid": "specs/layout.yaml",
-    "routesAndPageComposition": "specs/page-patterns.md",
+    "reusablePageComposition": "specs/page-patterns.md",
     "interactionAndAccessibility": "specs/interaction-accessibility.md",
     "projectComponentUsage": "specs/components.yaml"
   },
   "sourceOfTruthOrder": [
     "user requirements",
     "frontend shadcn configuration, runtime theme, and generated UI source",
-    "prototype layout, information architecture, and business flows",
     "design-system decisions",
+    "approved reference layout and responsive intent",
     "repository evidence"
   ],
   "prototype": {
     "path": "../prototype/v1.0.html",
-    "authoritativeFor": [
-      "layout intent",
-      "responsive intent",
-      "business flows"
-    ],
+    "authoritativeFor": ["layout intent", "responsive intent"],
     "notAuthoritativeFor": [
       "React structure",
       "primitive behavior",
       "focus management",
       "routing implementation",
-      "icons"
+      "icons",
+      "business fields",
+      "business actions",
+      "business state transitions"
     ]
   }
 }

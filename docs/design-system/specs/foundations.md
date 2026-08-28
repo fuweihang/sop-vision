@@ -2,7 +2,8 @@
 
 ## 设计方向
 
-SOP Vision 使用 shadcn/ui `base-nova` 的中性、紧凑、工程工具化视觉语言。页面优先表达设备、任务、状态、关系和操作层级。
+SOP Vision 使用 shadcn/ui `base-nova` 的中性、紧凑、工程工具化视觉语言。页面优先表达资源、
+状态、关系和操作层级。
 
 冲突顺序由 `catalog.json#sourceOfTruthOrder` 定义。
 
@@ -30,7 +31,7 @@ SOP Vision 使用 shadcn/ui `base-nova` 的中性、紧凑、工程工具化视�
 - 正文、控件、辅助文本、标题分别使用既有语义层级，不为单个页面创建新字号。
 - 页面只保留一个主标题层级；Card 和 Dialog 标题低于页面标题。
 - 使用 Geist Variable 和系统 sans-serif 回退。
-- ID、参数、时间戳和流地址使用系统等宽字体。
+- ID、参数、时间戳和机器可读地址使用系统等宽字体。
 - Muted 文本不承载关键错误、权限、结果或告警。
 
 ## 间距、尺寸与圆角
@@ -38,7 +39,7 @@ SOP Vision 使用 shadcn/ui `base-nova` 的中性、紧凑、工程工具化视�
 - 使用 `tokens/layout.tokens.json` 中的 spacing、control、radius 和 shell token。
 - 页面布局可以选择组件已有 size，但不得重写 primitive 默认尺寸表。
 - Card、Dialog、Button、Input、Menu Item 等使用各自组件圆角，不强制统一圆角。
-- 长文本、中文、ID 和流地址优先换行，不扩大页面最小宽度。
+- 长文本、中文、ID 和机器可读地址优先换行，不扩大页面最小宽度。
 
 ## 表面与阴影
 
@@ -57,6 +58,6 @@ SOP Vision 使用 shadcn/ui `base-nova` 的中性、紧凑、工程工具化视�
 
 ## 边界
 
-- Layout、Card Grid、Table、Preview、ROI 和表单排列可以按业务组合。
+- Layout、Card Grid、Table、Preview、交互画布和表单排列可以按页面需要组合。
 - Primitive 的内部状态、键盘行为和 ARIA 由 Base UI 管理。
 - 页面通过 composition、variant、size 和局部 class 扩展，不创建同名替代组件。
