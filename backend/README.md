@@ -95,7 +95,7 @@ uv run --env-file .env.local alembic upgrade head
 
 `cameras` 与 `camera_sources` 有意不建立外键。Camera Repository 通过聚合锁、同事务校验、
 显式 Source 清理和完整性巡检维护跨表约束；数据库继续负责主键、IPv4、端口、顺序和同 Camera
-唯一性。设计原因和完整规则见 [Cameras Foundation](../docs/plan/cameras-mvp/01-foundation/README.md)。
+唯一性。设计原因和完整规则见 [Cameras 基础能力](../docs/modules/cameras/foundation.md)。
 
 迁移和 Repository 集成测试只接受独立、尚不存在且名称以 `_test` 结尾的数据库。测试会创建并
 删除该数据库，拒绝接管预先存在的同名库：
@@ -148,7 +148,7 @@ backend/
 应用 lifespan 在数据库 Runtime 和 MediaMTX Client 创建后启动媒体对账，不等待首轮完成。关闭时
 先取消并等待对账任务，再关闭 Client 和连接池。对账故障不改变 `/health/ready`：该探针仍只检查
 PostgreSQL，避免 MediaMTX 故障同时让配置控制面被摘除。详细规则见
-[媒体对账](../docs/plan/cameras-mvp/04-media-reconciliation/README.md)。
+[媒体对账](../docs/modules/cameras/media-reconciliation.md)。
 
 ## 质量检查
 

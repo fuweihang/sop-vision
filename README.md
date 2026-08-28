@@ -18,7 +18,8 @@ Camera 业务 handler、WHEP 播放器和 Detector 业务仍未实现。
 | Web UI              | 部分可用 | App Shell、路由、主题和通用页面状态已完成；Cameras/Tasks 是页面骨架      |
 | Detector 与实时检测 | 未实现   | `detector/` 仅为预留目录；Backend 尚未接入 Redis 客户端或 WebSocket      |
 
-精确的 Cameras 状态与目标契约见 [Cameras MVP](docs/plan/cameras-mvp/README.md)。
+精确的 Cameras 当前能力见 [Cameras 模块文档](docs/modules/cameras/README.md)，未完成工作见
+[Cameras MVP 剩余计划](docs/plans/cameras-mvp/README.md)。
 
 ## 架构边界
 
@@ -154,6 +155,7 @@ bash scripts/check-cameras-sensitive-data.sh
 
 - [总体架构](docs/vision-platform-architecture.md)
 - [产品范围](docs/product-requirements.md)
-- [Cameras MVP](docs/plan/cameras-mvp/README.md)
+- [Cameras 当前能力](docs/modules/cameras/README.md)
+- [Cameras MVP 剩余计划](docs/plans/cameras-mvp/README.md)
 - [Design System](docs/design-system/README.md)
 - [实时检测数据设计](docs/realtime-detection-design.md)

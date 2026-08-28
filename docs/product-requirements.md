@@ -2,7 +2,8 @@
 
 本文描述仍有效的产品方向，不代表所有能力已经实现。当前实现状态以
 [文档入口](README.md) 为准；Camera 第一阶段的精确契约以
-[Cameras MVP](plan/cameras-mvp/README.md) 为准。
+[Cameras 当前能力](modules/cameras/README.md)和
+[Cameras MVP 剩余计划](plans/cameras-mvp/README.md)为准。
 
 ## 产品定位
 
@@ -37,7 +38,8 @@ Cameras MVP 计划提供：
 本阶段明确不包含 Camera 启停、厂商字段、批量操作、保存前连通性探测、录像、截图、回放、
 WebSocket 状态推送、软删除、跨业务删除保护和事务级 Outbox/Saga 媒体投递。周期 Desired State
 对账属于 MVP，但不提供与数据库同事务、零窗口或恰好一次的外部副作用保证。完整字段与错误语义
-不在本文重复，见 [Cameras MVP](plan/cameras-mvp/README.md)。
+不在本文重复，当前行为见 [Cameras 模块文档](modules/cameras/README.md)，目标行为见
+[Cameras MVP 剩余计划](plans/cameras-mvp/README.md)。
 
 ## Detection Tasks 目标范围
 
