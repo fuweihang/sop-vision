@@ -43,9 +43,11 @@
 
 - `BACKEND_LOG_LEVEL=debug|info|warning|error|critical`，默认 `info`。
 - `BACKEND_LOG_FORMAT=console|json`，默认 `console`。
+- Backend 容器使用 `TZ=Asia/Shanghai` 作为默认地区；Formatter 根据进程 `TZ` 输出
+  `YYYY-MM-DD HH:mm:ss`，console 与 JSON 不显示毫秒或时区后缀。
 - `BACKEND_LOG_LEVEL` 优先；仅当它未设置时，兼容读取已有 `UVICORN_LOG_LEVEL`。示例和文档不再
   主动使用旧变量，但本轮不让现有部署静默退回 `info`；旧变量也只接受同一组五个合法值。
-- 总览规定的 UTC console Formatter、JSON Formatter、字段白名单、组件映射、单行转义和安全异常
+- 总览规定的地区时间 console Formatter、JSON Formatter、字段白名单、组件映射、单行转义和安全异常
   堆栈。
 - 一个只返回纯字符串 `error_type/error_frames` 的安全异常 helper，供应用捕获未知异常时使用；
   helper 和 Formatter 都不得把异常文本或异常对象写入 LogRecord。
@@ -71,7 +73,7 @@
 
 ## 实施步骤
 
-1. 先用测试固定总览中的 UTC 时间、level/组件映射、console 短键与字段顺序、单行转义、空字段
+1. 先用测试固定总览中的 `TZ` 地区时间、level/组件映射、console 短键与字段顺序、单行转义、空字段
    省略、有效 `0` 保留、未知字段忽略、JSON 数值类型和安全异常输出。
 2. 实现日志字段常量、组件映射、安全异常 helper、trace Filter、console/JSON Formatter 和配置
    构造函数。Formatter 只能处理白名单字段，不得修改业务 LogRecord 来制造另一套格式。
@@ -90,9 +92,9 @@
      子进程也应用它。重复应用必须由步骤 3 的测试证明不会叠加 Handler。
    - 向 Uvicorn 传入字符串应用路径、解析后的 log level 和 `access_log=True`；任务 1 仍启用
      Uvicorn access log。
-6. Docker 改用 `app.server`；Compose 直接传 `BACKEND_LOG_LEVEL/BACKEND_LOG_FORMAT`，不再只设置
+6. Docker 改用 `app.server`；Compose 直接传 `BACKEND_LOG_LEVEL/BACKEND_LOG_FORMAT/TZ`，不再只设置
    `UVICORN_LOG_LEVEL`。
-7. 更新两个环境变量示例、Backend README、根 README 和 `AGENTS.md`，所有受支持的 Backend
+7. 更新环境变量示例、Backend README、根 README 和 `AGENTS.md`，所有受支持的 Backend
    启动命令都经过 `app.server`。
 
 ## 验证方式

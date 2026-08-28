@@ -99,6 +99,8 @@ services:
       BACKEND_CORS_ORIGINS: "${BACKEND_CORS_ORIGINS:-http://localhost:8000}"
       BACKEND_LOG_LEVEL: "${BACKEND_LOG_LEVEL:-info}"
       BACKEND_LOG_FORMAT: "${BACKEND_LOG_FORMAT:-console}"
+      # Backend Formatter 使用进程所在地区展示日志时间；不改变业务数据的 UTC 存储。
+      TZ: "${TZ:-Asia/Shanghai}"
     ports:
       - "${BACKEND_PORT:-3001}:3001"
     depends_on:

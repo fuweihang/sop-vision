@@ -2,7 +2,9 @@
 
 import json
 import logging
-from collections.abc import Iterator
+import os
+import time
+from collections.abc import Callable, Iterator
 from datetime import UTC, datetime
 
 import pytest
@@ -33,8 +35,34 @@ def make_record(
     return record
 
 
-def test_console_formatter_uses_utc_columns_event_order_and_visible_controls() -> None:
-    """console 固定列和短键可读，控制字符不能把一条记录拆成多行。"""
+@pytest.fixture
+def set_process_timezone() -> Iterator[Callable[[str], None]]:
+    """临时修改进程 ``TZ``，并在用例结束后恢复 C 运行库的时区缓存。"""
+
+    original_timezone = os.environ.get("TZ")
+
+    def apply(timezone_name: str) -> None:
+        os.environ["TZ"] = timezone_name
+        # 测试进程启动后才修改环境变量，必须通知 C 运行库重新读取 TZ；生产容器在 Python
+        # 启动前已经注入变量，不需要应用代码主动调用 tzset。
+        time.tzset()
+
+    try:
+        yield apply
+    finally:
+        if original_timezone is None:
+            os.environ.pop("TZ", None)
+        else:
+            os.environ["TZ"] = original_timezone
+        time.tzset()
+
+
+def test_console_formatter_uses_local_columns_event_order_and_visible_controls(
+    set_process_timezone: Callable[[str], None],
+) -> None:
+    """console 使用容器地区时间，固定列和控制字符转义保持不变。"""
+
+    set_process_timezone("Asia/Shanghai")
 
     record = make_record(
         message="Camera 已保存\n但媒体操作\t未全部成功",
@@ -49,12 +77,40 @@ def test_console_formatter_uses_utc_columns_event_order_and_visible_controls() -
     rendered = ConsoleFormatter().format(record)
 
     assert rendered == (
-        "2026-08-28T08:49:08.431Z WARN  camera.create         "
+        "2026-08-28 16:49:08 WARN  camera.create         "
         "Camera 已保存\\n但媒体操作\\t未全部成功  "
         "operation=post_commit_media_sync result=degraded camera=camera-1 failed=0 "
         "trace=tr_abc123"
     )
     assert len(rendered.splitlines()) == 1
+
+
+def test_console_and_json_formatters_follow_the_same_container_timezone(
+    set_process_timezone: Callable[[str], None],
+) -> None:
+    """两种输出必须读取同一个 ``TZ``，且不显示毫秒、偏移或时区缩写。"""
+
+    set_process_timezone("Asia/Shanghai")
+    record = make_record()
+
+    console_timestamp = ConsoleFormatter().format(record).split(" WARN", maxsplit=1)[0]
+    json_timestamp = json.loads(JsonFormatter().format(record))["timestamp"]
+
+    assert console_timestamp == "2026-08-28 16:49:08"
+    assert json_timestamp == console_timestamp
+    assert all(marker not in console_timestamp for marker in (".431", "Z", "+08:00", "CST"))
+
+
+def test_formatter_uses_utc_when_container_timezone_is_utc(
+    set_process_timezone: Callable[[str], None],
+) -> None:
+    """部署把 ``TZ`` 改为 UTC 后，无需修改应用配置即可得到对应地区时间。"""
+
+    set_process_timezone("UTC")
+
+    payload = json.loads(JsonFormatter().format(make_record()))
+
+    assert payload["timestamp"] == "2026-08-28 08:49:08"
 
 
 def test_json_formatter_keeps_types_order_zero_and_ignores_unknown_fields() -> None:

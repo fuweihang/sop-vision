@@ -69,6 +69,7 @@ uv run --env-file .env.local python -m app.server \
 | `DATABASE_ECHO`                            | `false`                 | 是否输出 SQL；参数始终隐藏                         |
 | `BACKEND_LOG_LEVEL`                        | `info`                  | 应用与 Uvicorn 日志级别                            |
 | `BACKEND_LOG_FORMAT`                       | `console`               | 日志格式：`console` 或单行 `json`                  |
+| `TZ`                                       | `Asia/Shanghai`         | 日志显示地区，使用 IANA 时区名称                   |
 | `MEDIAMTX_API_URL`                         | `http://mediamtx:9997`  | MediaMTX Control API 地址                          |
 | `MEDIAMTX_API_TIMEOUT`                     | `5`                     | Control API 请求超时秒数                           |
 | `PUBLIC_WEBRTC_BASE_URL`                   | `http://localhost:8889` | WHEP 公网基础地址；当前播放 handler 尚未使用       |
@@ -80,6 +81,10 @@ uv run --env-file .env.local python -m app.server \
 应用才会兼容读取旧 `UVICORN_LOG_LEVEL`；新部署不应继续使用旧变量。`BACKEND_PORT` 只控制
 Compose 发布到宿主机的端口，容器内仍监听 `3001`；本地直接启动如需改端口使用 `--port`。
 `REDIS_URL` 已在运行环境中预留，但当前代码不会读取它。
+
+console 与 JSON 的 `timestamp` 都按 Backend 进程的 `TZ` 输出 `YYYY-MM-DD HH:mm:ss`，不包含
+毫秒、时区偏移或缩写。默认镜像和 Compose 使用 `Asia/Shanghai`；修改地区时应填写系统支持的
+IANA 名称，例如 `UTC`。该变量只改变进程本地时间展示，数据库、API 和媒体快照继续使用 UTC。
 
 `DATABASE_URL` 以 Secret 保存，配置校验、日志和 SQL 输出不得回显密码。`TEST_DATABASE_URL`
 只供集成测试使用，绝不回退到应用数据库。

@@ -5,7 +5,7 @@ import logging
 import logging.config
 import math
 import traceback
-from datetime import UTC, datetime
+from datetime import datetime
 from pathlib import Path
 from types import TracebackType
 from typing import Any, Literal, TypedDict
@@ -227,10 +227,14 @@ def resolve_component(logger_name: str) -> str:
 
 
 def _timestamp(record: logging.LogRecord) -> str:
-    """使用 LogRecord 创建时间生成带毫秒的 UTC ISO 8601。"""
+    """按进程所在地区格式化 LogRecord 创建时间。
 
-    value = datetime.fromtimestamp(record.created, tz=UTC).isoformat(timespec="milliseconds")
-    return value.replace("+00:00", "Z")
+    容器通过 ``TZ`` 选择地区，Python 会根据系统 zoneinfo 自动处理当地偏移和夏令时。
+    这里只输出人读格式，不附加毫秒和时区后缀；日志采集端需要结合部署的 ``TZ`` 解释时间。
+    数据库、API 和业务快照继续显式使用 UTC，不受这个展示函数影响。
+    """
+
+    return datetime.fromtimestamp(record.created).strftime("%Y-%m-%d %H:%M:%S")
 
 
 def _level_name(record: logging.LogRecord) -> str:

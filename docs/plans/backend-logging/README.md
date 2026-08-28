@@ -36,11 +36,11 @@
 默认 console 格式：
 
 ```text
-2026-08-28T08:31:12.083Z WARN  media.reconciliation  MediaMTX 不可用，本轮对账已跳过  result=gateway_unavailable retry=257.0s failures=1 duration=5ms
-2026-08-28T08:48:45.216Z INFO  media.reconciliation  MediaMTX 已恢复，对账完成  result=success desired=4 managed=4 ensured=1 released=0 failures=7 degraded=1033.1s duration=12ms
-2026-08-28T08:49:01.102Z INFO  http.access           HTTP 请求完成  method=GET path=/api/v1/cameras status=200 duration=18ms trace=tr_abc123
-2026-08-28T08:49:08.431Z WARN  camera.create         Camera 已保存，但媒体操作未全部成功  result=degraded camera=... failed=2 trace=tr_abc123
-2026-08-28T08:50:22.614Z ERROR camera.integrity      Camera 引用完整性异常  kind=ORPHAN_SOURCE camera=... source=...
+2026-08-28 16:31:12 WARN  media.reconciliation  MediaMTX 不可用，本轮对账已跳过  result=gateway_unavailable retry=257.0s failures=1 duration=5ms
+2026-08-28 16:48:45 INFO  media.reconciliation  MediaMTX 已恢复，对账完成  result=success desired=4 managed=4 ensured=1 released=0 failures=7 degraded=1033.1s duration=12ms
+2026-08-28 16:49:01 INFO  http.access           HTTP 请求完成  method=GET path=/api/v1/cameras status=200 duration=18ms trace=tr_abc123
+2026-08-28 16:49:08 WARN  camera.create         Camera 已保存，但媒体操作未全部成功  result=degraded camera=... failed=2 trace=tr_abc123
+2026-08-28 16:50:22 ERROR camera.integrity      Camera 引用完整性异常  kind=ORPHAN_SOURCE camera=... source=...
 ```
 
 同时支持可选的 `BACKEND_LOG_FORMAT=json`。console 和 JSON 必须消费同一个 `LogRecord`，业务代码不能
@@ -49,14 +49,15 @@
 对应 JSON 示例：
 
 ```json
-{"timestamp":"2026-08-28T08:31:12.083Z","level":"WARN","logger":"app.modules.cameras.application.reconciliation","component":"media.reconciliation","message":"MediaMTX 不可用，本轮对账已跳过","event":"media_reconciliation.round_failed","outcome":"gateway_unavailable","retry_in_seconds":257.0,"consecutive_failures":1,"duration_ms":5}
+{"timestamp":"2026-08-28 16:31:12","level":"WARN","logger":"app.modules.cameras.application.reconciliation","component":"media.reconciliation","message":"MediaMTX 不可用，本轮对账已跳过","event":"media_reconciliation.round_failed","outcome":"gateway_unavailable","retry_in_seconds":257.0,"consecutive_failures":1,"duration_ms":5}
 ```
 
 ## 全局日志规则
 
 ### 显示规则
 
-- 时间固定为带毫秒的 UTC ISO 8601。
+- 时间根据 Backend 进程的 `TZ` 格式化为 `YYYY-MM-DD HH:mm:ss`；容器默认使用
+  `Asia/Shanghai`，不显示毫秒、时区偏移或缩写。
 - console 前缀固定为 `timestamp level component message`；level 宽度为 5，组件列最小宽度为 22，
   长组件不截断。
 - console level 固定显示为 `DEBUG/INFO/WARN/ERROR/CRIT`。
@@ -97,7 +98,7 @@ Formatter 按最长 Logger 前缀匹配；未命中时，`app.` Logger 去掉 `a
 
 | 字段 | 来源 | 说明 |
 | --- | --- | --- |
-| `timestamp` | Formatter | 根据 `record.created` 生成 UTC 时间 |
+| `timestamp` | Formatter | 根据 `record.created` 和进程 `TZ` 生成地区时间 |
 | `level` | LogRecord | 日志级别 |
 | `logger` | LogRecord | 完整 Logger 名 |
 | `component` | Formatter | 根据 Logger 名映射，调用方不得任意填写 |
