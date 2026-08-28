@@ -1,0 +1,7 @@
+interface:
+  display_name: "代码评审"
+  short_description: "基于代码变更和仓库证据发现影响正确性、安全性与可靠性的实际问题"
+  default_prompt: "请使用 $code-review 对这些代码变更进行只读审查，按严重程度报告有证据支持的实际问题，并给出最终结论。"
+
+policy:
+  allow_implicit_invocation: false

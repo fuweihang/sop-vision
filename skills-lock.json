@@ -7,6 +7,12 @@
       "skillPath": "skills/code-explain/SKILL.md",
       "computedHash": "eddc6f8792c5006daf63f8618e379bc7195518aebb5af326d8f9731022ed0052"
     },
+    "code-review": {
+      "source": "fuweihang/skills",
+      "sourceType": "github",
+      "skillPath": "skills/code-review/SKILL.md",
+      "computedHash": "e828dd4a5238f758f6b32f836eed22c78320e3e8fd44c2425c5cd228f940bfb2"
+    },
     "data-loading": {
       "source": "TanStack/router",
       "sourceType": "github",
