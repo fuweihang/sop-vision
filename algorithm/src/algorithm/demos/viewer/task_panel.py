@@ -26,7 +26,8 @@ class TaskPanel(QWidget):
     """独立编辑和控制一个任务，耗时操作统一放到后台线程。"""
 
     task_id_changed = Signal(str)
-    preview_configuration_changed = Signal(str, object, bool)
+    # 第三个参数保留 load/start/reload，预览组件据此决定是否需要重连 RTSP。
+    preview_configuration_changed = Signal(str, object, str)
     _operation_finished = Signal(str, bool, str, object)
 
     def __init__(
@@ -270,7 +271,7 @@ class TaskPanel(QWidget):
             self.worker_type_input.setCurrentText(record.worker_type)
             self.worker_type_input.blockSignals(False)
             self.schema_form.set_schema(value["schema"], record.config)
-            self.preview_configuration_changed.emit(self.task_id, record.config, False)
+            self.preview_configuration_changed.emit(self.task_id, record.config, "load")
             self.task_status.setText(
                 f"任务配置：已加载，最后更新 {record.updated_at.isoformat()}"
             )
@@ -280,7 +281,7 @@ class TaskPanel(QWidget):
             self.task_status.setText(
                 f"任务配置：{response['runtime_state']}，PID {response['pid']}"
             )
-            self.preview_configuration_changed.emit(self.task_id, config, True)
+            self.preview_configuration_changed.emit(self.task_id, config, name)
         elif name == "stop":
             self.task_status.setText("任务配置：Worker 已停止")
 

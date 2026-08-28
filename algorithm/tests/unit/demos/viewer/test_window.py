@@ -205,6 +205,127 @@ def test_启动成功只自动连接对应画面(monkeypatch) -> None:
     app.processEvents()
 
 
+def test_重载地址未变化时保持rtsp画面和redis订阅(monkeypatch) -> None:
+    app = QApplication.instance() or QApplication([])
+    created_feeds: list[object] = []
+    created_subscribers: list[object] = []
+
+    class FakeFeed:
+        def __init__(self, url, **_kwargs):
+            self.url = url
+            created_feeds.append(self)
+
+        def start(self):
+            pass
+
+        def close(self):
+            pass
+
+    class FakeSubscriber:
+        def __init__(self, url, task_id, **_kwargs):
+            self.url = url
+            self.task_id = task_id
+            created_subscribers.append(self)
+
+        def start(self):
+            pass
+
+        def close(self):
+            pass
+
+    monkeypatch.setattr(preview_module, "RtspVideoFeed", FakeFeed)
+    monkeypatch.setattr(preview_module, "RedisDetectionSubscriber", FakeSubscriber)
+    window = ViewerWindow(task_id="task-1", task_id_2="task-2")
+    panel = window.task_panels[0]
+    preview = window.preview_panels[0]
+    config = _detector_config("camera-1")
+
+    panel.on_operation_finished(
+        "start",
+        True,
+        "",
+        {
+            "config": config,
+            "response": {"runtime_state": "running", "pid": 100},
+        },
+    )
+    preview.canvas.set_frame(
+        RgbFrame(
+            sequence=1,
+            captured_at_ms=1,
+            pixels=np.zeros((360, 640, 3), dtype=np.uint8),
+        )
+    )
+    displayed_image = preview.canvas._image
+    video_feed = preview._video_feed
+    subscriber = preview._subscriber
+
+    reloaded_config = {**config, "confidence": 0.7}
+    panel.on_operation_finished(
+        "reload",
+        True,
+        "",
+        {
+            "config": reloaded_config,
+            "response": {"runtime_state": "running", "pid": 101},
+        },
+    )
+
+    assert len(created_feeds) == 1
+    assert len(created_subscribers) == 1
+    assert preview._video_feed is video_feed
+    assert preview._subscriber is subscriber
+    assert preview.canvas._image is displayed_image
+    assert preview.result_status.text() == "检测：等待重载后的结果"
+    window.close()
+    app.processEvents()
+
+
+def test_重载只重连发生变化的预览地址(monkeypatch) -> None:
+    app = QApplication.instance() or QApplication([])
+    feed_urls: list[str] = []
+    subscriber_urls: list[str] = []
+
+    class FakeFeed:
+        def __init__(self, url, **_kwargs):
+            feed_urls.append(url)
+
+        def start(self):
+            pass
+
+        def close(self):
+            pass
+
+    class FakeSubscriber:
+        def __init__(self, url, _task_id, **_kwargs):
+            subscriber_urls.append(url)
+
+        def start(self):
+            pass
+
+        def close(self):
+            pass
+
+    monkeypatch.setattr(preview_module, "RtspVideoFeed", FakeFeed)
+    monkeypatch.setattr(preview_module, "RedisDetectionSubscriber", FakeSubscriber)
+    window = ViewerWindow(task_id="task-1", task_id_2="task-2")
+    preview = window.preview_panels[0]
+    config = _detector_config("camera-1")
+    preview.set_task_configuration("task-1", config, "start")
+
+    redis_changed = {**config, "redis_url": "redis://redis-2/0"}
+    preview.set_task_configuration("task-1", redis_changed, "reload")
+    assert feed_urls == ["rtsp://camera-1/stream"]
+    assert subscriber_urls == ["redis://camera-1/0", "redis://redis-2/0"]
+
+    rtsp_changed = {**redis_changed, "rtsp_url": "rtsp://camera-2/stream"}
+    preview.set_task_configuration("task-1", rtsp_changed, "reload")
+    assert feed_urls == ["rtsp://camera-1/stream", "rtsp://camera-2/stream"]
+    assert subscriber_urls == ["redis://camera-1/0", "redis://redis-2/0"]
+    window.close()
+    app.processEvents()
+
+
 def test_不含预览字段的worker只禁用对应画面() -> None:
     app = QApplication.instance() or QApplication([])
     window = ViewerWindow(task_id="task-1", task_id_2="task-2")

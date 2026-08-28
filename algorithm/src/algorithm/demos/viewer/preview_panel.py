@@ -169,9 +169,10 @@ class PreviewPanel(QGroupBox):
         self._signals.redis_reset.connect(self._on_redis_reset)
         self._signals.rtsp_status.connect(self._on_rtsp_status)
 
-        # 每一路都有自己的 generation。旧连接即使晚到一条回调，也不能更新新连接
-        # 或另一路画面。
-        self._generation = 0
+        # RTSP 和 Redis 必须分别记录 generation。重载时可能只更换 Redis 订阅，
+        # 此时旧 RTSP 状态回调仍然有效，不能被 Redis 的重连操作一起作废。
+        self._video_generation = 0
+        self._redis_generation = 0
         self._video_feed: RtspVideoFeed | None = None
         self._subscriber: RedisDetectionSubscriber | None = None
         self._preview_task_id: str | None = None
@@ -237,6 +238,12 @@ class PreviewPanel(QGroupBox):
     def preview_redis_url(self) -> str | None:
         return self._preview_redis_url
 
+    @property
+    def _generation(self) -> int:
+        """兼容原单路测试代码；检测消息使用 Redis generation。"""
+
+        return self._redis_generation
+
     def set_task_id(self, task_id: str) -> None:
         """响应配置页 Task ID 修改，只断开当前预览，不影响另一任务。"""
 
@@ -260,14 +267,25 @@ class PreviewPanel(QGroupBox):
         self,
         task_id: str,
         config: object,
-        auto_connect: bool = False,
+        operation: str | bool = "load",
     ) -> None:
-        """缓存任务配置；只有启动或重载成功时才自动连接预览。"""
+        """缓存任务配置，并按 load/start/reload 更新预览连接。
 
-        if self._video_feed is not None or self._subscriber is not None:
-            self.disconnect_sources()
-        self._task_id = task_id.strip()
-        self._update_title()
+        reload 会尽量复用当前连接：RTSP 地址没有变化时保留视频拉流和当前画面，
+        Redis 地址没有变化时保留订阅。只有对应地址发生变化才重连该组件。
+        """
+
+        # 兼容之前以 bool 表示是否自动连接的内部调用。
+        if isinstance(operation, bool):
+            operation = "start" if operation else "load"
+
+        next_task_id = task_id.strip()
+        same_task = self._preview_task_id == next_task_id
+        previous_rtsp_url = self._preview_rtsp_url
+        previous_redis_url = self._preview_redis_url
+        had_active_connection = (
+            self._video_feed is not None or self._subscriber is not None
+        )
 
         roi = None
         if isinstance(config, dict) and config.get("roi") is not None:
@@ -287,15 +305,35 @@ class PreviewPanel(QGroupBox):
             and isinstance(redis_url, str)
             and redis_url.strip()
         ):
-            self._preview_rtsp_url = rtsp_url.strip()
-            self._preview_redis_url = redis_url.strip()
-            self._preview_task_id = self._task_id
+            next_rtsp_url = rtsp_url.strip()
+            next_redis_url = redis_url.strip()
+            self._task_id = next_task_id
+            self._preview_rtsp_url = next_rtsp_url
+            self._preview_redis_url = next_redis_url
+            self._preview_task_id = next_task_id
+            self._update_title()
+
+            if operation == "reload" and same_task and had_active_connection:
+                self._apply_reload_connections(
+                    rtsp_changed=previous_rtsp_url != next_rtsp_url,
+                    redis_changed=previous_redis_url != next_redis_url,
+                )
+                return
+
+            # 加载任务继续保持手动连接；start 成功后建立新连接。只有 reload
+            # 在地址未变化时会复用当前视频，避免画面闪断和重新缓冲。
+            if had_active_connection:
+                self.disconnect_sources()
             self.connect_button.setEnabled(True)
             self.result_status.setText("检测：任务配置已就绪")
-            if auto_connect:
+            if operation in {"start", "reload"}:
                 self.connect_sources()
             return
 
+        self._task_id = next_task_id
+        self._update_title()
+        if had_active_connection:
+            self.disconnect_sources()
         self._preview_task_id = None
         self._preview_rtsp_url = None
         self._preview_redis_url = None
@@ -304,6 +342,36 @@ class PreviewPanel(QGroupBox):
         self.canvas.clear_frame()
         self.canvas.set_objects(())
         self.result_status.setText("检测：当前 Worker 不支持视频预览")
+
+    def _apply_reload_connections(
+        self,
+        *,
+        rtsp_changed: bool,
+        redis_changed: bool,
+    ) -> None:
+        """重载后只重连发生变化的地址，未变化的 RTSP 保持连续播放。"""
+
+        self._clear_detection_state("检测：等待重载后的结果")
+
+        if rtsp_changed:
+            self._stop_video_feed()
+            self.canvas.clear_frame()
+            self._last_frame_sequence = 0
+            self.rtsp_status.setText("RTSP：正在连接")
+            self._start_video_feed()
+        elif self._video_feed is None:
+            # 用户之前只断开了 RTSP 或连接创建失败时，重载成功后补建缺失连接。
+            self._start_video_feed()
+
+        if redis_changed:
+            self._stop_subscriber()
+            self.redis_status.setText("Redis：正在连接")
+            self._start_subscriber()
+        elif self._subscriber is None:
+            self._start_subscriber()
+
+        self.connect_button.setEnabled(False)
+        self.disconnect_button.setEnabled(True)
 
     def has_preview_config(self) -> bool:
         return (
@@ -324,31 +392,13 @@ class PreviewPanel(QGroupBox):
         assert self._preview_redis_url is not None
 
         self._stop_components()
-        generation = self._generation
         self._overlay.clear()
         self._last_frame_sequence = 0
         self.canvas.set_objects(())
         self.canvas.clear_frame()
 
-        self._video_feed = RtspVideoFeed(
-            self._preview_rtsp_url,
-            on_status=lambda status: self._signals.rtsp_status.emit(
-                generation, status.connected, status.detail
-            ),
-        )
-        self._subscriber = RedisDetectionSubscriber(
-            self._preview_redis_url,
-            self._task_id,
-            on_message=lambda message: self._signals.detection.emit(
-                generation, message
-            ),
-            on_status=lambda status: self._signals.redis_status.emit(
-                generation, status.connected, status.detail
-            ),
-            on_reset=lambda: self._signals.redis_reset.emit(generation),
-        )
-        self._video_feed.start()
-        self._subscriber.start()
+        self._start_video_feed()
+        self._start_subscriber()
         self.connect_button.setEnabled(False)
         self.disconnect_button.setEnabled(True)
         self.result_status.setText("检测：等待结果")
@@ -379,26 +429,73 @@ class PreviewPanel(QGroupBox):
         self.setTitle(f"{self._slot_label} · {task}")
 
     def _stop_components(self) -> None:
-        self._generation += 1
+        self._stop_video_feed()
+        self._stop_subscriber()
+
+    def _start_video_feed(self) -> None:
+        assert self._preview_rtsp_url is not None
+        generation = self._video_generation
+        self._video_feed = RtspVideoFeed(
+            self._preview_rtsp_url,
+            on_status=lambda status: self._signals.rtsp_status.emit(
+                generation, status.connected, status.detail
+            ),
+        )
+        self._video_feed.start()
+
+    def _start_subscriber(self) -> None:
+        assert self._preview_redis_url is not None
+        generation = self._redis_generation
+        self._subscriber = RedisDetectionSubscriber(
+            self._preview_redis_url,
+            self._task_id,
+            on_message=lambda message: self._signals.detection.emit(
+                generation, message
+            ),
+            on_status=lambda status: self._signals.redis_status.emit(
+                generation, status.connected, status.detail
+            ),
+            on_reset=lambda: self._signals.redis_reset.emit(generation),
+        )
+        self._subscriber.start()
+
+    def _stop_video_feed(self) -> None:
+        self._video_generation += 1
         video_feed = self._video_feed
-        subscriber = self._subscriber
         self._video_feed = None
-        self._subscriber = None
-        if video_feed is None and subscriber is None:
+        if video_feed is None:
             return
 
-        # close() 可能等待网络线程退出，不能在 Qt 主线程中同步执行。
-        def close_in_background() -> None:
-            if subscriber is not None:
-                subscriber.close()
-            if video_feed is not None:
-                video_feed.close()
+        self._close_in_background(video_feed.close, "rtsp")
+
+    def _stop_subscriber(self) -> None:
+        self._redis_generation += 1
+        subscriber = self._subscriber
+        self._subscriber = None
+        if subscriber is None:
+            return
+
+        self._close_in_background(subscriber.close, "redis")
+
+    def _close_in_background(self, close: object, component: str) -> None:
+        """后台关闭网络组件，防止其 join 等待阻塞 Qt 主线程。"""
+
+        assert callable(close)
 
         threading.Thread(
-            target=close_in_background,
-            name=f"viewer-{self._slot_label}-connection-cleanup",
+            target=close,
+            name=f"viewer-{self._slot_label}-{component}-cleanup",
             daemon=True,
         ).start()
+
+    def _clear_detection_state(self, status: str) -> None:
+        """清除旧 Worker 的结果，但保留当前视频帧和 RTSP 拉流。"""
+
+        self._overlay.clear()
+        self.canvas.set_objects(())
+        self.result_status.setText(status)
+        self.objects_label.setText("目标：-")
+        self.metrics_label.setText("推理：-    Worker FPS：-    消息年龄：-")
 
     def _refresh(self) -> None:
         if self._video_feed is not None:
@@ -422,7 +519,9 @@ class PreviewPanel(QGroupBox):
             )
 
     def _on_detection(self, generation: int, value: object) -> None:
-        if generation != self._generation or not isinstance(value, FrameDetection):
+        if generation != self._redis_generation or not isinstance(
+            value, FrameDetection
+        ):
             return
         run_changed = self._overlay.update(value)
         if run_changed:
@@ -439,12 +538,12 @@ class PreviewPanel(QGroupBox):
             self.objects_label.setText("目标：无")
 
     def _on_redis_status(self, generation: int, connected: bool, detail: str) -> None:
-        if generation == self._generation:
+        if generation == self._redis_generation:
             state = "已连接" if connected else detail
             self.redis_status.setText(f"Redis：{state}")
 
     def _on_redis_reset(self, generation: int) -> None:
-        if generation != self._generation:
+        if generation != self._redis_generation:
             return
         self._overlay.clear()
         self.canvas.set_objects(())
@@ -452,7 +551,7 @@ class PreviewPanel(QGroupBox):
         self.objects_label.setText("目标：-")
 
     def _on_rtsp_status(self, generation: int, connected: bool, detail: str) -> None:
-        if generation == self._generation:
+        if generation == self._video_generation:
             state = "已连接" if connected else detail
             self.rtsp_status.setText(f"RTSP：{state}")
 

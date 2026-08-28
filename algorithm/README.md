@@ -143,6 +143,9 @@ Viewer 左侧用“任务 1 / 任务 2”页签分别编辑两个 Worker，右�
 Redis、ROI 和其他算法参数。Viewer 从 Daemon 获取标准 JSON Schema 并动态生成参数控件；
 保存操作在后台线程中先提交 PostgreSQL 事务，提交成功后再调用 Daemon。连接参数位于默认
 收起的“高级连接设置”中。数据库中的任务配置是各自预览地址的唯一来源。
+重载 Worker 时，如果 `rtsp_url` 没有变化，Viewer 会保留现有 RTSP 拉流和当前画面，
+只清除旧检测框并等待新结果；只有 RTSP 地址确实改变时才重新拉流。`redis_url` 改变时
+只重建对应的 Redis 订阅，不影响视频画面。
 当任务配置包含 ROI 时，Viewer 会在视频内容区域绘制黄色虚线多边形并标注区域 ID；
 `roi=null` 时不绘制边框。多边形仅用于展示当前过滤区域，不改变 Worker 的中心点过滤规则。
 
