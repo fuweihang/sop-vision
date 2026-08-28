@@ -17,3 +17,4 @@
 - [2026-08-26｜MediaMTX 接入契约](2026-08-26-mediamtx-contract.md)
 - [2026-08-27｜Stream Gateway 与媒体对账](2026-08-27-stream-gateway-and-reconciliation.md)
 - [2026-08-28｜Camera 创建](2026-08-28-camera-create.md)
+- [2026-08-28｜Backend 统一日志](2026-08-28-backend-logging.md)

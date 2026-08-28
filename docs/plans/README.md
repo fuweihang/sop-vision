@@ -2,7 +2,6 @@
 
 本目录只保存尚未完成、可以直接交给开发者执行的工作。当前计划：
 
-- [Backend 日志改造](backend-logging/README.md)
 - [Cameras MVP 剩余能力](cameras-mvp/README.md)
 
 ## 计划内容

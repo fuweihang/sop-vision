@@ -55,6 +55,7 @@ changes/<日期>-<主题>  记录这次交付改变了什么
 ## 当前长期文档
 
 - [Cameras](modules/cameras/README.md)：Camera 配置、MediaMTX 集成、媒体对账和创建能力。
+- [Backend 日志](modules/backend-logging/README.md)：统一输出、业务事件、HTTP access 与数据库日志。
 - [总体架构](vision-platform-architecture.md)：当前服务与数据边界。
 - [产品范围](product-requirements.md)：产品对象、计划能力和范围外事项。
 - [实时检测数据设计](realtime-detection-design.md)：尚未实现的 Detector、Redis 和 WebSocket 目标设计。

@@ -98,10 +98,9 @@ ensure/release 0。Adapter 单次 I/O 使用 `stream_gateway.io` DEBUG，默认�
 原始异常文本或响应正文。trace 由统一 Handler 自动补充；后台任务没有 HTTP 上下文时直接省略，
 不使用 `-` 占位。
 
-日志采集器应启用 `BACKEND_LOG_FORMAT=json`，按 `media_reconciliation.round_completed`、
-`round_failed`、`recovered` 和 `runner_exit` 事件及稳定字段处理；默认 console 面向人工查看，不保证
-完整文本可供正则长期解析。SQL 调试由独立的 `DATABASE_ECHO` 控制，不会因 Backend DEBUG 或对账
-故障自动开启。
+日志采集器应按 [日志事件表](../backend-logging/events.md#已注册事件)读取
+`media_reconciliation.round_completed`、`round_failed`、`recovered` 和 `runner_exit`。SQL 调试由
+独立的 `DATABASE_ECHO` 控制，不会因 Backend DEBUG 或对账故障自动开启。
 
 ## 长期验证
 

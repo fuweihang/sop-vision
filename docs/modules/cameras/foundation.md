@@ -76,11 +76,9 @@ PostgreSQL 使用原生 `uuid`、`inet` 和 `timestamptz`。两个 Camera 表不
 - 数据库提交后才能更新或释放 MediaMTX 映射；外部失败不能伪装成数据库回滚。
 - 完整性巡检检测孤儿 Source、缺失/跨 Camera 默认源和无 Source Camera，只告警不修复。
 
-Runtime Engine 固定使用 `echo=False` 和 `hide_parameters=True`。需要查看 SQL 时通过
-`DATABASE_ECHO=true` 打开统一的 `database.sql` 输出，不能直接启用 SQLAlchemy echo，否则可能与
-root Handler 重复。Alembic CLI 同样使用统一 Formatter；嵌入 pytest 或应用进程执行时不得替换宿主
-Handler，迁移结束后必须恢复 Logger 级别。SQL 日志隐藏绑定参数，但调用方仍不得把密码或 Token
-直接拼入 SQL 文本。
+Runtime Engine、SQL 参数保护和 Alembic 输出的公共规则见
+[数据库与迁移日志](../backend-logging/database.md)。Cameras 查询必须继续使用绑定参数，不能把密码、
+Token 或其他敏感值直接拼入 SQL 文本。
 
 公共端口是 `CameraRepository.add/save/get/list/count/delete` 与
 `CameraUnitOfWork.commit/rollback`。列表搜索对名称和 IPv4 做大小写无关的字面包含匹配；
@@ -97,11 +95,8 @@ Handler，迁移结束后必须恢复 Logger 级别。SQL 日志隐藏绑定参�
 - 列表参数：`page >= 1`，`1 <= page_size <= 100`，`q` trim 后最长 100，空白等同未提供。
 - 额外查询参数被忽略；请求 DTO 的未知字段返回 `422 UNKNOWN_FIELD`。
 - 成功和错误响应均带 `X-Trace-Id`；Problem body 使用同一 `trace_id`。
-- 每个 HTTP 请求在响应完整发送或中断时最多记录一条应用级 access log，只包含 method、path、
-  实际状态码、`completed|failed|response_interrupted`、完整耗时和 trace；query string、正文、
-  headers、客户端 IP 和 User-Agent 不进入日志。
-- 响应头已经发送后发生流式中断时保留真实状态码，并用 `ERROR/response_interrupted` 表示正文未
-  完整发送，不能把已经发送的 2xx 伪造为 500。成功的 live/ready 探针不输出 access log。
+- HTTP access log 在响应完成或中断后记录实际状态与 trace，并遵守统一敏感字段限制；详细规则见
+  [HTTP access log](../backend-logging/http-access.md)。
 
 Problem 的稳定分支字段是 `status/code/errors/context`。Frontend 不比较可变的 `title/detail`：
 

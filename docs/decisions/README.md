@@ -15,3 +15,4 @@
 ## 当前决策
 
 - [0001｜Camera 配置与媒体运行态分离](0001-camera-config-and-media-state.md)
+- [0002｜Backend 使用统一结构化日志与安全输出边界](0002-backend-structured-logging.md)

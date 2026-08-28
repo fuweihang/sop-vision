@@ -1,21 +1,21 @@
 # SOP Vision Backend
 
 Backend 是平台的 FastAPI 控制面。当前已完成公共 HTTP/数据库基础、Camera 领域与持久化层、
-MediaMTX v1.20.1 Adapter，以及 PostgreSQL 到 MediaMTX 的后台媒体对账；Camera 业务 handler、
-Redis 和 Detector 控制尚未实现。
+MediaMTX v1.20.1 Adapter、PostgreSQL 到 MediaMTX 的后台媒体对账和 Camera 创建；其余 Camera
+handler、Redis 和 Detector 控制尚未实现。
 
 ## 当前能力
 
-| 能力                         | 状态   | 入口                                          |
-| ---------------------------- | ------ | --------------------------------------------- |
-| 存活检查                     | 可用   | `GET /api/v1/health/live`                     |
-| PostgreSQL 就绪检查          | 可用   | `GET /api/v1/health/ready`                    |
-| MediaMTX 协议与 Adapter      | 可用   | `contracts/mediamtx-openapi.json`、`ports.py` |
-| Camera 领域与持久化          | 可用   | `app/modules/cameras/domain`、`persistence`   |
-| 媒体后台对账                 | 可用   | `application/reconciliation.py`               |
-| Cameras HTTP 契约            | 已冻结 | 七个路由和 Schema 已进入 OpenAPI              |
-| Cameras HTTP 行为            | 未实现 | 七个 handler 当前仅抛出 `NotImplementedError` |
-| Redis / WebSocket / Detector | 未实现 | Compose 变量和目标设计不等于应用接入          |
+| 能力                         | 状态     | 入口                                          |
+| ---------------------------- | -------- | --------------------------------------------- |
+| 存活检查                     | 可用     | `GET /api/v1/health/live`                     |
+| PostgreSQL 就绪检查          | 可用     | `GET /api/v1/health/ready`                    |
+| MediaMTX 协议与 Adapter      | 可用     | `contracts/mediamtx-openapi.json`、`ports.py` |
+| Camera 领域与持久化          | 可用     | `app/modules/cameras/domain`、`persistence`   |
+| 媒体后台对账                 | 可用     | `application/reconciliation.py`               |
+| Cameras HTTP 契约            | 已冻结   | 七个路由和 Schema 已进入 OpenAPI              |
+| Cameras HTTP 行为            | 部分可用 | 创建可用，其余六个 handler 仍为占位           |
+| Redis / WebSocket / Detector | 未实现   | Compose 变量和目标设计不等于应用接入          |
 
 `/api/v1/health/ready` 当前只检查 PostgreSQL，不检查 MediaMTX 或 Redis。MediaMTX 不可用不会令
 配置 API 被部署层摘除；媒体故障由状态投影和脱敏对账日志独立表达。
@@ -77,38 +77,14 @@ uv run --env-file .env.local python -m app.server \
 | `MEDIA_RECONCILIATION_MAX_BACKOFF_SECONDS` | `300`                   | 连续失败时指数退避的上限秒数                       |
 | `BACKEND_CORS_ORIGINS`                     | `http://localhost:8000` | 允许的 Origin，多个值使用逗号分隔                  |
 
-`BACKEND_LOG_LEVEL` 支持 `debug`、`info`、`warning`、`error` 和 `critical`，并同时控制应用与
-Uvicorn Logger。它不会打开 SQLAlchemy、httpx 或 httpcore 的调试输出；SQL 只由
-`DATABASE_ECHO=true` 单独开启。`BACKEND_PORT` 只控制 Compose 发布到宿主机的端口，容器内仍监听
-`3001`；本地直接启动如需改端口使用 `--port`。`REDIS_URL` 已在运行环境中预留，但当前代码不会读取它。
+`BACKEND_LOG_LEVEL` 不会打开 SQLAlchemy、httpx 或 httpcore 的调试输出；SQL 只由
+`DATABASE_ECHO=true` 单独开启。日志格式、事件、HTTP access、数据库输出和安全限制见
+[Backend 日志](../docs/modules/backend-logging/README.md)。`BACKEND_PORT` 只控制 Compose 发布到宿主机
+的端口，容器内仍监听 `3001`；本地直接启动如需改端口使用 `--port`。`REDIS_URL` 已在运行环境中
+预留，但当前代码不会读取它。
 
-console 与 JSON 的 `timestamp` 都按 Backend 进程的 `TZ` 输出 `YYYY-MM-DD HH:mm:ss`，不包含
-毫秒、时区偏移或缩写。默认镜像和 Compose 使用 `Asia/Shanghai`；修改地区时应填写系统支持的
-IANA 名称，例如 `UTC`。该变量只改变进程本地时间展示，数据库、API 和媒体快照继续使用 UTC。
-
-`DATABASE_URL` 以 Secret 保存，配置校验、日志和 SQL 输出不得回显密码。Runtime Engine 始终使用
-`echo=False` 和 `hide_parameters=True`；`DATABASE_ECHO` 通过统一的 `sqlalchemy.engine` Logger
-输出 SQL，避免 SQLAlchemy 自行安装 Handler 后重复打印。该保护隐藏绑定参数，不应把敏感值直接
-拼进 SQL 文本。`TEST_DATABASE_URL` 只供集成测试使用，绝不回退到应用数据库。
-
-`BACKEND_LOG_FORMAT=console` 输出带颜色、适合终端阅读的单行文本；`json` 每个 LogRecord 输出一个
-JSON 对象，适合日志采集器读取 `event`、`outcome`、`trace_id` 等稳定字段。外部采集规则不得按完整
-console 文本或旧的 `operation=... outcome=...` 消息做解析。
-
-每个 HTTP 请求在响应完整发送或发生中断时最多记录一条应用级 access log，包含 method、path、
-实际状态码、结果、完整耗时和 trace。日志只读取 ASGI `path`，不记录 query string、请求/响应正文、
-headers、客户端 IP 或 User-Agent。Uvicorn 原生 access log 已关闭，避免同一请求重复输出以及 query
-进入 request line。
-
-HTTP 结果分为：
-
-- `completed`：响应正文已经完整发送；100–499 使用 `INFO`，500–599 使用 `ERROR`。
-- `failed`：响应头发送前发生未处理异常，记录 `status=500` 和 `ERROR`。
-- `response_interrupted`：响应头已经发送、正文尚未完整发送时发生未处理异常；保留已经发送的真实
-  状态码，并使用 `ERROR`，不能把已发送的 200 改写成 500。
-
-成功的 `/api/v1/health/live` 和 `/api/v1/health/ready` 不输出 access log；失败状态或响应中断仍会
-输出。access log 不保存异常内容，具体异常继续由 ServerError/Uvicorn 错误日志报告。
+`DATABASE_URL` 以 Secret 保存，配置校验、日志和 SQL 输出不得回显密码。`TEST_DATABASE_URL` 只供
+集成测试使用，绝不回退到应用数据库。
 
 ## 数据库与事务
 
@@ -119,9 +95,8 @@ uv run --env-file .env.local alembic current
 uv run --env-file .env.local alembic upgrade head
 ```
 
-Alembic CLI 使用与 Backend Runtime 相同的时间、级别、组件和 console/JSON Formatter，不再读取
-`alembic.ini` 中的独立 logging 段。在 pytest 或应用进程内调用 Alembic 时，会保留宿主已有 Handler，
-并在迁移成功、失败或取消后恢复 Alembic/SQLAlchemy Logger 级别。
+Alembic CLI 使用与 Backend Runtime 相同的日志格式；独立 CLI 和嵌入式执行的详细行为见
+[数据库与迁移日志](../docs/modules/backend-logging/database.md)。
 
 `cameras` 与 `camera_sources` 有意不建立外键。Camera Repository 通过聚合锁、同事务校验、
 显式 Source 清理和完整性巡检维护跨表约束；数据库继续负责主键、IPv4、端口、顺序和同 Camera
@@ -146,7 +121,8 @@ uv run python scripts/export_openapi.py
 
 导出不进入 lifespan，也不会连接 PostgreSQL 或 MediaMTX。生成文件不得手工修改；从仓库根目录
 运行 `bash scripts/check-cameras-contracts.sh` 可同时重建 OpenAPI 和前端 TypeScript 类型并
-检查漂移。Cameras 路径存在于契约中只表示目标接口形状已经冻结。
+检查漂移。当前可用行为见 [Cameras 模块文档](../docs/modules/cameras/README.md)；尚未实现的 Cameras
+路径出现在契约中只表示目标接口形状已经冻结。
 
 ## 模块边界
 
@@ -163,7 +139,7 @@ backend/
 │   │   └── http/               # Trace、Problem、校验与 OpenAPI 公共机制
 │   └── modules/
 │       ├── cameras/
-│       │   ├── api/            # Schema、依赖、错误映射和占位 Router
+│       │   ├── api/            # Schema、依赖、错误映射、创建和剩余占位 Router
 │       │   ├── application/    # 应用端口、媒体 Desired State 与后台对账
 │       │   ├── domain/         # 框架无关的 Camera 聚合和值对象
 │       │   └── persistence/    # Repository/UoW、Mapper、巡检和对账锁/读取

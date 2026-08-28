@@ -2,20 +2,20 @@
 
 SOP Vision 是面向 IP Camera 的视觉分析平台。当前仓库已经完成可运行的基础设施、
 FastAPI/React 工程骨架，以及 Camera 配置、MediaMTX 适配和后台媒体对账所需的公共能力；
-Camera 业务 handler、WHEP 播放器和 Detector 业务仍未实现。
+Camera 创建已经可用，详情、播放、列表、更新、删除和 Detector 业务仍未实现。
 
 ## 当前状态
 
 | 范围                | 状态     | 说明                                                                     |
 | ------------------- | -------- | ------------------------------------------------------------------------ |
 | 本地运行栈          | 可用     | PostgreSQL、Redis、MediaMTX、FastAPI、React/Nginx                        |
-| Backend 公共基础    | 可用     | 应用工厂、数据库生命周期、Alembic、统一 Problem、Trace ID、CORS          |
+| Backend 公共基础    | 可用     | 应用工厂、数据库生命周期、统一日志、Problem、Trace ID、CORS              |
 | 健康检查            | 可用     | `GET /api/v1/health/live` 与 `GET /api/v1/health/ready`                  |
 | Cameras Foundation  | 已完成   | 领域聚合、Repository/UoW、关系模型、OpenAPI、前端 Client/Mock 和 CI 门禁 |
 | MediaMTX 媒体边界   | 已完成   | v1.20.1 协议、Path 读写、完整快照、状态投影和真实 Adapter 门禁           |
 | 媒体后台对账        | 已完成   | 启动/周期恢复数据库 Source Path，并清理受管孤儿 Path                     |
-| Cameras HTTP 业务   | 未实现   | 七个目标路由已注册用于冻结契约，但 handler 仍是占位，不能作为可用 API    |
-| Web UI              | 部分可用 | App Shell、路由、主题和通用页面状态已完成；Cameras/Tasks 是页面骨架      |
+| Cameras HTTP 业务   | 部分可用 | `POST /api/v1/cameras` 可用，其余六个目标 handler 仍为占位               |
+| Web UI              | 部分可用 | App Shell 与 Camera 新增 Dialog 可用；列表、详情、播放器和 Tasks 未实现  |
 | Detector 与实时检测 | 未实现   | `detector/` 仅为预留目录；Backend 尚未接入 Redis 客户端或 WebSocket      |
 
 精确的 Cameras 当前能力见 [Cameras 模块文档](docs/modules/cameras/README.md)，未完成工作见
@@ -74,8 +74,8 @@ docker compose --env-file .env exec backend alembic upgrade head
 - MediaMTX WHEP 服务：<http://localhost:8889>
 
 容器启动不会自动执行数据库迁移；部署新 revision 后必须显式运行 `alembic upgrade head`。
-当前 Frontend 只展示应用 Shell 和页面骨架。调用 Cameras 目标路由会进入占位 handler，
-不代表 CRUD 已可使用。
+当前 Frontend 可以创建 Camera；列表仍是占位内容。除 `POST /api/v1/cameras` 外的 Cameras 目标路由
+仍进入占位 handler，不能作为可用 CRUD API。
 
 停止服务使用：
 
@@ -156,6 +156,7 @@ bash scripts/check-cameras-sensitive-data.sh
 - [总体架构](docs/vision-platform-architecture.md)
 - [产品范围](docs/product-requirements.md)
 - [Cameras 当前能力](docs/modules/cameras/README.md)
+- [Backend 日志](docs/modules/backend-logging/README.md)
 - [Cameras MVP 剩余计划](docs/plans/cameras-mvp/README.md)
 - [Design System](docs/design-system/README.md)
 - [实时检测数据设计](docs/realtime-detection-design.md)
