@@ -1,4 +1,5 @@
 import os
+import time
 from datetime import UTC, datetime
 from types import SimpleNamespace
 
@@ -13,62 +14,90 @@ from PySide6.QtGui import QImage
 from PySide6.QtWidgets import QApplication
 
 from algorithm.common.roi import RoiConfig
+from algorithm.contracts.detection import (
+    DetectionMetrics,
+    DetectionObject,
+    FrameDetection,
+)
 from algorithm.daemon.registry import get_worker_definition
-from algorithm.demos.viewer import window as window_module
+from algorithm.demos.viewer import preview_panel as preview_module
+from algorithm.demos.viewer import task_panel as task_module
 from algorithm.demos.viewer.schema_form import SchemaForm
+from algorithm.demos.viewer.task_panel import TaskPanel
 from algorithm.demos.viewer.video_feed import RgbFrame
 from algorithm.demos.viewer.window import VideoCanvas, ViewerWindow
 
 
-def test_window_starts_and_closes_without_connections() -> None:
+@pytest.fixture(autouse=True)
+def 禁止测试窗口自动访问守护进程(monkeypatch) -> None:
+    """窗口结构测试不依赖正在运行的 Daemon。"""
+
+    monkeypatch.setattr(TaskPanel, "refresh_worker_types", lambda _self: None)
+
+
+def test_窗口包含两个任务页签和两个并排画面() -> None:
     app = QApplication.instance() or QApplication([])
-    window = ViewerWindow(
-        task_id="task-1",
-    )
+    window = ViewerWindow(task_id="task-1", task_id_2="task-2")
     window.show()
     app.processEvents()
 
-    assert window.task_input.text() == "task-1"
-    assert window.size().width() == 1280
-    assert window.size().height() == 800
+    assert tuple(panel.task_id for panel in window.task_panels) == (
+        "task-1",
+        "task-2",
+    )
+    assert window.task_tabs.count() == 2
+    assert len(window.preview_panels) == 2
+    assert window.size().width() == 1600
+    assert window.size().height() == 900
     assert window.main_splitter.orientation() == Qt.Orientation.Horizontal
-    assert 400 <= window.main_splitter.sizes()[0] <= 440
-    assert window.main_splitter.sizes()[1] > window.main_splitter.sizes()[0]
-    assert window.task_panel.minimumWidth() == 360
-    assert window.preview_panel.minimumWidth() == 640
+    assert window.preview_splitter.orientation() == Qt.Orientation.Horizontal
+    assert 420 <= window.main_splitter.sizes()[0] <= 460
+    assert all(panel.minimumWidth() == 480 for panel in window.preview_panels)
+    assert window.task_panel.minimumWidth() == 380
     assert window.advanced_panel.isHidden()
     assert not window.advanced_toggle.isChecked()
     assert not hasattr(window, "rtsp_input")
     assert not hasattr(window, "redis_input")
-    assert not window.connect_button.isEnabled()
-    assert not window.disconnect_button.isEnabled()
+    assert all(not panel.connect_button.isEnabled() for panel in window.preview_panels)
     window.close()
     app.processEvents()
 
 
-def test_schema_form_round_trips_detector_defaults_and_nested_roi() -> None:
+def test_schema表单可读写detector默认值和嵌套roi() -> None:
     QApplication.instance() or QApplication([])
     schema = get_worker_definition("detector").parameter_schema()
     form = SchemaForm()
-    config = {
-        "rtsp_url": "rtsp://camera/stream",
-        "redis_url": "redis://localhost/0",
-        "model_path": "resources/models/model.pt",
-        "roi": {
-            "roi_id": "main",
-            "points": [[0.1, 0.1], [0.9, 0.1], [0.5, 0.9]],
-        },
-    }
+    config = _detector_config("camera-1", roi_id="area-1")
 
     form.set_schema(schema, config)
     payload = form.payload()
 
     assert payload["confidence"] == 0.5
     assert payload["image_size"] == 640
-    assert payload["roi"]["points"][2] == [0.5, 0.9]
+    assert payload["roi"]["roi_id"] == "area-1"
+    assert payload["roi"]["points"][2] == [0.8, 0.8]
 
 
-def test_video_canvas_renders_roi_polygon_border() -> None:
+def test_两个任务可独立选择worker类型() -> None:
+    app = QApplication.instance() or QApplication([])
+    window = ViewerWindow(task_id="task-1", task_id_2="task-2")
+    first, second = window.task_panels
+    for panel in (first, second):
+        panel.worker_type_input.blockSignals(True)
+        panel.worker_type_input.addItems(["detector", "future-worker"])
+
+    first.worker_type_input.setCurrentText("detector")
+    second.worker_type_input.setCurrentText("future-worker")
+    first.worker_type_input.blockSignals(False)
+    second.worker_type_input.blockSignals(False)
+
+    assert first.worker_type == "detector"
+    assert second.worker_type == "future-worker"
+    window.close()
+    app.processEvents()
+
+
+def test_视频画布绘制roi多边形边框() -> None:
     QApplication.instance() or QApplication([])
     canvas = VideoCanvas()
     canvas.resize(640, 360)
@@ -101,122 +130,292 @@ def test_video_canvas_renders_roi_polygon_border() -> None:
     assert yellow_pixels > 100
 
 
-def test_loading_task_caches_preview_addresses() -> None:
+def test_两个任务分别缓存预览地址和roi() -> None:
     app = QApplication.instance() or QApplication([])
-    window = ViewerWindow(task_id="task-1")
-    config = _detector_config()
-    record = SimpleNamespace(
-        worker_type="detector",
-        config=config,
-        updated_at=datetime(2026, 8, 21, tzinfo=UTC),
-    )
+    window = ViewerWindow(task_id="task-1", task_id_2="task-2")
+    schema = get_worker_definition("detector").parameter_schema()
+    first_config = _detector_config("camera-1", roi_id="area-1")
+    second_config = _detector_config("camera-2", roi_id="area-2")
 
-    window._on_operation_finished(
-        "load",
-        True,
-        "",
-        {
-            "record": record,
-            "schema": get_worker_definition("detector").parameter_schema(),
-        },
-    )
+    for panel, config in zip(
+        window.task_panels,
+        (first_config, second_config),
+        strict=True,
+    ):
+        panel.on_operation_finished(
+            "load",
+            True,
+            "",
+            {
+                "record": SimpleNamespace(
+                    worker_type="detector",
+                    config=config,
+                    updated_at=datetime(2026, 8, 21, tzinfo=UTC),
+                ),
+                "schema": schema,
+            },
+        )
 
-    assert window._preview_rtsp_url == config["rtsp_url"]
-    assert window._preview_redis_url == config["redis_url"]
-    assert window.canvas.roi is not None
-    assert window.canvas.roi.roi_id == "main"
-    assert window.canvas.roi.points[0] == (0.2, 0.2)
-    assert window.connect_button.isEnabled()
-    window.task_input.setText("another-task")
-    assert not window.connect_button.isEnabled()
+    first_preview, second_preview = window.preview_panels
+    assert first_preview.preview_rtsp_url == first_config["rtsp_url"]
+    assert second_preview.preview_rtsp_url == second_config["rtsp_url"]
+    assert first_preview.preview_redis_url == first_config["redis_url"]
+    assert second_preview.preview_redis_url == second_config["redis_url"]
+    assert first_preview.canvas.roi is not None
+    assert first_preview.canvas.roi.roi_id == "area-1"
+    assert second_preview.canvas.roi is not None
+    assert second_preview.canvas.roi.roi_id == "area-2"
+
+    window.task_panels[0].task_input.setText("task-1-edited")
+    assert not first_preview.connect_button.isEnabled()
+    assert second_preview.connect_button.isEnabled()
     window.close()
     app.processEvents()
 
 
-def test_start_success_updates_preview_config_and_connects(monkeypatch) -> None:
+def test_启动成功只自动连接对应画面(monkeypatch) -> None:
     app = QApplication.instance() or QApplication([])
-    window = ViewerWindow(task_id="task-1")
-    connected = []
-    monkeypatch.setattr(window, "connect_sources", lambda: connected.append(True))
+    window = ViewerWindow(task_id="task-1", task_id_2="task-2")
+    connected: list[int] = []
+    monkeypatch.setattr(
+        window.preview_panels[0],
+        "connect_sources",
+        lambda: connected.append(1),
+    )
+    monkeypatch.setattr(
+        window.preview_panels[1],
+        "connect_sources",
+        lambda: connected.append(2),
+    )
 
-    window._on_operation_finished(
+    window.task_panels[1].on_operation_finished(
         "start",
         True,
         "",
         {
-            "config": _detector_config(),
+            "config": _detector_config("camera-2"),
             "response": {"runtime_state": "running", "pid": 123},
         },
     )
 
-    assert connected == [True]
+    assert connected == [2]
+    assert window.preview_panels[0].preview_task_id is None
+    assert window.preview_panels[1].preview_task_id == "task-2"
     window.close()
     app.processEvents()
 
 
-def test_worker_without_preview_fields_disables_preview() -> None:
+def test_不含预览字段的worker只禁用对应画面() -> None:
     app = QApplication.instance() or QApplication([])
-    window = ViewerWindow(task_id="task-1")
-    window._set_preview_config(_detector_config())
-    window._set_preview_config({"some_parameter": True})
+    window = ViewerWindow(task_id="task-1", task_id_2="task-2")
+    first_preview, second_preview = window.preview_panels
+    first_preview.set_task_configuration("task-1", {"some_parameter": True})
+    second_preview.set_task_configuration("task-2", _detector_config("camera-2"))
 
-    assert not window.connect_button.isEnabled()
-    assert window.canvas.roi is None
-    assert "不支持视频预览" in window.result_status.text()
+    assert not first_preview.connect_button.isEnabled()
+    assert first_preview.canvas.roi is None
+    assert "不支持视频预览" in first_preview.result_status.text()
+    assert second_preview.connect_button.isEnabled()
     window.close()
     app.processEvents()
 
 
-def test_reconnect_uses_cached_task_configuration(monkeypatch) -> None:
+def test_两路重新连接分别使用自己的缓存配置(monkeypatch) -> None:
     app = QApplication.instance() or QApplication([])
-    created = {}
+    created: dict[str, list] = {"rtsp": [], "redis": []}
 
     class FakeFeed:
         def __init__(self, url, **_kwargs):
-            created["rtsp_url"] = url
+            created["rtsp"].append(url)
 
         def start(self):
-            created["feed_started"] = True
+            pass
 
         def close(self):
             pass
 
     class FakeSubscriber:
         def __init__(self, url, task_id, **_kwargs):
-            created["redis_url"] = url
-            created["task_id"] = task_id
+            created["redis"].append((url, task_id))
 
         def start(self):
-            created["subscriber_started"] = True
+            pass
 
         def close(self):
             pass
 
-    monkeypatch.setattr(window_module, "RtspVideoFeed", FakeFeed)
-    monkeypatch.setattr(window_module, "RedisDetectionSubscriber", FakeSubscriber)
-    window = ViewerWindow(task_id="task-1")
-    window._set_preview_config(_detector_config())
+    monkeypatch.setattr(preview_module, "RtspVideoFeed", FakeFeed)
+    monkeypatch.setattr(preview_module, "RedisDetectionSubscriber", FakeSubscriber)
+    window = ViewerWindow(task_id="task-1", task_id_2="task-2")
 
-    window.connect_sources()
+    for preview, task_id, camera in (
+        (window.preview_panels[0], "task-1", "camera-1"),
+        (window.preview_panels[1], "task-2", "camera-2"),
+    ):
+        preview.set_task_configuration(task_id, _detector_config(camera))
+        preview.connect_sources()
 
     assert created == {
-        "rtsp_url": "rtsp://camera/stream",
-        "redis_url": "redis://localhost/0",
-        "task_id": "task-1",
-        "feed_started": True,
-        "subscriber_started": True,
+        "rtsp": [
+            "rtsp://camera-1/stream",
+            "rtsp://camera-2/stream",
+        ],
+        "redis": [
+            ("redis://camera-1/0", "task-1"),
+            ("redis://camera-2/0", "task-2"),
+        ],
     }
     window.close()
     app.processEvents()
 
 
-def _detector_config() -> dict:
+def test_第二路检测结果不会修改第一路状态() -> None:
+    app = QApplication.instance() or QApplication([])
+    window = ViewerWindow(task_id="task-1", task_id_2="task-2")
+    first_preview, second_preview = window.preview_panels
+    message = FrameDetection(
+        task_id="task-2",
+        run_id="run-2",
+        frame_id=1,
+        frame_ts_ms=1,
+        published_at_ms=2,
+        source_width=1920,
+        source_height=1080,
+        objects=(
+            DetectionObject(
+                class_id=0,
+                class_name="person",
+                confidence=0.9,
+                bbox=(0.1, 0.1, 0.2, 0.3),
+            ),
+        ),
+        metrics=DetectionMetrics(inference_ms=10.0, fps=20.0),
+    )
+
+    second_preview._on_detection(second_preview._generation, message)
+
+    assert second_preview.result_status.text() == "检测：1 个目标"
+    assert "person 0.90" in second_preview.objects_label.text()
+    assert first_preview.result_status.text() == "检测：等待任务配置"
+    assert first_preview.objects_label.text() == "目标：-"
+    window.close()
+    app.processEvents()
+
+
+def test_相同task_id禁止保存和停止worker() -> None:
+    app = QApplication.instance() or QApplication([])
+    window = ViewerWindow(task_id="same-task", task_id_2="different-task")
+    second = window.task_panels[1]
+    second.task_input.setText("same-task")
+
+    second.save_and_command("start")
+    assert "两个任务的 Task ID 不能相同" in second.task_status.text()
+    assert not second.busy
+
+    second.stop_worker()
+    assert "两个任务的 Task ID 不能相同" in second.task_status.text()
+    assert not second.busy
+    window.close()
+    app.processEvents()
+
+
+def test_第二任务保存时先写数据库再调用对应worker(monkeypatch) -> None:
+    app = QApplication.instance() or QApplication([])
+    window = ViewerWindow(task_id="task-1", task_id_2="task-2")
+    second = window.task_panels[1]
+    events: list[tuple] = []
+    connected: list[bool] = []
+
+    second.worker_type_input.blockSignals(True)
+    second.worker_type_input.addItem("detector")
+    second.worker_type_input.setCurrentText("detector")
+    second.worker_type_input.blockSignals(False)
+    second.schema_form.set_schema(
+        get_worker_definition("detector").parameter_schema(),
+        _detector_config("camera-2"),
+    )
+
+    def fake_save(database_url, task_id, worker_type, config):
+        events.append(("save", database_url, task_id, worker_type, config["rtsp_url"]))
+        return SimpleNamespace()
+
+    class FakeDaemonClient:
+        def __init__(self, daemon_url):
+            self.daemon_url = daemon_url
+
+        def command(self, task_id, command):
+            events.append(("command", self.daemon_url, task_id, command))
+            return {"runtime_state": "running", "pid": 456}
+
+    monkeypatch.setattr(task_module, "save_task", fake_save)
+    monkeypatch.setattr(task_module, "DaemonClient", FakeDaemonClient)
+    monkeypatch.setattr(
+        window.preview_panels[1],
+        "connect_sources",
+        lambda: connected.append(True),
+    )
+
+    second.save_and_command("start")
+    assert not second.start_worker_button.isEnabled()
+    assert window.task_panels[0].start_worker_button.isEnabled()
+    _wait_until(app, lambda: not second.busy)
+
+    assert events == [
+        (
+            "save",
+            window.database_input.text(),
+            "task-2",
+            "detector",
+            "rtsp://camera-2/stream",
+        ),
+        ("command", window.daemon_input.text(), "task-2", "start"),
+    ]
+    assert connected == [True]
+    window.close()
+    app.processEvents()
+
+
+def test_关闭窗口清理两路预览但不停止worker(monkeypatch) -> None:
+    app = QApplication.instance() or QApplication([])
+    window = ViewerWindow(task_id="task-1", task_id_2="task-2")
+    shutdown: list[int] = []
+    stopped: list[int] = []
+    for index, preview in enumerate(window.preview_panels, start=1):
+        monkeypatch.setattr(
+            preview,
+            "shutdown",
+            lambda index=index: shutdown.append(index),
+        )
+    for index, panel in enumerate(window.task_panels, start=1):
+        monkeypatch.setattr(
+            panel,
+            "stop_worker",
+            lambda index=index: stopped.append(index),
+        )
+
+    window.close()
+    app.processEvents()
+
+    assert shutdown == [1, 2]
+    assert stopped == []
+
+
+def _detector_config(camera: str, *, roi_id: str = "main") -> dict:
     return {
-        "rtsp_url": "rtsp://camera/stream",
-        "redis_url": "redis://localhost/0",
+        "rtsp_url": f"rtsp://{camera}/stream",
+        "redis_url": f"redis://{camera}/0",
         "model_path": "resources/models/model.pt",
         "roi": {
-            "roi_id": "main",
+            "roi_id": roi_id,
             "points": [[0.2, 0.2], [0.8, 0.2], [0.8, 0.8], [0.2, 0.8]],
         },
     }
+
+
+def _wait_until(app: QApplication, predicate, *, timeout: float = 2.0) -> None:
+    deadline = time.monotonic() + timeout
+    while not predicate() and time.monotonic() < deadline:
+        app.processEvents()
+        time.sleep(0.01)
+    app.processEvents()
+    assert predicate(), "等待 Qt 后台操作完成超时"

@@ -133,16 +133,16 @@ uv run detector --task-id detector-001
 ```bash
 uv run --extra viewer algorithm-viewer \
   --task-id detector-001 \
+  --task-id-2 detector-002 \
   --daemon-url http://127.0.0.1:8090 \
   --database-url postgresql://sop_vision:sop_vision@localhost:5432/sop_vision
 ```
 
-Viewer 从 Daemon 获取 Worker 类型与标准 JSON Schema，动态生成参数控件并执行客户端
-校验。它可从数据库加载已有任务，也可使用“保存并启动”或“保存并重载”先 UPSERT 参数、
-再调用控制命令。Detector 启动成功后，Viewer 自动使用配置中的 RTSP/Redis 地址连接预览。
-界面采用可拖动的左右分栏：左侧编辑任务参数，右侧显示视频；Daemon 和数据库连接地址
-位于默认收起的“高级连接设置”中。Viewer 不提供独立的 RTSP/Redis 覆盖输入，数据库任务
-配置是预览地址的唯一来源。
+Viewer 左侧用“任务 1 / 任务 2”页签分别编辑两个 Worker，右侧同时显示两个摄像头
+画面。两个任务共用 Daemon 和 PostgreSQL 连接，但各自保存 Task ID、Worker 类型、RTSP、
+Redis、ROI 和其他算法参数。Viewer 从 Daemon 获取标准 JSON Schema 并动态生成参数控件；
+保存操作在后台线程中先提交 PostgreSQL 事务，提交成功后再调用 Daemon。连接参数位于默认
+收起的“高级连接设置”中。数据库中的任务配置是各自预览地址的唯一来源。
 当任务配置包含 ROI 时，Viewer 会在视频内容区域绘制黄色虚线多边形并标注区域 ID；
 `roi=null` 时不绘制边框。多边形仅用于展示当前过滤区域，不改变 Worker 的中心点过滤规则。
 

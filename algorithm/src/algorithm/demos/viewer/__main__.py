@@ -10,12 +10,10 @@ from collections.abc import Sequence
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="algorithm-viewer",
-        description=(
-            "Configure one database-backed Worker and display its latest "
-            "detection result."
-        ),
+        description="配置两个数据库任务，并同时显示两路最新检测结果。",
     )
     parser.add_argument("--task-id", default="detector-001")
+    parser.add_argument("--task-id-2", default="detector-002")
     parser.add_argument("--daemon-url", default="http://127.0.0.1:8090")
     parser.add_argument(
         "--database-url",
@@ -39,6 +37,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         raise
     return run_viewer(
         task_id=args.task_id,
+        task_id_2=args.task_id_2,
         daemon_url=args.daemon_url,
         database_url=args.database_url,
     )
