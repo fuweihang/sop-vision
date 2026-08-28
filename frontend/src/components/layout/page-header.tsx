@@ -9,12 +9,15 @@ export interface PageHeaderProps extends Omit<
   title: string;
   description: string;
   actions?: ReactNode;
+  /** 页面可以在窄屏调整操作组对齐方式，不需要复制 PageHeader 结构。 */
+  actionsClassName?: string;
 }
 
 export function PageHeader({
   title,
   description,
   actions,
+  actionsClassName,
   className,
   ...props
 }: PageHeaderProps) {
@@ -39,7 +42,12 @@ export function PageHeader({
         </p>
       </div>
       {actions === undefined || actions === null ? null : (
-        <div className="flex shrink-0 flex-wrap items-center gap-2">
+        <div
+          className={cn(
+            "flex shrink-0 flex-wrap items-center gap-2",
+            actionsClassName,
+          )}
+        >
           {actions}
         </div>
       )}

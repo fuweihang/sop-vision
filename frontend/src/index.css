@@ -25,6 +25,15 @@
   --color-input: var(--input);
   --color-border: var(--border);
   --color-destructive: var(--destructive);
+  --color-status-online-dot: var(--status-online-dot);
+  --color-status-online-foreground: var(--status-online-foreground);
+  --color-status-online: var(--status-online);
+  --color-status-degraded-dot: var(--status-degraded-dot);
+  --color-status-degraded-foreground: var(--status-degraded-foreground);
+  --color-status-degraded: var(--status-degraded);
+  --color-status-offline-dot: var(--status-offline-dot);
+  --color-status-offline-foreground: var(--status-offline-foreground);
+  --color-status-offline: var(--status-offline);
   --color-accent-foreground: var(--accent-foreground);
   --color-accent: var(--accent);
   --color-muted-foreground: var(--muted-foreground);
@@ -64,6 +73,31 @@
   --accent: oklch(0.97 0 0);
   --accent-foreground: oklch(0.205 0 0);
   --destructive: oklch(0.577 0.245 27.325);
+  /*
+   * 运行状态颜色复用原型的精确混色规则，但通过业务语义 Token 暴露给页面。
+   * 圆点单独登记 Token，当前值与文字一致，后续修改不会要求页面读取原始色阶。
+   */
+  --status-online-dot: oklch(0.627 0.17 149.214);
+  --status-online: color-mix(
+    in oklch,
+    var(--status-online-dot) 12%,
+    transparent
+  );
+  --status-online-foreground: var(--status-online-dot);
+  --status-degraded-dot: color-mix(
+    in oklch,
+    oklch(0.769 0.188 70.08) 78%,
+    var(--foreground)
+  );
+  --status-degraded: color-mix(
+    in oklch,
+    oklch(0.769 0.188 70.08) 14%,
+    transparent
+  );
+  --status-degraded-foreground: var(--status-degraded-dot);
+  --status-offline-dot: var(--destructive);
+  --status-offline: color-mix(in oklch, var(--destructive) 10%, transparent);
+  --status-offline-foreground: var(--status-offline-dot);
   --border: oklch(0.922 0 0);
   --input: oklch(0.922 0 0);
   --ring: oklch(0.708 0 0);
@@ -99,6 +133,27 @@
   --accent: oklch(0.269 0 0);
   --accent-foreground: oklch(0.985 0 0);
   --destructive: oklch(0.704 0.191 22.216);
+  --status-online-dot: oklch(0.627 0.17 149.214);
+  --status-online: color-mix(
+    in oklch,
+    var(--status-online-dot) 12%,
+    transparent
+  );
+  --status-online-foreground: var(--status-online-dot);
+  --status-degraded-dot: color-mix(
+    in oklch,
+    oklch(0.769 0.188 70.08) 78%,
+    var(--foreground)
+  );
+  --status-degraded: color-mix(
+    in oklch,
+    oklch(0.769 0.188 70.08) 14%,
+    transparent
+  );
+  --status-degraded-foreground: var(--status-degraded-dot);
+  --status-offline-dot: var(--destructive);
+  --status-offline: color-mix(in oklch, var(--destructive) 10%, transparent);
+  --status-offline-foreground: var(--status-offline-dot);
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
   --ring: oklch(0.556 0 0);

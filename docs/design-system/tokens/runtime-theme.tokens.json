@@ -63,6 +63,42 @@
       "light": "oklch(0.577 0.245 27.325)",
       "dark": "oklch(0.704 0.191 22.216)"
     },
+    "--status-online": {
+      "light": "color-mix(in oklch, var(--status-online-dot) 12%, transparent)",
+      "dark": "color-mix(in oklch, var(--status-online-dot) 12%, transparent)"
+    },
+    "--status-online-foreground": {
+      "light": "var(--status-online-dot)",
+      "dark": "var(--status-online-dot)"
+    },
+    "--status-online-dot": {
+      "light": "oklch(0.627 0.17 149.214)",
+      "dark": "oklch(0.627 0.17 149.214)"
+    },
+    "--status-degraded": {
+      "light": "color-mix(in oklch, oklch(0.769 0.188 70.08) 14%, transparent)",
+      "dark": "color-mix(in oklch, oklch(0.769 0.188 70.08) 14%, transparent)"
+    },
+    "--status-degraded-foreground": {
+      "light": "var(--status-degraded-dot)",
+      "dark": "var(--status-degraded-dot)"
+    },
+    "--status-degraded-dot": {
+      "light": "color-mix(in oklch, oklch(0.769 0.188 70.08) 78%, var(--foreground))",
+      "dark": "color-mix(in oklch, oklch(0.769 0.188 70.08) 78%, var(--foreground))"
+    },
+    "--status-offline": {
+      "light": "color-mix(in oklch, var(--destructive) 10%, transparent)",
+      "dark": "color-mix(in oklch, var(--destructive) 10%, transparent)"
+    },
+    "--status-offline-foreground": {
+      "light": "var(--status-offline-dot)",
+      "dark": "var(--status-offline-dot)"
+    },
+    "--status-offline-dot": {
+      "light": "var(--destructive)",
+      "dark": "var(--destructive)"
+    },
     "--border": {
       "light": "oklch(0.922 0 0)",
       "dark": "oklch(1 0 0 / 10%)"

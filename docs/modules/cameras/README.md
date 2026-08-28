@@ -1,8 +1,8 @@
 # Cameras 模块
 
 Cameras 模块维护 Camera 与 CameraSource 配置，并把 PostgreSQL 中的配置投影到 MediaMTX。当前已经
-支持创建 Camera、MediaMTX Path 读写、运行态投影和后台媒体恢复；详情、播放、列表、编辑和删除仍
-在 [Cameras MVP 剩余计划](../../plans/cameras-mvp/README.md)中。
+支持创建和只读查看 Camera、MediaMTX Path 读写、运行态投影和后台媒体恢复；播放、列表、编辑和
+删除仍在 [Cameras MVP 剩余计划](../../plans/cameras-mvp/README.md)中。
 
 ## 当前能力
 
@@ -13,10 +13,11 @@ Cameras 模块维护 Camera 与 CameraSource 配置，并把 PostgreSQL 中的�
 | Path 读写、快照、Source 状态和 WHEP URL | 已实现 | [Stream Gateway](stream-gateway.md)           |
 | PostgreSQL 到 MediaMTX 的周期恢复       | 已实现 | [媒体对账](media-reconciliation.md)           |
 | 创建 Camera 及前端新增 Dialog           | 已实现 | [Camera 创建](camera-create.md)               |
-| 详情、播放、列表、更新、删除            | 未实现 | [剩余计划](../../plans/cameras-mvp/README.md) |
+| Camera 完整详情 API 与前端只读详情页    | 已实现 | [Camera 详情](camera-detail.md)               |
+| 播放、列表、更新、删除                  | 未实现 | [剩余计划](../../plans/cameras-mvp/README.md) |
 
-“路由已出现在 OpenAPI”只表示占位契约可用于生成跨端类型，不表示 handler 已经可用。当前只有
-`POST /api/v1/cameras` 是可用的 Camera 业务 handler。
+“路由已出现在 OpenAPI”只表示占位契约可用于生成跨端类型，不表示 handler 已经可用。当前
+`POST /api/v1/cameras` 和 `GET /api/v1/cameras/{camera_id}` 是可用的 Camera 业务 handler。
 
 ## 模块边界
 
@@ -37,8 +38,8 @@ Frontend → FastAPI Cameras API → Cameras Application → PostgreSQL
 
 ## 当前不支持
 
-- Camera 详情、搜索分页列表、编辑、切换默认预览源和删除。
-- 浏览器 WHEP 播放和按需播放恢复。
+- 搜索分页列表、编辑、切换默认预览源和删除。
+- 浏览器详情播放器、Playback 恢复和预览操作。
 - 鉴权、RBAC、多租户、录像、截图、回放和 WebSocket 状态推送。
 - 软删除以及事务级 Outbox/Saga 媒体投递。
 

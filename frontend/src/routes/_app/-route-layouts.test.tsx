@@ -3,13 +3,20 @@ import { act, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { expect, test, vi } from "vitest";
 
+import { CAMERA_FIXTURE_IDS } from "@/mocks/cameras/fixtures";
+import { createCamerasMswScenario } from "@/mocks/cameras/scenarios";
+import { mockServer } from "@/mocks/node";
 import { renderAppRoute, type AppTestRouter } from "@/test/render-router";
 import { setViewportWidth } from "@/test/browser-mocks";
+
+const CAMERA_DETAIL_PATH = `/cameras/${CAMERA_FIXTURE_IDS.primaryCamera}`;
 
 function renderRoute(
   initialPath: string,
   configure?: (router: AppTestRouter) => void,
 ) {
+  // Camera 详情现在有真实 loader；Shell 测试提供确定的成功响应，业务错误由详情路由专测覆盖。
+  mockServer.use(...createCamerasMswScenario("success"));
   return renderAppRoute(initialPath, configure).router;
 }
 
@@ -91,7 +98,7 @@ test("767px 渲染移动 Sheet，768px 渲染桌面 Sidebar", async () => {
 
 test.each([
   ["/cameras", "摄像头"],
-  ["/cameras/camera-42", "camera-42"],
+  [CAMERA_DETAIL_PATH, "洗手区 01"],
   ["/tasks", "检测任务"],
   ["/tasks/task-42", "task-42"],
 ])("可直接进入 %s 并只渲染一个页面主标题", async (path, title) => {
@@ -109,9 +116,15 @@ test.each([
   expect(mainContent).toHaveAttribute("id", "main-content");
   expect(mainContent).toHaveAttribute("tabindex", "-1");
   expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
-  expect(
-    screen.getByRole("heading", { level: 2, name: "路由骨架" }),
-  ).toBeInTheDocument();
+  if (path === CAMERA_DETAIL_PATH) {
+    expect(
+      screen.getByRole("heading", { level: 2, name: "连接信息" }),
+    ).toBeInTheDocument();
+  } else {
+    expect(
+      screen.getByRole("heading", { level: 2, name: "路由骨架" }),
+    ).toBeInTheDocument();
+  }
 });
 
 test("pathname 改变后将焦点移到新页面标题", async () => {
@@ -172,7 +185,7 @@ test("Skip Link 首个获得键盘焦点并将焦点交给主内容", async () =
 });
 
 test.each([
-  ["/cameras/camera-42", "摄像头", "camera-42", "返回摄像头列表", "/cameras"],
+  [CAMERA_DETAIL_PATH, "摄像头", "洗手区 01", "返回摄像头列表", "/cameras"],
   ["/tasks/task-42", "检测任务", "task-42", "返回检测任务列表", "/tasks"],
 ])(
   "%s 显示父级与动态 Breadcrumb，并返回固定父列表",
@@ -200,7 +213,7 @@ test.each([
 );
 
 test.each([
-  ["/cameras/camera-42", "摄像头"],
+  [CAMERA_DETAIL_PATH, "摄像头"],
   ["/tasks/task-42", "检测任务"],
 ])("详情路由 %s 保持父菜单激活", async (path, activeLabel) => {
   renderRoute(path);
@@ -222,10 +235,10 @@ test.each([
     heading: "摄像头",
   },
   {
-    path: "/cameras/camera-42",
+    path: CAMERA_DETAIL_PATH,
     routeId: "/_app/cameras/$cameraId",
     pendingLabel: "正在加载摄像头详情",
-    heading: "camera-42",
+    heading: "洗手区 01",
   },
   {
     path: "/tasks",
@@ -305,7 +318,7 @@ test("Cameras 子路由失败时保留 Shell，并可通过 invalidate 重试", 
   let restoreRoute = () => {};
 
   try {
-    const router = renderRoute("/cameras/camera-42", (testRouter) => {
+    const router = renderRoute(CAMERA_DETAIL_PATH, (testRouter) => {
       const cameraRoute = testRouter.routesById["/_app/cameras/$cameraId"];
       const originalLoader = cameraRoute.options.loader;
 
@@ -348,7 +361,7 @@ test("Cameras 子路由失败时保留 Shell，并可通过 invalidate 重试", 
 
     expect(invalidate).toHaveBeenCalledTimes(1);
     expect(
-      await screen.findByRole("heading", { level: 1, name: "camera-42" }),
+      await screen.findByRole("heading", { level: 1, name: "洗手区 01" }),
     ).toBeInTheDocument();
   } finally {
     restoreRoute();

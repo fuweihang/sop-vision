@@ -8,12 +8,12 @@
 当前创建能力让用户一次录入 Camera 连接信息和完整 Source 数组，指定唯一默认源，并用一个数据库
 事务创建聚合。保存前不探测摄像头；合法的离线配置仍能成功。
 
-创建同时提供响应所需的共享 Camera 状态聚合和 `CameraDetail` 组装能力，供后续详情与列表复用。
-当前不包含 `GET /cameras`、详情页面、播放器、编辑、删除或媒体事务补偿，也没有幂等键、Outbox
-或通用 CRUD Service。
+创建同时提供响应所需的共享 Camera 状态聚合和 `CameraDetail` 组装能力，当前已由
+[Camera 详情](camera-detail.md)复用。创建本身不包含 `GET /cameras`、播放器、编辑、删除或媒体事务
+补偿，也没有幂等键、Outbox 或通用 CRUD Service。
 
 新增表单位于现有 `/cameras` 页面。当前只增加“添加 Camera”入口和 Dialog，保留列表占位内容；
-成功后停留在该页面，不跳转到尚未实现的详情页。正式列表、搜索和 Cards 见
+成功后停留在该页面，不自动跳转详情。正式列表、搜索和 Cards 见
 [Cameras MVP 剩余计划](../../plans/cameras-mvp/README.md)。
 
 ## 请求与响应
@@ -107,7 +107,7 @@ Schema 直接复用同一枚举，不能复制一套同值类型。纯函数返�
 
 - 生产依赖使用现有请求级 UoW 和 lifespan 级 Stream Gateway；生产 UUID/Clock 使用 Foundation 的
   `Uuid4Generator`、`SystemClock`，测试可以替换为固定序列和固定时间。
-- 创建 handler 原位替换 Foundation 占位；其余六个 handler 生命周期不变，不能顺带移除占位。
+- 创建 handler 原位替换 Foundation 占位；详情现已独立实现，其余五个 handler 仍保持占位。
 - 领域、持久化、Adapter 错误继续通过现有脱敏异常边界转换；创建服务、响应映射和日志不得记录
   请求 DTO、Camera 聚合、凭据、完整 RTSP URL 或 MediaMTX 原始响应。
 - 若客户端在数据库提交后、收到响应前中断，请求结果对客户端属于未知；服务端不为此回滚已提交

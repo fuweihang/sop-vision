@@ -9,7 +9,7 @@ MediaMTX Adapter、后台对账和具体业务用例由同目录的主题文档�
 - 无外键的 `cameras` / `camera_sources` 模型、稳定约束、完整性巡检和聚合级 Repository/UoW。
 - 框架无关的不可变 Camera 聚合、值规则、固定 ID/时钟和 Fake 持久化实现。
 - Trace ID、Problem Details、严格 UUID、分页参数、异常脱敏和 OpenAPI 公共响应。
-- Cameras 全量请求/响应 Schema、可用创建 Router、六个目标占位 Router 和确定性 OpenAPI 导出。
+- Cameras 全量请求/响应 Schema、可用创建与详情 Router、五个目标占位 Router 和确定性 OpenAPI 导出。
 - Frontend 生成类型、单一 API Client、Problem 映射、Query Key、Fixture 和显式 MSW 场景。
 - 契约漂移、占位生命周期、迁移/Repository 和敏感数据的自动化门禁。
 

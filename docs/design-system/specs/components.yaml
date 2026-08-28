@@ -44,8 +44,28 @@ components:
     api:
       variants: [default, secondary, destructive, outline, ghost, link]
     use_for: [resource_status, concise_label]
+    resource_status:
+      online:
+        label: 在线
+        color: green
+        prototype_rule: status-success 12% background, status-success text and dot
+        tokens: [status-online, status-online-foreground, status-online-dot]
+      degraded:
+        label: 部分离线
+        color: yellow
+        prototype_rule: status-warning 14% background, mixed warning text and dot
+        tokens:
+          [status-degraded, status-degraded-foreground, status-degraded-dot]
+      offline:
+        label: 离线
+        color: red
+        prototype_rule: destructive 10% background, destructive text and dot
+        tokens: [status-offline, status-offline-foreground, status-offline-dot]
     rules:
       - Do not use for sentence-length content.
+      - Resource status uses the registered background, foreground, and dot token set in Light and Dark modes.
+      - Resource status includes a decorative dot before the text and uses the registered dot token.
+      - Resource status always includes its text label and never relies on color alone.
 
   breadcrumb:
     use_for: [header_route_context]

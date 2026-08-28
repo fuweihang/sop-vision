@@ -1,22 +1,55 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { useSuspenseQuery } from "@tanstack/react-query";
+import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 
-import { PageContainer } from "@/components/layout/page-container";
-import { PageHeader } from "@/components/layout/page-header";
 import { RouteNotFound } from "@/components/route-state/route-not-found";
 import { RoutePending } from "@/components/route-state/route-pending";
+import { cameraDetailQueryOptions } from "@/features/cameras/api/camera-detail-query";
+import { CameraDetailView } from "@/features/cameras/components/camera-detail-view";
+import { ApiProblemError } from "@/lib/api-errors";
 import { getLoaderDataLabelOrParam } from "@/lib/route-meta";
+
+function selectCameraName(loaderData: unknown) {
+  return typeof loaderData === "object" &&
+    loaderData !== null &&
+    "name" in loaderData &&
+    typeof loaderData.name === "string"
+    ? loaderData.name
+    : undefined;
+}
+
+function isCameraNotFound(error: unknown) {
+  return (
+    error instanceof ApiProblemError &&
+    error.problem.status === 404 &&
+    error.problem.code === "CAMERA_NOT_FOUND"
+  );
+}
 
 export const Route = createFileRoute("/_app/cameras/$cameraId")({
   staticData: {
     breadcrumb: {
       label: (match) =>
-        getLoaderDataLabelOrParam(match, () => undefined, "cameraId") ??
+        getLoaderDataLabelOrParam(match, selectCameraName, "cameraId") ??
         "摄像头详情",
     },
     back: {
       label: "返回摄像头列表",
       renderLink: (props) => <Link to="/cameras" preload="intent" {...props} />,
     },
+  },
+  loader: async ({ context, params }) => {
+    try {
+      const camera = await context.queryClient.ensureQueryData(
+        cameraDetailQueryOptions(params.cameraId, context.apiClient),
+      );
+      // 完整 CameraDetail 只保留在 Query 内存缓存；Router 只保存 Breadcrumb 所需名称。
+      return { name: camera.name };
+    } catch (error: unknown) {
+      if (isCameraNotFound(error)) {
+        notFound({ throw: true });
+      }
+      throw error;
+    }
   },
   component: CameraDetailPage,
   pendingComponent: CameraDetailPending,
@@ -29,24 +62,12 @@ function CameraDetailPending() {
 
 function CameraDetailPage() {
   const { cameraId } = Route.useParams();
-
-  return (
-    <PageContainer>
-      <PageHeader
-        title={cameraId}
-        description="摄像头详情路由已就绪；实体名称将在正式 API 契约接入后加载。"
-      />
-      <section aria-labelledby="camera-detail-route-skeleton-title">
-        <h2 id="camera-detail-route-skeleton-title" className="font-medium">
-          路由骨架
-        </h2>
-        <p className="text-muted-foreground mt-1 text-sm">
-          此处仅用于验证详情层级、Breadcrumb
-          与返回操作，未实现视频、来源或编辑功能。
-        </p>
-      </section>
-    </PageContainer>
+  const { apiClient } = Route.useRouteContext();
+  const { data: camera } = useSuspenseQuery(
+    cameraDetailQueryOptions(cameraId, apiClient),
   );
+
+  return <CameraDetailView camera={camera} />;
 }
 
 function CameraNotFound() {

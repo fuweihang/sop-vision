@@ -89,6 +89,17 @@ export function setViewportWidth(width: number) {
   mediaQueryLists.forEach((mediaQueryList) => mediaQueryList.refresh());
 }
 
+/** 驱动依赖 Page Visibility API 的后台刷新测试，不通过私有 Query 状态模拟焦点。 */
+export function setDocumentVisibility(
+  visibilityState: DocumentVisibilityState,
+) {
+  Object.defineProperty(document, "visibilityState", {
+    configurable: true,
+    value: visibilityState,
+  });
+  document.dispatchEvent(new Event("visibilitychange"));
+}
+
 function clearDocumentCookies() {
   document.cookie.split(";").forEach((cookie) => {
     const separatorIndex = cookie.indexOf("=");
@@ -103,6 +114,7 @@ function clearDocumentCookies() {
 export function resetBrowserState() {
   mediaQueryLists.clear();
   setViewportWidth(DEFAULT_VIEWPORT_WIDTH);
+  setDocumentVisibility("visible");
   installMatchMediaMock();
   clearDocumentCookies();
   localStorage.clear();

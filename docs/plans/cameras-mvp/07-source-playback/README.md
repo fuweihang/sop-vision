@@ -1,7 +1,8 @@
 # 07｜CameraSource WHEP 播放准备与恢复
 
 > 前置：[Stream Gateway](../../../modules/cameras/stream-gateway.md)、
-> [媒体对账](../../../modules/cameras/media-reconciliation.md)、[详情](../06-camera-detail/README.md)
+> [媒体对账](../../../modules/cameras/media-reconciliation.md)、
+> [Camera 详情](../../../modules/cameras/camera-detail.md)
 >
 > 交付：`POST /api/v1/camera-sources/{source_id}/playback`
 > （`prepareCameraSourcePlayback`）和可复用 WHEP 播放器

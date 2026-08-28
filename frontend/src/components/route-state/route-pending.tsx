@@ -195,7 +195,7 @@ function DetailSkeleton() {
           <RouteSkeleton className="h-8 w-24" />
         </div>
       </div>
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1.65fr)_minmax(18rem,0.75fr)]">
+      <div className="grid gap-6 min-[1200px]:grid-cols-[minmax(0,1.65fr)_minmax(18rem,0.75fr)]">
         <Card className="overflow-hidden py-0">
           <CardContent className="p-0">
             <RouteSkeleton className="aspect-video w-full rounded-none" />

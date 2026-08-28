@@ -103,6 +103,7 @@ export function createCamerasMswScenario(
   scenario: CamerasMswScenarioName,
 ): RequestHandler[] {
   let listRequestCount = 0;
+  let detailRequestCount = 0;
   const detail = buildCameraDetail();
   const page = buildCameraPage();
 
@@ -166,8 +167,15 @@ export function createCamerasMswScenario(
     }),
 
     http.get(cameraUrl, ({ request }) => {
+      detailRequestCount += 1;
       const instance = new URL(request.url).pathname;
       if (scenario === "dependency-unavailable") {
+        return unavailableProblem(instance);
+      }
+      if (scenario === "initial-failure" && detailRequestCount === 1) {
+        return unavailableProblem(instance);
+      }
+      if (scenario === "background-refresh-failure" && detailRequestCount > 1) {
         return unavailableProblem(instance);
       }
       if (scenario === "camera-not-found") {
