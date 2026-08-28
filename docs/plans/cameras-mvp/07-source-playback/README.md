@@ -52,6 +52,7 @@ handler 仍是 Foundation 占位，只有完成本切片的 Backend 行为和测
 
 ## Frontend 播放与恢复
 
+- 07 在 06 已有的只读预览区域内接入播放器；06 不创建播放器、Playback 请求或恢复控件。
 - 列表或详情拿到非空 `whep_url` 时直接创建静音、内联播放器，不调用 Playback。
 - `whep_url=null && error=MTX_PATH_NOT_FOUND` 时，可见 Card 对同一 Source 自动调用一次 Playback；
   这是 MTX 内存丢失的按需自愈，不是常规 N+1 流程。

@@ -232,6 +232,7 @@ def test_http_access_event_keeps_real_status_outcome_and_field_order() -> None:
         ("root", "backend"),
         ("app.factory", "backend.lifecycle"),
         ("app.modules.cameras.application.create.child", "camera.create"),
+        ("app.modules.cameras.application.detail.child", "camera.detail"),
         ("uvicorn.access", "server.access"),
         ("uvicorn.error", "server"),
         ("app.custom.worker", "custom.worker"),
@@ -247,6 +248,33 @@ def test_formatter_maps_component_by_longest_logger_prefix(
     payload = json.loads(JsonFormatter().format(make_record(name=logger_name)))
 
     assert payload["component"] == component
+
+
+def test_camera_detail_invalid_event_uses_registered_safe_fields() -> None:
+    """详情聚合损坏事件只输出固定操作、结果和 Camera ID。"""
+
+    sentinel = "camera-detail-log-secret"
+    record = make_record(
+        name="app.modules.cameras.application.detail",
+        level=logging.ERROR,
+        message="Camera 详情聚合数据无效",
+        event="camera.detail_aggregate_invalid",
+        operation="get_camera",
+        outcome="failed",
+        camera_id="00000000-0000-4000-8000-000000000001",
+        password=sentinel,
+        source_id="should-not-be-rendered",
+    )
+
+    console = ConsoleFormatter().format(record)
+    payload = json.loads(JsonFormatter().format(record))
+
+    assert payload["component"] == "camera.detail"
+    assert list(payload)[-4:] == ["event", "operation", "outcome", "camera_id"]
+    assert "operation=get_camera result=failed" in console
+    assert "source=" not in console
+    assert sentinel not in console
+    assert sentinel not in json.dumps(payload)
 
 
 def test_safe_exception_fields_never_include_exception_text_or_absolute_path() -> None:

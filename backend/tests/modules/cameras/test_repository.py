@@ -15,7 +15,9 @@ from sqlalchemy.engine import URL
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
+from app.modules.cameras.api.mappers import camera_detail_from_runtime
 from app.modules.cameras.application import (
+    CameraAggregateInvalidError,
     CameraConstraintViolationError,
     CameraConstraintViolationKind,
     CameraListCriteria,
@@ -23,6 +25,7 @@ from app.modules.cameras.application import (
     CreateCameraCommand,
     CreateCameraSourceCommand,
     create_camera,
+    get_camera_detail,
 )
 from app.modules.cameras.domain import (
     CameraAggregateCorruptedError,
@@ -35,7 +38,7 @@ from app.modules.cameras.persistence.integrity import (
 from app.modules.cameras.persistence.models import CameraRow, CameraSourceRow
 from app.modules.cameras.persistence.repository import SQLAlchemyCameraRepository
 from app.modules.cameras.persistence.uow import SQLAlchemyCameraUnitOfWork
-from app.modules.stream_gateway.ports import RuntimePathSnapshot
+from app.modules.stream_gateway.ports import RuntimePath, RuntimePathSnapshot
 from tests.core.database.test_migrations import (
     BACKEND_ROOT,
     temporary_database,
@@ -528,6 +531,81 @@ async def test_camera_repository_rejects_corrupted_rows_instead_of_partial_camer
             await repository.get(CAMERA_A)
 
 
+async def test_camera_detail_reads_ordered_postgresql_aggregate_and_maps_complete_response(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    """真实详情读取保持 Source 顺序、默认源、计数和按配置派生的 RTSP URL。"""
+
+    camera = CameraBuilder().build(source_count=2, id_start=800)
+    async with session_factory() as writing_session:
+        writing_uow = SQLAlchemyCameraUnitOfWork(writing_session)
+        await writing_uow.cameras.add(camera)
+        await writing_uow.commit()
+
+    default_source = camera.sources[0]
+    gateway = FakeStreamGateway(
+        RuntimePathSnapshot(
+            paths=(RuntimePath(name=str(default_source.source_id), available=True, online=True),),
+            checked_at=NOW,
+        )
+    )
+    async with session_factory() as reading_session:
+        result = await get_camera_detail(
+            camera.camera_id,
+            uow=SQLAlchemyCameraUnitOfWork(reading_session),
+            stream_gateway=gateway,
+            clock=FixedClock(NOW),
+        )
+        # Application 已在网络调用前显式 rollback；返回后不应留下只读事务。
+        assert not reading_session.in_transaction()
+
+    detail = camera_detail_from_runtime(
+        result.camera,
+        result.source_runtime,
+        result.runtime_summary,
+    )
+    assert tuple(source.source_id for source in result.camera.sources) == tuple(
+        source.source_id for source in camera.sources
+    )
+    assert detail.default_preview_source_id == default_source.source_id
+    assert detail.online_source_count == 1
+    assert detail.source_count == 2
+    assert tuple(source.source_id for source in detail.sources) == tuple(
+        source.source_id for source in camera.sources
+    )
+    assert tuple(source.rtsp_url for source in detail.sources) == tuple(
+        camera.rtsp_url_for(source.source_id) for source in camera.sources
+    )
+    assert gateway.runtime_snapshot_count == 1
+    assert gateway.ensure_calls == []
+
+
+async def test_camera_detail_converts_postgresql_corruption_and_ends_read_transaction(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    """真实 Repository 重建失败转换成安全详情错误，并在返回 500 前结束事务。"""
+
+    async with session_factory() as writing_session:
+        writing_session.add(make_camera(CAMERA_A, SOURCE_A))
+        await writing_session.commit()
+
+    gateway = FakeStreamGateway(RuntimePathSnapshot(paths=(), checked_at=NOW))
+    async with session_factory() as reading_session:
+        with pytest.raises(CameraAggregateInvalidError) as captured:
+            await get_camera_detail(
+                CAMERA_A,
+                uow=SQLAlchemyCameraUnitOfWork(reading_session),
+                stream_gateway=gateway,
+                clock=FixedClock(NOW),
+            )
+        assert not reading_session.in_transaction()
+
+    assert captured.value.camera_id == CAMERA_A
+    assert captured.value.__context__ is None
+    assert gateway.runtime_snapshot_count == 0
+    assert gateway.ensure_calls == []
+
+
 async def test_aggregate_get_for_update_serializes_same_camera_intent(
     session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
@@ -576,8 +654,9 @@ async def test_camera_delete_serializes_concurrent_save_without_orphan_sources(
         async with session_factory() as session:
             uow = SQLAlchemyCameraUnitOfWork(session)
             save_started.set()
-            with pytest.raises(CameraNotFoundError):
+            with pytest.raises(CameraNotFoundError) as captured:
                 await uow.cameras.save(updated)
+            assert captured.value.camera_id == camera.camera_id
             await uow.rollback()
 
     async with session_factory() as deleting_session:

@@ -6,6 +6,8 @@ HTTP 层只需处理本文件中的错误，无须理解 PostgreSQL 或数据库
 
 from enum import StrEnum
 
+from app.modules.cameras.domain import CameraId
+
 
 class CameraPersistenceError(Exception):
     """所有 Camera 数据库存取错误的共同父类。
@@ -18,16 +20,33 @@ class CameraPersistenceError(Exception):
 
 
 class CameraNotFoundError(CameraPersistenceError):
-    """保存完整 Camera 配置时，目标 Camera 已不存在。
+    """读取或保存完整 Camera 配置时，目标 Camera 已不存在。
 
-    普通读取找不到数据会返回 ``None``；只有 ``save`` 明确要求目标必须存在，所以使用异常
-    区分“更新失败”和“读取结果为空”。
+    Repository 普通读取仍用 ``None`` 表示不存在；详情 Application 和 Repository 保存路径在确认
+    业务必须有目标后转换成此错误，并保留经过校验的 Camera ID 供 404 context 使用。
     """
 
     code = "CAMERA_NOT_FOUND"
 
-    def __init__(self) -> None:
+    def __init__(self, camera_id: CameraId) -> None:
+        # ID 已由 HTTP Canonical UUID 或领域对象校验，可以安全用于 404 context。异常消息仍使用
+        # 固定文本，避免默认 repr/str 意外把未来新增的请求数据带入日志。
+        self.camera_id = camera_id
         super().__init__("Camera 不存在。")
+
+
+class CameraAggregateInvalidError(CameraPersistenceError):
+    """请求目标存在，但持久化数据无法重建为合法 Camera 聚合。
+
+    领域层的 ``CameraAggregateCorruptedError`` 会保存具体损坏项，适合单元测试和内部定位，但这些
+    内容不能穿过 Application 边界进入 HTTP 或日志。本错误只保留已经校验的请求 Camera ID。
+    """
+
+    code = "CAMERA_AGGREGATE_INVALID"
+
+    def __init__(self, camera_id: CameraId) -> None:
+        self.camera_id = camera_id
+        super().__init__("Camera 聚合数据无效。")
 
 
 class CameraConstraintViolationKind(StrEnum):

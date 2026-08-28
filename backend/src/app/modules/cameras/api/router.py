@@ -37,6 +37,7 @@ from app.modules.cameras.application import (
     CreateCameraSourceCommand,
 )
 from app.modules.cameras.application import create_camera as execute_create_camera
+from app.modules.cameras.application import get_camera_detail as execute_get_camera_detail
 from app.modules.stream_gateway.api.dependencies import StreamGatewayDependency
 
 router = APIRouter()
@@ -150,8 +151,26 @@ async def create_camera(
         ),
     },
 )
-async def get_camera(camera_id: CanonicalUUID4) -> CameraDetail:
-    raise NotImplementedError
+async def get_camera(
+    camera_id: CanonicalUUID4,
+    response: Response,
+    uow: CameraUnitOfWorkDependency,
+    stream_gateway: StreamGatewayDependency,
+    clock: CameraClockDependency,
+) -> CameraDetail:
+    result = await execute_get_camera_detail(
+        camera_id,
+        uow=uow,
+        stream_gateway=stream_gateway,
+        clock=clock,
+    )
+    # CameraDetail 包含密码和完整 RTSP URL，即使客户端或代理有默认缓存策略也必须禁止保存。
+    response.headers["Cache-Control"] = "no-store"
+    return camera_detail_from_runtime(
+        result.camera,
+        result.source_runtime,
+        result.runtime_summary,
+    )
 
 
 @router.put(

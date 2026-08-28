@@ -285,7 +285,7 @@ class SQLAlchemyCameraRepository:
 
         camera_row, source_rows = await self._lock_aggregate_or_none(camera_id)
         if camera_row is None:
-            raise CameraNotFoundError
+            raise CameraNotFoundError(camera_id)
         return camera_row, source_rows
 
     async def _lock_aggregate_or_none(

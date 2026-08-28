@@ -4,6 +4,7 @@ from fastapi import FastAPI, Request
 
 from app.core.http import FieldError, add_http_exception_handler, problem_response
 from app.modules.cameras.application.errors import (
+    CameraAggregateInvalidError,
     CameraConstraintViolationError,
     CameraNotFoundError,
     CameraPersistenceOperationError,
@@ -31,11 +32,11 @@ async def camera_validation_error_handler(request: Request, error: CameraValidat
     )
 
 
-async def camera_not_found_error_handler(request: Request, _error: CameraNotFoundError):
+async def camera_not_found_error_handler(request: Request, error: CameraNotFoundError):
     """把 Camera 不存在转换为稳定 404。
 
-    资源 ID 将由后续业务路由在明确的披露边界加入批准 context；公共映射不从 URL、异常或
-    请求体猜测 ID，避免错误字段和未经审查的信息泄露。
+    ID 来自已经通过 Canonical UUID 或领域规则校验的错误字段；不从 URL 字符串或请求体重新
+    解析，避免把未经审查的内容放入公开 context。
     """
 
     return problem_response(
@@ -44,6 +45,22 @@ async def camera_not_found_error_handler(request: Request, _error: CameraNotFoun
         code="CAMERA_NOT_FOUND",
         title="Camera 不存在",
         detail="未找到指定的 Camera。",
+        context={"camera_id": str(error.camera_id)},
+    )
+
+
+async def camera_aggregate_invalid_error_handler(
+    request: Request,
+    _error: CameraAggregateInvalidError,
+):
+    """把详情读取发现的损坏聚合转换为稳定且不含损坏项的 500。"""
+
+    return problem_response(
+        request,
+        status_code=500,
+        code="CAMERA_AGGREGATE_INVALID",
+        title="Camera 数据无效",
+        detail="Camera 配置暂时无法读取。",
     )
 
 
@@ -94,6 +111,11 @@ def install_camera_exception_handlers(application: FastAPI) -> None:
 
     add_http_exception_handler(application, CameraValidationError, camera_validation_error_handler)
     add_http_exception_handler(application, CameraNotFoundError, camera_not_found_error_handler)
+    add_http_exception_handler(
+        application,
+        CameraAggregateInvalidError,
+        camera_aggregate_invalid_error_handler,
+    )
     # 子类分别注册而不是笼统捕获 CameraPersistenceError：NotFound 是 404，依赖不可用是
     # 503，而服务端约束破坏必须是 500，混为一个 handler 会掩盖不同恢复语义。
     add_http_exception_handler(

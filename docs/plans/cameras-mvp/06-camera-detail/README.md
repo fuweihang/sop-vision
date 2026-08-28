@@ -4,47 +4,35 @@
 > [Camera 创建](../../../modules/cameras/camera-create.md)、
 > [Stream Gateway](../../../modules/cameras/stream-gateway.md)
 >
-> 交付：`GET /api/v1/cameras/{camera_id}`（`getCamera`）和详情路由；播放器在 07 接入
+> 最终交付：`GET /api/v1/cameras/{camera_id}`（`getCamera`）和只读详情路由
 
-## CameraDetail
+## 执行顺序
 
-用户可以通过 `/cameras/{camera_id}` 查看完整配置、默认源和当前媒体投影，并进入后续编辑、
-默认源切换、预览或删除操作。
+| 顺序 | 子任务                                                     | 独立交付                         |
+| ---- | ---------------------------------------------------------- | -------------------------------- |
+| 06.1 | [Backend Camera 详情接口](01-backend-camera-detail-api.md) | 可独立调用和验证的详情 GET 接口  |
+| 06.2 | [Frontend 只读详情页](02-frontend-camera-detail-page.md)   | 可直接访问的只读页面和交付文档   |
 
-`CameraDetail` 是创建、详情和更新成功响应共享的唯一完整形状：
+必须按顺序执行。06.2 开始前先核对 06.1 的实际代码、测试和 OpenAPI 生成物，不能只依据计划假定
+Backend 已完成。
 
-| 层级        | 字段                                                                |
-| ----------- | ------------------------------------------------------------------- |
-| Camera      | `camera_id/name/ip_address/rtsp_port/username/password`             |
-| 聚合        | `default_preview_source_id/status/online_source_count/source_count` |
-| Source      | `source_id/name/url_suffix/rtsp_url/is_default_preview`             |
-| Source 投影 | `status/last_checked_at/error/whep_url`                             |
-| 时间        | `created_at/updated_at`                                             |
+## 共同边界
 
-成功返回 `200` 和 `Cache-Control: no-store`。不存在返回 `404 CAMERA_NOT_FOUND`，
-`context.camera_id` 为请求 ID。完整安全边界见
-[Cameras 基础能力](../../../modules/cameras/foundation.md#敏感数据)。
+- 06 只实现详情读取和展示；播放器在 07 接入，编辑与默认源切换在 09 接入，删除在 10 接入。
+- 不创建、覆盖或删除 MediaMTX Path，不调用 Playback，不增加媒体补偿或通用读取框架。
+- RTSP URL 只作为非链接普通文本展示，不提供复制按钮、菜单、提示或 Clipboard API 调用。
+- 不显示可操作的启动预览、编辑、默认源切换或删除按钮。
+- `CameraDetail` 继续使用现有 Schema、OpenAPI 和生成类型，不另建详情 DTO。
 
-## 读取与投影
+## 06 完成条件
 
-- 一次读取 Camera 和按序 Source，验证聚合，再派生供详情展示的完整 RTSP URL。
-- Source 始终按持久化顺序；`source_count == sources.length`，且恰好一路默认源。
-- 所有 Source 共享一次 `500ms` 完整 Path 快照，不得逐 Source 调用 Control API。
-- 状态映射遵循 [Stream Gateway](../../../modules/cameras/stream-gateway.md#严格状态映射)。外部故障使用降级值，
-  不让配置读取失败。
-- 只有严格在线的 Path 返回 `whep_url`；该 URL 表示 `last_checked_at` 时的观察结果，不承诺之后
-  建立的浏览器会话一定成功。
-- 详情读取只观察 Runtime State，不创建、覆盖或删除 Path。缺失映射由后台对账或 07 Playback
-  准备命令恢复。
-- 配置聚合损坏返回 `500 CAMERA_AGGREGATE_INVALID` 并告警，不返回部分详情。
+两个子任务全部完成并通过最终验证后，用户可以直接打开 `/cameras/{camera_id}`，查看 Camera 完整
+配置、默认 Source 和当前媒体状态，并返回 Cameras 列表。
 
-## 前端与验收
+完成 06 时统一执行文档处理：
 
-- 首次进入显示当前 Camera 骨架；后台刷新保留内容；`404` 提供返回 Cameras 操作。
-- Source 展示名称、完整 RTSP URL、默认标记、状态和最近检查时间。
-- 复制 RTSP URL 是显式操作，按钮必须提示其中包含凭据。
-- 本切片先完成配置和投影页面；07 接入播放器后，非空 `whep_url` 直接播放，空值按稳定 error
-  决定恢复或提示。
-- 查询缓存只在当前会话内短期保存；更新/默认源切换后刷新，删除后移除且不重试。
-- 验收覆盖直接 URL 恢复、顺序/默认/计数、复用 Cameras Application 共享状态聚合、RTSP URL
-  派生、一次快照、外部降级、404、聚合损坏、`no-store` 和敏感数据门禁。
+1. 新增 `docs/modules/cameras/camera-detail.md`，记录已经实现的接口、页面、错误和排障信息。
+2. 更新 `docs/modules/cameras/README.md` 及受影响的当前能力说明。
+3. 在 `docs/changes/` 新增交付记录。
+4. 把 07 对本计划的链接改为当前能力文档。
+5. 从 Cameras MVP 总计划移除 06，并删除本目录；不得提前移除 07、09 或 10。

@@ -10,7 +10,9 @@ from app.modules.cameras.application.create import (
     CreateCameraSourceCommand,
     create_camera,
 )
+from app.modules.cameras.application.detail import CameraDetailResult, get_camera_detail
 from app.modules.cameras.application.errors import (
+    CameraAggregateInvalidError,
     CameraConstraintViolationError,
     CameraConstraintViolationKind,
     CameraNotFoundError,
@@ -29,8 +31,10 @@ from app.modules.cameras.application.status import (
 )
 
 __all__ = [
+    "CameraAggregateInvalidError",
     "CameraConstraintViolationError",
     "CameraConstraintViolationKind",
+    "CameraDetailResult",
     "CameraListCriteria",
     "CameraNotFoundError",
     "CameraPersistenceError",
@@ -43,5 +47,6 @@ __all__ = [
     "CreateCameraResult",
     "CreateCameraSourceCommand",
     "create_camera",
+    "get_camera_detail",
     "summarize_camera_runtime",
 ]

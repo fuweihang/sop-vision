@@ -46,8 +46,12 @@ class FakeCameraStore:
 class FakeCameraRepository:
     """与 PostgreSQL 实现共享聚合、搜索、排序和分页契约的内存 Fake。"""
 
-    def __init__(self, state: _FakeWorkingState) -> None:
+    def __init__(self, state: _FakeWorkingState, operation_log: list[str]) -> None:
         self._state = state
+        self._operation_log = operation_log
+        # 详情用例需要覆盖数据库失败、聚合损坏和任务取消，同时保持 Fake 的 get 签名与真实
+        # Repository 一致。测试只设置脱敏应用/领域异常，不在这里模拟 SQLAlchemy 异常细节。
+        self.get_error: BaseException | None = None
 
     async def add(self, camera: Camera) -> None:
         if camera.camera_id in self._state.cameras:
@@ -66,7 +70,7 @@ class FakeCameraRepository:
     async def save(self, camera: Camera) -> None:
         stored = self._state.cameras.get(camera.camera_id)
         if stored is None:
-            raise CameraNotFoundError
+            raise CameraNotFoundError(camera.camera_id)
 
         owned_ids = {source.source_id for source in stored.sources}
         foreign_ids = {
@@ -85,8 +89,10 @@ class FakeCameraRepository:
         self._state.cameras[camera.camera_id] = camera
 
     async def get(self, camera_id: CameraId, for_update: bool = False) -> Camera | None:
-        # Fake 明确不模拟 PostgreSQL 行锁；参数只为保持公共 Protocol 一致。
-        del for_update
+        # Fake 不模拟 PostgreSQL 行锁，但会保留调用参数，详情测试可以证明普通读取没有误加锁。
+        self._operation_log.append(f"repository.get:{camera_id}:{for_update}")
+        if self.get_error is not None:
+            raise self.get_error
         return self._state.cameras.get(camera_id)
 
     async def list(
@@ -112,18 +118,28 @@ class FakeCameraRepository:
 class FakeCameraUnitOfWork:
     """每例独立工作副本、显式 commit/rollback 的 Camera Unit of Work Fake。"""
 
-    def __init__(self, store: FakeCameraStore) -> None:
+    def __init__(
+        self,
+        store: FakeCameraStore,
+        *,
+        operation_log: list[str] | None = None,
+    ) -> None:
         self._store = store
         self._state = _FakeWorkingState(store._snapshot())
-        self.cameras = FakeCameraRepository(self._state)
+        # 详情测试可让 UoW 与 Stream Gateway 共用一个列表，以验证外部 I/O 发生在事务结束后。
+        # 其他测试不传时仍得到每例独立列表，不改变原有 Fake 行为。
+        self.operation_log = operation_log if operation_log is not None else []
+        self.cameras = FakeCameraRepository(self._state, self.operation_log)
         self.commit_count = 0
         self.rollback_count = 0
 
     async def commit(self) -> None:
+        self.operation_log.append("uow.commit")
         self.commit_count += 1
         self._store._publish(self._state.cameras)
 
     async def rollback(self) -> None:
+        self.operation_log.append("uow.rollback")
         self.rollback_count += 1
         # 回滚后继续使用同一 UoW 时，应看到 Store 最新的已提交状态。
         self._state.cameras = self._store._snapshot()
@@ -137,6 +153,7 @@ class FakeStreamGateway:
         runtime_observation: RuntimePathSnapshot | Exception,
         *,
         whep_base_url: str = "https://media.example.invalid",
+        operation_log: list[str] | None = None,
     ) -> None:
         self.runtime_observation = runtime_observation
         self.whep_base_url = whep_base_url.rstrip("/")
@@ -144,8 +161,11 @@ class FakeStreamGateway:
         self.ensure_calls: list[DesiredSource] = []
         self.runtime_snapshot_count = 0
         self.whep_source_ids: list[UUID] = []
+        self.operation_log = operation_log
 
     async def fetch_runtime_path_snapshot(self) -> RuntimePathSnapshot:
+        if self.operation_log is not None:
+            self.operation_log.append("stream_gateway.fetch_runtime_path_snapshot")
         self.runtime_snapshot_count += 1
         if isinstance(self.runtime_observation, Exception):
             raise self.runtime_observation

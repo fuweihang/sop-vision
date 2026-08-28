@@ -32,8 +32,10 @@ class FixedClock:
 
     def __init__(self, current: datetime) -> None:
         self.current = current
+        self.now_count = 0
 
     def now(self) -> datetime:
+        self.now_count += 1
         return self.current
 
     def set(self, current: datetime) -> None:

@@ -272,6 +272,13 @@ def test_placeholder_handlers_only_raise_not_implemented() -> None:
 
     report = check_camera_placeholders(GateMode.FOUNDATION)
     assert not report.invalid_handlers
+    assert report.placeholders == (
+        "list_cameras",
+        "update_camera",
+        "set_default_preview_source",
+        "delete_camera",
+        "prepare_camera_source_playback",
+    )
 
 
 async def test_placeholder_runtime_500_is_not_added_to_target_contract(
