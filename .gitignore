@@ -72,5 +72,3 @@ node_modules/
 .svelte-kit/
 .vite/
 out/
-
-docs.local
