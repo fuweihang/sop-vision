@@ -77,7 +77,7 @@ def test_console_formatter_uses_local_columns_event_order_and_visible_controls(
     rendered = ConsoleFormatter().format(record)
 
     assert rendered == (
-        "2026-08-28 16:49:08 WARN  camera.create         "
+        "2026-08-28 16:49:08 \x1b[33mWARN \x1b[0m camera.create         "
         "Camera 已保存\\n但媒体操作\\t未全部成功  "
         "operation=post_commit_media_sync result=degraded camera=camera-1 failed=0 "
         "trace=tr_abc123"
@@ -93,12 +93,40 @@ def test_console_and_json_formatters_follow_the_same_container_timezone(
     set_process_timezone("Asia/Shanghai")
     record = make_record()
 
-    console_timestamp = ConsoleFormatter().format(record).split(" WARN", maxsplit=1)[0]
+    console_timestamp = ConsoleFormatter().format(record)[:19]
     json_timestamp = json.loads(JsonFormatter().format(record))["timestamp"]
 
     assert console_timestamp == "2026-08-28 16:49:08"
     assert json_timestamp == console_timestamp
     assert all(marker not in console_timestamp for marker in (".431", "Z", "+08:00", "CST"))
+
+
+@pytest.mark.parametrize(
+    ("level", "name", "color"),
+    [
+        (logging.DEBUG, "DEBUG", "\x1b[90m"),
+        (logging.INFO, "INFO", "\x1b[32m"),
+        (logging.WARNING, "WARN", "\x1b[33m"),
+        (logging.ERROR, "ERROR", "\x1b[31m"),
+        (logging.CRITICAL, "CRIT", "\x1b[1;31m"),
+    ],
+)
+def test_console_colors_standard_levels_but_json_remains_plain(
+    level: int,
+    name: str,
+    color: str,
+) -> None:
+    """五个标准级别固定着色，JSON 级别和值中不得混入 ANSI 控制码。"""
+
+    record = make_record(level=level)
+
+    console = ConsoleFormatter().format(record)
+    json_output = JsonFormatter().format(record)
+
+    assert f" {color}{name:<5}\x1b[0m " in console
+    assert console.count("\x1b[0m") == 1
+    assert "\x1b" not in json_output
+    assert json.loads(json_output)["level"] == name
 
 
 def test_formatter_uses_utc_when_container_timezone_is_utc(

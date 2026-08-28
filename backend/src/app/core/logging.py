@@ -192,6 +192,18 @@ LEVEL_NAMES: dict[int, str] = {
     logging.CRITICAL: "CRIT",
 }
 
+# 只给固定宽度的级别列着色，正文和业务字段保持终端默认颜色，连续查看多行时更容易定位
+# 严重程度。颜色不做 TTY 判断：console 格式的用途就是人读输出，因此 Docker 和重定向文件
+# 也会原样包含这些 ANSI 转义码；JSON 格式完全不引用这张表。
+ANSI_RESET = "\x1b[0m"
+LEVEL_COLORS: dict[int, str] = {
+    logging.DEBUG: "\x1b[90m",  # 灰色，弱化开发诊断信息。
+    logging.INFO: "\x1b[32m",  # 绿色，表示正常业务事件。
+    logging.WARNING: "\x1b[33m",  # 黄色，提示需要留意但尚未失败。
+    logging.ERROR: "\x1b[31m",  # 红色，突出本次操作失败。
+    logging.CRITICAL: "\x1b[1;31m",  # 粗体红色，突出进程级严重故障。
+}
+
 
 def safe_exception_fields(error: BaseException) -> SafeExceptionFields:
     """把未知异常压缩为类型和最多 20 个最内层代码位置。
@@ -241,6 +253,19 @@ def _level_name(record: logging.LogRecord) -> str:
     """把标准级别压缩为固定显示值；自定义级别仍保留其名称。"""
 
     return LEVEL_NAMES.get(record.levelno, record.levelname.upper())
+
+
+def _colored_console_level(record: logging.LogRecord) -> str:
+    """返回固定五列的级别文本，并仅为标准日志级别添加 ANSI 颜色。"""
+
+    # 必须先补齐可见字符宽度再包颜色；若把 ANSI 序列放进格式化表达式，Python 会把不可见
+    # 的转义字符也计入列宽，导致 component 列随级别颜色长度左右漂移。
+    padded_level = f"{_level_name(record):<5}"
+    color = LEVEL_COLORS.get(record.levelno)
+    if color is None:
+        # 第三方库可能注册自定义级别。没有明确颜色含义时保留文本，避免误导排障人员。
+        return padded_level
+    return f"{color}{padded_level}{ANSI_RESET}"
 
 
 def _visible_text(value: str) -> str:
@@ -305,8 +330,16 @@ def _safe_exception_from_record(record: logging.LogRecord) -> SafeExceptionField
 def _record_fields(record: logging.LogRecord) -> dict[str, object]:
     """按事件顺序建立字段字典，并补充第三方异常的安全摘要。"""
 
-    event = _validated_field(record, "event")
-    order = EVENT_FIELD_ORDER.get(event, FALLBACK_FIELD_ORDER)
+    event_value = _validated_field(record, "event")
+    # _validated_field 同时服务字符串、数值和列表字段，所以它的通用返回类型是 object。
+    # event 在运行时只可能通过字符串校验；这里显式缩窄，既保留统一校验入口，也避免把未知
+    # object 传给只接受 str 键的 EVENT_FIELD_ORDER。
+    event = event_value if isinstance(event_value, str) else None
+    order = (
+        EVENT_FIELD_ORDER.get(event, FALLBACK_FIELD_ORDER)
+        if event is not None
+        else FALLBACK_FIELD_ORDER
+    )
     fields: dict[str, object] = {}
     for field_name in order:
         value = _validated_field(record, field_name)
@@ -325,18 +358,18 @@ def _record_fields(record: logging.LogRecord) -> dict[str, object]:
 
 
 class ConsoleFormatter(logging.Formatter):
-    """输出无 ANSI、适合 Docker 与终端阅读的单行日志。"""
+    """输出级别固定带 ANSI 颜色、适合终端阅读的单行日志。"""
 
     def format(self, record: logging.LogRecord) -> str:
         """按固定列输出 message、事件字段和当前 trace。"""
 
         timestamp = _timestamp(record)
-        level = _level_name(record)
+        level = _colored_console_level(record)
         component = _visible_text(resolve_component(record.name))
         message = _visible_text(record.getMessage())
         # level 后保留一个分隔空格；component 自身补齐到 22 列后直接接 message，正好与
         # 设计示例中的 ``WARN  media.reconciliation  message`` 对齐。
-        rendered = f"{timestamp} {level:<5} {component:<22}{message}"
+        rendered = f"{timestamp} {level} {component:<22}{message}"
 
         field_parts = [
             self._format_field(name, value) for name, value in _record_fields(record).items()
@@ -356,6 +389,9 @@ class ConsoleFormatter(logging.Formatter):
         if name == "duration_ms":
             return f"{key}={value}ms"
         if name in SECONDS_FIELDS:
+            # 秒数字段进入 Formatter 前已经由 _validated_field 排除 bool、负数和非有限值。
+            # 此断言把该运行时保证告知类型检查器，避免直接对 object 调用 float。
+            assert isinstance(value, (int, float)) and not isinstance(value, bool)
             return f"{key}={float(value):.1f}s"
         if name == "error_frames":
             assert isinstance(value, list)

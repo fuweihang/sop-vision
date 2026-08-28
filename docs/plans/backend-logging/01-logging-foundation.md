@@ -77,7 +77,8 @@
    省略、有效 `0` 保留、未知字段忽略、JSON 数值类型和安全异常输出。
 2. 实现日志字段常量、组件映射、安全异常 helper、trace Filter、console/JSON Formatter 和配置
    构造函数。Formatter 只能处理白名单字段，不得修改业务 LogRecord 来制造另一套格式。
-3. 统一使用一个无 ANSI 的 `stderr` Handler；配置时保持 `disable_existing_loggers=False`，移除并
+3. 统一使用一个级别固定带 ANSI 颜色的 `stderr` Handler；配置时保持
+   `disable_existing_loggers=False`，移除并
    替换本模块自己安装的旧 Handler，但不得删除 pytest/caplog 或宿主进程 Handler。重复配置不得
    增加 Handler 或重复输出。
 4. 修改现有 `TraceIdLogFilter`，非 HTTP 上下文写入 `None` 而不是 `-`；增加 Settings 字段、枚举
