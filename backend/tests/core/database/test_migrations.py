@@ -211,6 +211,15 @@ def test_postgres_connection_error_does_not_expose_password(monkeypatch) -> None
     assert password not in repr(error.value)
 
 
+def test_alembic_ini_contains_no_independent_logging_configuration() -> None:
+    """Alembic 必须由应用统一配置日志，不能再从 ini 安装第二套 Handler/Formatter。"""
+
+    alembic_config = Config(str(BACKEND_ROOT / "alembic.ini"))
+
+    for section in ("loggers", "handlers", "formatters"):
+        assert not alembic_config.file_config.has_section(section)
+
+
 def test_empty_postgresql_database_upgrade_downgrade_upgrade_chain() -> None:
     """在真实空 PostgreSQL 库逐步断言基线 → head → base → head revision。
 

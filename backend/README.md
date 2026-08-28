@@ -66,7 +66,7 @@ uv run --env-file .env.local python -m app.server \
 | `DATABASE_POOL_TIMEOUT`                    | `30`                    | 获取连接最长等待秒数                               |
 | `DATABASE_POOL_RECYCLE`                    | `1800`                  | 连接回收秒数；`-1` 表示禁用按时回收                |
 | `DATABASE_CONNECT_TIMEOUT`                 | `10`                    | 建立 PostgreSQL 连接超时秒数                       |
-| `DATABASE_ECHO`                            | `false`                 | 是否输出 SQL；参数始终隐藏                         |
+| `DATABASE_ECHO`                            | `false`                 | 是否通过统一 Logger 输出 SQL；绑定参数始终隐藏     |
 | `BACKEND_LOG_LEVEL`                        | `info`                  | 应用与 Uvicorn 日志级别                            |
 | `BACKEND_LOG_FORMAT`                       | `console`               | 日志格式：`console` 或单行 `json`                  |
 | `TZ`                                       | `Asia/Shanghai`         | 日志显示地区，使用 IANA 时区名称                   |
@@ -78,15 +78,22 @@ uv run --env-file .env.local python -m app.server \
 | `BACKEND_CORS_ORIGINS`                     | `http://localhost:8000` | 允许的 Origin，多个值使用逗号分隔                  |
 
 `BACKEND_LOG_LEVEL` 支持 `debug`、`info`、`warning`、`error` 和 `critical`，并同时控制应用与
-Uvicorn Logger。`BACKEND_PORT` 只控制 Compose 发布到宿主机的端口，容器内仍监听 `3001`；本地
-直接启动如需改端口使用 `--port`。`REDIS_URL` 已在运行环境中预留，但当前代码不会读取它。
+Uvicorn Logger。它不会打开 SQLAlchemy、httpx 或 httpcore 的调试输出；SQL 只由
+`DATABASE_ECHO=true` 单独开启。`BACKEND_PORT` 只控制 Compose 发布到宿主机的端口，容器内仍监听
+`3001`；本地直接启动如需改端口使用 `--port`。`REDIS_URL` 已在运行环境中预留，但当前代码不会读取它。
 
 console 与 JSON 的 `timestamp` 都按 Backend 进程的 `TZ` 输出 `YYYY-MM-DD HH:mm:ss`，不包含
 毫秒、时区偏移或缩写。默认镜像和 Compose 使用 `Asia/Shanghai`；修改地区时应填写系统支持的
 IANA 名称，例如 `UTC`。该变量只改变进程本地时间展示，数据库、API 和媒体快照继续使用 UTC。
 
-`DATABASE_URL` 以 Secret 保存，配置校验、日志和 SQL 输出不得回显密码。`TEST_DATABASE_URL`
-只供集成测试使用，绝不回退到应用数据库。
+`DATABASE_URL` 以 Secret 保存，配置校验、日志和 SQL 输出不得回显密码。Runtime Engine 始终使用
+`echo=False` 和 `hide_parameters=True`；`DATABASE_ECHO` 通过统一的 `sqlalchemy.engine` Logger
+输出 SQL，避免 SQLAlchemy 自行安装 Handler 后重复打印。该保护隐藏绑定参数，不应把敏感值直接
+拼进 SQL 文本。`TEST_DATABASE_URL` 只供集成测试使用，绝不回退到应用数据库。
+
+`BACKEND_LOG_FORMAT=console` 输出带颜色、适合终端阅读的单行文本；`json` 每个 LogRecord 输出一个
+JSON 对象，适合日志采集器读取 `event`、`outcome`、`trace_id` 等稳定字段。外部采集规则不得按完整
+console 文本或旧的 `operation=... outcome=...` 消息做解析。
 
 每个 HTTP 请求在响应完整发送或发生中断时最多记录一条应用级 access log，包含 method、path、
 实际状态码、结果、完整耗时和 trace。日志只读取 ASGI `path`，不记录 query string、请求/响应正文、
@@ -111,6 +118,10 @@ Alembic 当前包含运行时基线和 Camera 关系模型。容器启动不会�
 uv run --env-file .env.local alembic current
 uv run --env-file .env.local alembic upgrade head
 ```
+
+Alembic CLI 使用与 Backend Runtime 相同的时间、级别、组件和 console/JSON Formatter，不再读取
+`alembic.ini` 中的独立 logging 段。在 pytest 或应用进程内调用 Alembic 时，会保留宿主已有 Handler，
+并在迁移成功、失败或取消后恢复 Alembic/SQLAlchemy Logger 级别。
 
 `cameras` 与 `camera_sources` 有意不建立外键。Camera Repository 通过聚合锁、同事务校验、
 显式 Source 清理和完整性巡检维护跨表约束；数据库继续负责主键、IPv4、端口、顺序和同 Camera

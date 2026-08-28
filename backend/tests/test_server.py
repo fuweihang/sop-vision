@@ -17,11 +17,17 @@ def test_main_configures_logging_before_starting_uvicorn(monkeypatch) -> None:
     class StubSettings:
         backend_log_level = "debug"
         backend_log_format = "json"
+        database_echo = True
 
     monkeypatch.setattr(server, "get_settings", lambda: StubSettings())
 
-    def configure_logging(*, log_level: str, log_format: str) -> dict[str, Any]:
-        call_order.append(f"logging:{log_level}:{log_format}")
+    def configure_logging(
+        *,
+        log_level: str,
+        log_format: str,
+        database_echo: bool,
+    ) -> dict[str, Any]:
+        call_order.append(f"logging:{log_level}:{log_format}:{database_echo}")
         return logging_config
 
     def run(application: str, **kwargs: Any) -> None:
@@ -33,7 +39,7 @@ def test_main_configures_logging_before_starting_uvicorn(monkeypatch) -> None:
 
     server.main(["--host", "0.0.0.0", "--port", "3100", "--workers", "3"])
 
-    assert call_order == ["logging:debug:json", "uvicorn"]
+    assert call_order == ["logging:debug:json:True", "uvicorn"]
     assert run_calls == [
         (
             "app.main:app",
@@ -56,6 +62,7 @@ def test_main_uses_safe_local_defaults(monkeypatch) -> None:
     class StubSettings:
         backend_log_level = "info"
         backend_log_format = "console"
+        database_echo = False
 
     calls: list[dict[str, Any]] = []
     monkeypatch.setattr(server, "get_settings", lambda: StubSettings())

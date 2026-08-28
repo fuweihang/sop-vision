@@ -9,7 +9,7 @@ from app.core.database.engine import create_database_engine
 
 
 def test_create_database_engine_uses_configured_pool_and_safe_logging() -> None:
-    """连接池配置应完整透传，同时不能允许 echo 绕过参数隐藏。"""
+    """连接池配置应完整透传，SQL 输出必须完全交给统一 Logger。"""
 
     settings = Settings(
         # Settings 的字段类型是 SecretStr；显式包装可让静态类型与运行时脱敏语义一致。
@@ -31,7 +31,7 @@ def test_create_database_engine_uses_configured_pool_and_safe_logging() -> None:
     create_engine.assert_called_once_with(
         settings.database_url.get_secret_value(),
         connect_args={"connect_timeout": 4},
-        echo=True,
+        echo=False,
         hide_parameters=True,
         max_overflow=3,
         pool_pre_ping=True,

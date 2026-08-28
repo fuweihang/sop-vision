@@ -49,6 +49,7 @@ def main(arguments: Sequence[str] | None = None) -> None:
     log_config = configure_logging(
         log_level=settings.backend_log_level,
         log_format=settings.backend_log_format,
+        database_echo=settings.database_echo,
     )
     # 使用 import string 才能让 reload 和多 worker 子进程重新导入应用。启动调用只放在 main
     # 内，子进程导入 app.main 时不会再次创建 supervisor 或改写 pytest/宿主 Handler。

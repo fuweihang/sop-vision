@@ -1,7 +1,6 @@
 """Alembic 异步迁移环境，复用应用 metadata 与数据库配置。"""
 
 import asyncio
-from logging.config import fileConfig
 
 from alembic import context
 from sqlalchemy import Connection, make_url
@@ -10,16 +9,10 @@ from sqlalchemy.pool import NullPool
 
 from app.core.config import get_settings
 from app.core.database import Base
+from app.core.logging import migration_logging_context
 from app.modules.cameras.persistence import models as camera_models  # noqa: F401
 
 config = context.config
-
-# alembic.ini 只保存非敏感日志配置，不保存 sqlalchemy.url。
-if config.config_file_name is not None:
-    # Alembic 集成测试会在 Backend pytest 进程内多次加载本模块。logging.fileConfig 默认
-    # 禁用配置文件未列出的既有应用 Logger，导致迁移完成后的后台对账和 Adapter 日志永久
-    # 消失；保留这些 Logger 既不改变独立 Alembic 进程的输出，也不会破坏运行时可观测性。
-    fileConfig(config.config_file_name, disable_existing_loggers=False)
 
 # 后续 ORM 表统一挂到此 metadata，autogenerate 才能看到完整应用 Schema。
 target_metadata = Base.metadata
@@ -95,7 +88,15 @@ def run_migrations_online() -> None:
     asyncio.run(run_async_migrations())
 
 
-if context.is_offline_mode():
-    run_migrations_offline()
-else:
-    run_migrations_online()
+# Alembic 的默认模板会从 alembic.ini 调用 fileConfig()，这会在嵌入式命令中替换 pytest 或应用
+# 已有的 Handler。本项目改由统一 logging 模块管理：独立 CLI 安装统一格式，嵌入进程只临时调整
+# Logger 级别，并在下方 with 的 finally 路径恢复。
+settings = get_settings()
+with migration_logging_context(
+    log_format=settings.backend_log_format,
+    database_echo=settings.database_echo,
+):
+    if context.is_offline_mode():
+        run_migrations_offline()
+    else:
+        run_migrations_online()

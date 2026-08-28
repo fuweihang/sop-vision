@@ -123,3 +123,17 @@ uv run --env-file .env.local pytest \
 
 后续如接入日志平台，应基于现有 JSON 输出增加部署侧采集，不应重新修改业务 Logger 或放宽字段
 白名单。
+
+## 实施结果
+
+- Runtime Engine 固定 `echo=False`、`hide_parameters=True`；`DATABASE_ECHO` 改由统一
+  `sqlalchemy.engine` Logger 控制。
+- Alembic 已移除 `fileConfig()` 和 `alembic.ini` 日志段。独立 CLI 使用统一 stderr Handler；嵌入
+  pytest/应用进程时保留宿主 Handler，并在迁移结束后恢复 Logger 级别。
+- console 与 JSON 均已覆盖 SQL 绑定参数、数据库 URL 异常脱敏测试。
+- Backend 全量测试：`261 passed, 18 skipped`；跳过项均要求进程显式配置 `TEST_DATABASE_URL`。
+- 使用 `backend/.env.local` 额外执行三组 PostgreSQL 集成测试：`22 passed`。
+- `ruff check`、`ruff format --check`、MediaMTX 契约脚本、Camera foundation 门禁、
+  `docker compose config` 和 `git diff --check` 均通过。
+- 人工启动当前 Backend 后，请求带密码哨兵的 query 只输出一条应用 access log，query 未进入日志；
+  `alembic current` 的 console/JSON 输出使用统一组件，`DATABASE_ECHO=true` 时绑定参数保持隐藏。

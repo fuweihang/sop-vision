@@ -1,13 +1,16 @@
 """统一日志 Formatter、字段安全边界和重复初始化测试。"""
 
+import asyncio
 import json
 import logging
 import os
 import time
 from collections.abc import Callable, Iterator
 from datetime import UTC, datetime
+from io import StringIO
 
 import pytest
+from sqlalchemy import create_engine, text
 
 from app.core.http.trace import TraceIdLogFilter
 from app.core.logging import (
@@ -15,6 +18,7 @@ from app.core.logging import (
     ConsoleFormatter,
     JsonFormatter,
     configure_logging,
+    migration_logging_context,
     safe_exception_fields,
 )
 
@@ -314,6 +318,7 @@ def restore_logging_state() -> Iterator[None]:
         "httpx",
         "httpcore",
         "sqlalchemy",
+        "sqlalchemy.engine",
         "alembic",
     ]
     root = logging.getLogger()
@@ -347,8 +352,8 @@ def test_configure_logging_preserves_host_handler_and_is_idempotent(
     """重复初始化只保留一个自有 stderr Handler，同时不移除 pytest/caplog Handler。"""
 
     caplog_handler = caplog.handler
-    configure_logging(log_level="debug", log_format="console")
-    configure_logging(log_level="debug", log_format="console")
+    configure_logging(log_level="debug", log_format="console", database_echo=False)
+    configure_logging(log_level="debug", log_format="console", database_echo=False)
 
     root_handlers = logging.getLogger().handlers
     assert caplog_handler in root_handlers
@@ -356,9 +361,175 @@ def test_configure_logging_preserves_host_handler_and_is_idempotent(
     assert logging.getLogger("app").level == logging.DEBUG
     assert logging.getLogger("httpx").level == logging.WARNING
     assert logging.getLogger("sqlalchemy").level == logging.WARNING
+    assert logging.getLogger("sqlalchemy.engine").level == logging.WARNING
     assert all(not logging.getLogger(name).handlers for name in ("app", "uvicorn"))
     assert logging.getLogger("uvicorn.access").level == logging.CRITICAL
     assert logging.getLogger("uvicorn.access").propagate is False
 
     logging.getLogger("app.test").debug("重复初始化检查")
     assert [record.message for record in caplog.records].count("重复初始化检查") == 1
+
+
+def test_database_echo_only_enables_sqlalchemy_engine(
+    restore_logging_state: None,
+) -> None:
+    """数据库调试不能顺带打开连接池、httpx 或其他第三方 DEBUG/INFO。"""
+
+    configure_logging(log_level="debug", log_format="json", database_echo=True)
+
+    assert logging.getLogger("app").level == logging.DEBUG
+    assert logging.getLogger("sqlalchemy").level == logging.WARNING
+    assert logging.getLogger("sqlalchemy.engine").level == logging.INFO
+    assert logging.getLogger("httpx").level == logging.WARNING
+    assert logging.getLogger("httpcore").level == logging.WARNING
+
+    # 再次关闭必须显式恢复 engine Logger；只修改父 Logger 会让同一进程残留 INFO。
+    configure_logging(log_level="debug", log_format="json", database_echo=False)
+    assert logging.getLogger("sqlalchemy.engine").level == logging.WARNING
+
+
+@pytest.mark.parametrize("formatter", [ConsoleFormatter(), JsonFormatter()])
+def test_sqlalchemy_hides_bound_parameters_in_unified_output(
+    formatter: logging.Formatter,
+) -> None:
+    """真实 SQLAlchemy 记录经过两种 Formatter 时都不能包含绑定参数值。"""
+
+    secret_parameter = "sql-parameter-must-not-leak"
+    stream = StringIO()
+    handler = logging.StreamHandler(stream)
+    handler.setFormatter(formatter)
+    logger = logging.getLogger("sqlalchemy.engine")
+    previous_state = (list(logger.handlers), logger.level, logger.propagate)
+    logger.handlers = [handler]
+    logger.setLevel(logging.INFO)
+    logger.propagate = False
+    engine = create_engine("sqlite://", echo=False, hide_parameters=True)
+
+    try:
+        with engine.connect() as connection:
+            connection.execute(
+                text("SELECT :private_value"),
+                {"private_value": secret_parameter},
+            )
+    finally:
+        engine.dispose()
+        logger.handlers = previous_state[0]
+        logger.setLevel(previous_state[1])
+        logger.propagate = previous_state[2]
+        handler.close()
+
+    rendered = stream.getvalue()
+    assert secret_parameter not in rendered
+    assert "SQL parameters hidden due to hide_parameters=True" in rendered
+
+
+@pytest.mark.parametrize("formatter", [ConsoleFormatter(), JsonFormatter()])
+def test_database_url_in_third_party_exception_is_not_rendered(
+    formatter: logging.Formatter,
+) -> None:
+    """数据库异常即使携带完整 URL，两种统一格式也只能输出安全异常摘要。"""
+
+    password = "database-password-must-not-leak"
+    database_url = f"postgresql+psycopg://user:{password}@database/sop_vision"
+    try:
+        raise RuntimeError(database_url)
+    except RuntimeError:
+        record = logging.LogRecord(
+            "sqlalchemy.engine",
+            logging.ERROR,
+            __file__,
+            1,
+            "数据库操作失败",
+            (),
+            __import__("sys").exc_info(),
+        )
+
+    rendered = formatter.format(record)
+    assert password not in rendered
+    assert database_url not in rendered
+    assert "RuntimeError" in rendered
+
+
+def test_migration_logging_installs_one_handler_and_restores_levels(
+    restore_logging_state: None,
+) -> None:
+    """独立迁移进程连续执行命令时只安装一次 Handler，并恢复显式级别。"""
+
+    root = logging.getLogger()
+    root.handlers = []
+    root.setLevel(logging.ERROR)
+    expected_levels = {
+        "alembic": logging.ERROR,
+        "sqlalchemy": logging.DEBUG,
+        "sqlalchemy.engine": logging.CRITICAL,
+    }
+    for name, level in expected_levels.items():
+        logging.getLogger(name).setLevel(level)
+
+    with migration_logging_context(log_format="json", database_echo=True):
+        handlers = root.handlers
+        assert sum(isinstance(handler, BackendStreamHandler) for handler in handlers) == 1
+        assert isinstance(handlers[0].formatter, JsonFormatter)
+        assert root.level == logging.WARNING
+        assert logging.getLogger("alembic").level == logging.INFO
+        assert logging.getLogger("sqlalchemy").level == logging.WARNING
+        assert logging.getLogger("sqlalchemy.engine").level == logging.INFO
+
+    assert root.level == logging.ERROR
+    assert {name: logging.getLogger(name).level for name in expected_levels} == expected_levels
+
+    # Handler 有意保留到短生命周期 CLI 退出；第二条命令会复用它，不能重复安装。
+    with migration_logging_context(log_format="json", database_echo=False):
+        assert sum(isinstance(handler, BackendStreamHandler) for handler in root.handlers) == 1
+        assert logging.getLogger("sqlalchemy.engine").level == logging.WARNING
+
+    assert {name: logging.getLogger(name).level for name in expected_levels} == expected_levels
+
+
+def test_migration_logging_preserves_host_handlers_and_restores_levels(
+    restore_logging_state: None,
+) -> None:
+    """pytest/应用已有 Handler 时，迁移只能临时改 Logger 级别。"""
+
+    root = logging.getLogger()
+    host_handlers = list(root.handlers)
+    assert host_handlers
+    expected_levels = {
+        "alembic": logging.CRITICAL,
+        "sqlalchemy": logging.ERROR,
+        "sqlalchemy.engine": logging.DEBUG,
+    }
+    for name, level in expected_levels.items():
+        logging.getLogger(name).setLevel(level)
+
+    with migration_logging_context(log_format="console", database_echo=False):
+        assert root.handlers == host_handlers
+        assert all(not isinstance(handler, BackendStreamHandler) for handler in root.handlers)
+        assert logging.getLogger("alembic").level == logging.INFO
+        assert logging.getLogger("sqlalchemy").level == logging.WARNING
+        assert logging.getLogger("sqlalchemy.engine").level == logging.WARNING
+
+    assert root.handlers == host_handlers
+    assert {name: logging.getLogger(name).level for name in expected_levels} == expected_levels
+
+
+@pytest.mark.parametrize("error_type", [RuntimeError, asyncio.CancelledError])
+def test_migration_logging_restores_levels_after_failure_or_cancellation(
+    error_type: type[BaseException],
+    restore_logging_state: None,
+) -> None:
+    """迁移失败或任务取消都必须经过 finally 恢复宿主 Logger 级别。"""
+
+    expected_levels = {
+        "alembic": logging.ERROR,
+        "sqlalchemy": logging.CRITICAL,
+        "sqlalchemy.engine": logging.DEBUG,
+    }
+    for name, level in expected_levels.items():
+        logging.getLogger(name).setLevel(level)
+
+    with pytest.raises(error_type):
+        with migration_logging_context(log_format="console", database_echo=True):
+            raise error_type()
+
+    assert {name: logging.getLogger(name).level for name in expected_levels} == expected_levels

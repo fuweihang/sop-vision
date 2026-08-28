@@ -76,6 +76,12 @@ PostgreSQL 使用原生 `uuid`、`inet` 和 `timestamptz`。两个 Camera 表不
 - 数据库提交后才能更新或释放 MediaMTX 映射；外部失败不能伪装成数据库回滚。
 - 完整性巡检检测孤儿 Source、缺失/跨 Camera 默认源和无 Source Camera，只告警不修复。
 
+Runtime Engine 固定使用 `echo=False` 和 `hide_parameters=True`。需要查看 SQL 时通过
+`DATABASE_ECHO=true` 打开统一的 `database.sql` 输出，不能直接启用 SQLAlchemy echo，否则可能与
+root Handler 重复。Alembic CLI 同样使用统一 Formatter；嵌入 pytest 或应用进程执行时不得替换宿主
+Handler，迁移结束后必须恢复 Logger 级别。SQL 日志隐藏绑定参数，但调用方仍不得把密码或 Token
+直接拼入 SQL 文本。
+
 公共端口是 `CameraRepository.add/save/get/list/count/delete` 与
 `CameraUnitOfWork.commit/rollback`。列表搜索对名称和 IPv4 做大小写无关的字面包含匹配；
 `%`、`_`、`\` 不作为 SQL 通配符。结果按 `created_at ASC, camera_id ASC` 分页，越界页返回空集。

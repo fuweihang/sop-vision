@@ -4,7 +4,10 @@ import json
 import logging
 import logging.config
 import math
+import sys
 import traceback
+from collections.abc import Iterator
+from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
 from types import TracebackType
@@ -433,8 +436,14 @@ def build_logging_config(
     *,
     log_level: BackendLogLevel,
     log_format: BackendLogFormat,
+    database_echo: bool,
 ) -> dict[str, Any]:
-    """构造可直接交给 logging.dictConfig 和 Uvicorn 的同一份配置。"""
+    """构造可直接交给 logging.dictConfig 和 Uvicorn 的同一份配置。
+
+    SQLAlchemy 的 ``echo`` 快捷开关不能与显式 Python logging 混用。这里单独控制
+    ``sqlalchemy.engine`` 级别，既保留 ``DATABASE_ECHO`` 的公开行为，也不会让 Backend 的
+    DEBUG 级别意外打开 SQL、连接池或其他第三方细节。
+    """
 
     formatter_class = (
         "app.core.logging.ConsoleFormatter"
@@ -475,6 +484,11 @@ def build_logging_config(
             "httpx": {"handlers": [], "level": "WARNING", "propagate": True},
             "httpcore": {"handlers": [], "level": "WARNING", "propagate": True},
             "sqlalchemy": {"handlers": [], "level": "WARNING", "propagate": True},
+            "sqlalchemy.engine": {
+                "handlers": [],
+                "level": "INFO" if database_echo else "WARNING",
+                "propagate": True,
+            },
             "alembic": {"handlers": [], "level": "INFO", "propagate": True},
         },
     }
@@ -484,6 +498,7 @@ def configure_logging(
     *,
     log_level: BackendLogLevel,
     log_format: BackendLogFormat,
+    database_echo: bool,
 ) -> dict[str, Any]:
     """应用统一配置并保留 pytest 或嵌入式宿主已经安装的 Handler。
 
@@ -496,9 +511,73 @@ def configure_logging(
     host_handlers = [
         handler for handler in root.handlers if not isinstance(handler, BackendStreamHandler)
     ]
-    config = build_logging_config(log_level=log_level, log_format=log_format)
+    config = build_logging_config(
+        log_level=log_level,
+        log_format=log_format,
+        database_echo=database_echo,
+    )
     logging.config.dictConfig(config)
     for handler in host_handlers:
         if handler not in root.handlers:
             root.addHandler(handler)
     return config
+
+
+def _create_backend_stream_handler(log_format: BackendLogFormat) -> BackendStreamHandler:
+    """创建与 Runtime 配置相同的 stderr Handler，供独立 Alembic CLI 使用。
+
+    Alembic 在 pytest 或嵌入式应用中执行时必须沿用宿主 Handler，因此这个函数只由
+    ``migration_logging_context`` 在 root 完全没有 Handler 时调用。
+    """
+
+    # 局部导入避免统一 logging 模块在加载阶段反向依赖整个 HTTP 包；Filter 本身只读取
+    # ContextVar，迁移进程没有请求上下文时会写入 None，Formatter 随后直接省略 trace。
+    from app.core.http.trace import TraceIdLogFilter
+
+    handler = BackendStreamHandler(stream=sys.stderr)
+    handler.setLevel(logging.NOTSET)
+    handler.setFormatter(ConsoleFormatter() if log_format == "console" else JsonFormatter())
+    handler.addFilter(TraceIdLogFilter())
+    return handler
+
+
+@contextmanager
+def migration_logging_context(
+    *,
+    log_format: BackendLogFormat,
+    database_echo: bool,
+) -> Iterator[None]:
+    """在迁移执行期间提供统一日志，并完整保留宿主日志状态。
+
+    正常的 ``alembic`` CLI 进程没有 root Handler，此时安装一个统一 stderr Handler；Handler
+    保留到短生命周期 CLI 进程退出，使同一进程连续执行多个 Alembic 命令时也只安装一次。
+    pytest 或应用进程已经有 Handler 时不增删任何 Handler，只临时调整 Alembic 和 SQLAlchemy
+    Logger 的显式级别。所有显式级别都在 ``finally`` 中恢复，因此迁移成功、失败或取消都不会
+    改变宿主后续日志。
+    """
+
+    root = logging.getLogger()
+    logger_names = ("alembic", "sqlalchemy", "sqlalchemy.engine")
+    previous_levels = {name: logging.getLogger(name).level for name in logger_names}
+    previous_root_level = root.level
+    installed_handler = not root.handlers
+
+    if installed_handler:
+        root.addHandler(_create_backend_stream_handler(log_format))
+        # 与 Runtime 一致，未明确允许的第三方 INFO/DEBUG 不进入统一 Handler。子 Logger 已产生的
+        # 记录传播到 root 时不会再次按 root level 过滤，所以 Alembic INFO 仍可正常输出。
+        root.setLevel(logging.WARNING)
+
+    logging.getLogger("alembic").setLevel(logging.INFO)
+    logging.getLogger("sqlalchemy").setLevel(logging.WARNING)
+    logging.getLogger("sqlalchemy.engine").setLevel(
+        logging.INFO if database_echo else logging.WARNING
+    )
+
+    try:
+        yield
+    finally:
+        for name, level in previous_levels.items():
+            logging.getLogger(name).setLevel(level)
+        if installed_handler:
+            root.setLevel(previous_root_level)

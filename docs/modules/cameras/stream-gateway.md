@@ -125,6 +125,10 @@ Adapter 每次 I/O 记录一个 `stream_gateway.io` DEBUG 事件，使用固定�
 trace 由统一日志 Handler 从请求上下文补充，Adapter 不手工读取或制造 `-` 占位。快照不逐 Path
 记录日志，纯投影函数不记录日志；默认级别的业务影响由 Cameras Application 表达。
 
+默认 console 只用于人工查看；启用 `BACKEND_LOG_FORMAT=json` 后，采集器应读取
+`event=stream_gateway.io` 及其稳定字段，不能按完整中文 message 或整行 console 文本解析。即使
+`BACKEND_LOG_LEVEL=debug`，Adapter 仍不得把请求 URL、query、响应正文或原始异常文本写入日志。
+
 ## 接入约束
 
 - 媒体对账已使用配置快照实现启动和周期恢复，并在轮次之间负责重试与退避。
