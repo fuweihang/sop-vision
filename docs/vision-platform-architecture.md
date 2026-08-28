@@ -87,7 +87,7 @@ URL 后缀、顺序和时间。完整 RTSP URL 由聚合派生，不单独持久
 - 数据库继续执行主键、IPv4、端口、非负顺序和同 Camera 唯一性约束。
 
 这一选择要求所有 Camera 写入都经过专用 Repository/UoW，不能绕过聚合直接改表。精确字段、
-锁顺序和错误边界见 [Cameras Foundation](cameras-mvp/01-foundation/README.md)。
+锁顺序和错误边界见 [Cameras Foundation](plan/cameras-mvp/01-foundation/README.md)。
 
 ## HTTP 与跨端契约
 

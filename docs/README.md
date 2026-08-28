@@ -20,25 +20,25 @@ MSW 使用同一契约；这个公共 Playback handler 的按需恢复行为仍�
 
 1. [仓库 README](../README.md)：当前状态、运行方式和开发命令。
 2. [总体架构](vision-platform-architecture.md)：已实现边界和目标演进方向。
-3. [Cameras MVP](cameras-mvp/README.md)：当前实现进度、冻结规则和功能契约。
+3. [Cameras MVP](plan/cameras-mvp/README.md)：当前实现进度、冻结规则和功能契约。
 4. [Backend README](../backend/README.md) / [Frontend README](../frontend/README.md)：子项目开发。
 5. [Design System](design-system/README.md)：前端视觉、布局和交互约束。
 
 ## 文档职责
 
-| 文档                                                        | 性质        | 负责内容                                    |
-| ----------------------------------------------------------- | ----------- | ------------------------------------------- |
-| [总体架构](vision-platform-architecture.md)                 | 当前 + 目标 | 服务边界、数据职责、已实现与未实现链路      |
-| [产品范围](product-requirements.md)                         | 产品基线    | 产品对象、计划能力、范围外事项和未决问题    |
-| [Cameras MVP](cameras-mvp/README.md)                        | 冻结契约    | Camera 第一阶段范围、状态和功能切片         |
-| [Cameras Foundation](cameras-mvp/01-foundation/README.md)   | 已实现约束  | 数据、事务、HTTP、敏感数据和跨端基础        |
-| [MediaMTX 契约](cameras-mvp/02-mediamtx-contract/README.md) | 已实现约束  | 外部协议、媒体 Port、地址和部署边界         |
-| [媒体对账](cameras-mvp/04-media-reconciliation/README.md)   | 已实现约束  | 后台恢复、并发锁、退避和资源生命周期        |
-| [Design System](design-system/README.md)                    | 设计规范    | 当前 Shell 与计划业务页面的 UI 规则         |
-| [实时检测数据设计](realtime-detection-design.md)            | 目标设计    | Detector、Redis、WebSocket 的通信语义与约束 |
-| [交互原型](prototype/v1.0.html)                             | 参考产物    | 早期布局与业务流程，不代表当前实现或 API    |
+| 文档                                                             | 性质        | 负责内容                                    |
+| ---------------------------------------------------------------- | ----------- | ------------------------------------------- |
+| [总体架构](vision-platform-architecture.md)                      | 当前 + 目标 | 服务边界、数据职责、已实现与未实现链路      |
+| [产品范围](product-requirements.md)                              | 产品基线    | 产品对象、计划能力、范围外事项和未决问题    |
+| [Cameras MVP](plan/cameras-mvp/README.md)                        | 冻结契约    | Camera 第一阶段范围、状态和功能切片         |
+| [Cameras Foundation](plan/cameras-mvp/01-foundation/README.md)   | 已实现约束  | 数据、事务、HTTP、敏感数据和跨端基础        |
+| [MediaMTX 契约](plan/cameras-mvp/02-mediamtx-contract/README.md) | 已实现约束  | 外部协议、媒体 Port、地址和部署边界         |
+| [媒体对账](plan/cameras-mvp/04-media-reconciliation/README.md)   | 已实现约束  | 后台恢复、并发锁、退避和资源生命周期        |
+| [Design System](design-system/README.md)                         | 设计规范    | 当前 Shell 与计划业务页面的 UI 规则         |
+| [实时检测数据设计](realtime-detection-design.md)                 | 目标设计    | Detector、Redis、WebSocket 的通信语义与约束 |
+| [交互原型](prototype/v1.0.html)                                  | 参考产物    | 早期布局与业务流程，不代表当前实现或 API    |
 
-`cameras-mvp/05–11` 是尚未实现的功能契约，不是完成记录。`prototype/` 和架构图是设计证据，
+`plan/cameras-mvp/05–11` 是尚未实现的功能契约，不是完成记录。`prototype/` 和架构图是设计证据，
 不得覆盖运行时代码、`components.json`、OpenAPI 或数据库迁移中的事实。
 
 ## 事实优先级

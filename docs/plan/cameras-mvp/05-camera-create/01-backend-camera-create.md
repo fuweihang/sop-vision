@@ -15,7 +15,7 @@
 
 ## 当前上下文与前置条件
 
-新会话开始时必须先完整读取父方案、`docs/cameras-mvp/AGENTS.md`、根 Cameras MVP、01、03、04 和 06
+新会话开始时必须先完整读取父方案、`docs/plan/cameras-mvp/AGENTS.md`、根 Cameras MVP、01、03、04 和 06
 文档，并核对当前代码与测试，不能假设本文件生成后代码状态没有变化。
 
 当前已知基础如下：

@@ -16,7 +16,7 @@
 
 ## 当前上下文与前置条件
 
-新会话开始时必须先完整读取父方案、前置任务最终文档和 diff、`docs/cameras-mvp/AGENTS.md`、
+新会话开始时必须先完整读取父方案、前置任务最终文档和 diff、`docs/plan/cameras-mvp/AGENTS.md`、
 Foundation Frontend 契约、`docs/design-system/` 规则及当前 Frontend 代码。必须确认 05.1 已实际完成并
 通过 Backend 验证，不能只根据本文件假设接口行为。
 
