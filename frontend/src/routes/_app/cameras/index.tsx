@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 
+import { CameraCreateDialog } from "@/features/cameras/components/camera-create-dialog";
 import { PageContainer } from "@/components/layout/page-container";
 import { PageHeader } from "@/components/layout/page-header";
 import { RoutePending } from "@/components/route-state/route-pending";
@@ -14,11 +15,14 @@ function CamerasListPending() {
 }
 
 function CamerasPage() {
+  const { apiClient } = Route.useRouteContext();
+
   return (
     <PageContainer>
       <PageHeader
         title="摄像头"
-        description="摄像头列表路由与页面布局已就绪。"
+        description="管理摄像头连接信息和视频源配置。"
+        actions={<CameraCreateDialog apiClient={apiClient} />}
       />
       <section aria-labelledby="cameras-route-skeleton-title">
         <h2 id="cameras-route-skeleton-title" className="font-medium">

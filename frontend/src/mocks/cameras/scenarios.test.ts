@@ -10,7 +10,7 @@ import {
   prepareCameraSourcePlayback,
   setDefaultPreviewSource,
   updateCamera,
-} from "@/lib/cameras-api";
+} from "@/features/cameras/api/cameras-api";
 import {
   buildCameraCreateRequest,
   buildCameraUpdateRequest,

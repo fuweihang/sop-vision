@@ -1,8 +1,8 @@
 # SOP Vision Frontend
 
 Frontend 使用 React 19、TypeScript、Vite、TanStack Router/Query、Tailwind CSS v4 和 shadcn/ui。
-当前已完成应用 Shell、主题、路由状态、生成式 API Client、错误映射和 Cameras MSW；Cameras 与
-Detection Tasks 页面仍是业务骨架。
+当前已完成应用 Shell、主题、路由状态、生成式 API Client、错误映射、Cameras MSW 和 Camera 新增
+Dialog；Cameras 列表/详情与 Detection Tasks 页面仍是业务骨架。
 
 ## 环境与启动
 
@@ -20,13 +20,13 @@ pnpm dev
 
 ## 当前页面
 
-| 路由                 | 当前实现                                                |
-| -------------------- | ------------------------------------------------------- |
-| `/`                  | 重定向到 `/cameras`                                     |
-| `/cameras`           | App Shell、标题、Pending/Error/Not Found 边界和列表骨架 |
-| `/cameras/$cameraId` | 详情层级、Breadcrumb、返回操作和详情骨架                |
-| `/tasks`             | App Shell、标题和列表骨架                               |
-| `/tasks/$taskId`     | 详情层级、Breadcrumb、返回操作和详情骨架                |
+| 路由                 | 当前实现                                          |
+| -------------------- | ------------------------------------------------- |
+| `/`                  | 重定向到 `/cameras`                               |
+| `/cameras`           | App Shell、Camera 新增 Dialog、路由状态和列表骨架 |
+| `/cameras/$cameraId` | 详情层级、Breadcrumb、返回操作和详情骨架          |
+| `/tasks`             | App Shell、标题和列表骨架                         |
+| `/tasks/$taskId`     | 详情层级、Breadcrumb、返回操作和详情骨架          |
 
 Shell 已支持桌面 Sidebar、移动 Sheet、Light/Dark 主题、跳转主内容、路由后焦点恢复和响应式
 重排。页面文档中的表单、列表数据、播放器、ROI 和任务操作属于后续业务实现。
@@ -34,7 +34,7 @@ Shell 已支持桌面 Sidebar、移动 Sheet、Light/Dark 主题、跳转主内�
 ## API 与生成文件
 
 - `src/lib/api-client.ts` 是唯一 Axios 实例和错误入口。
-- `src/lib/cameras-api.ts` 封装七个已冻结的目标 operation。
+- `src/features/cameras/api/cameras-api.ts` 封装七个已冻结的目标 operation。
 - Playback Client 使用 `POST prepareCameraSourcePlayback`；它是按需准备/恢复命令，不是常规播放
   前的查询接口。
 - `src/generated/openapi.ts` 从 `contracts/openapi.json` 生成，不得手工修改。
@@ -84,15 +84,18 @@ frontend/src/
 │   ├── page-state/       # 数据页面 Empty/Error/Refresh 状态
 │   ├── route-state/      # Router Pending/Error/Not Found 状态
 │   └── ui/               # shadcn primitive
+├── features/
+│   └── cameras/          # Camera API、Query Key、表单规则和业务组件
 ├── generated/            # OpenAPI 生成类型
-├── lib/                  # Router、Query、API Client 和共享逻辑
+├── lib/                  # Router、Query Client、Axios Client 和共享逻辑
 ├── mocks/                # 类型安全 Fixture 与 MSW 场景
 ├── providers/            # Theme、Query 与全局 UI Provider
 └── routes/               # TanStack Router 文件路由
 ```
 
-共享 UI 变更前先阅读 [Design System](../docs/design-system/README.md)。业务页面使用 `routes/`，
-可复用组件放入对应 `components/` 子目录；不要编辑生成文件。
+共享 UI 变更前先阅读 [Design System](../docs/design-system/README.md)。Route 配置和轻量页面入口使用
+`routes/`，跨业务复用组件放入根 `components/`，业务专属代码放入 `features/<domain>/`；不要编辑
+生成文件。
 
 ## 质量检查
 

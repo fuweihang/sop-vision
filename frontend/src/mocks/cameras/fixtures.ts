@@ -5,7 +5,7 @@ import type {
   CameraUpdateRequest,
   DefaultPreviewSourceResponse,
   PlaybackInfo,
-} from "@/lib/cameras-api";
+} from "@/features/cameras/api/cameras-api";
 import type { ProblemDetails } from "@/lib/api-errors";
 
 export type CameraSummary = CameraPage["items"][number];

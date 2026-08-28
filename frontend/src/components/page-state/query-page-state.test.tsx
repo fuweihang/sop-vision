@@ -14,8 +14,8 @@ import {
 } from "@/components/page-state/page-state";
 import { RoutePending } from "@/components/route-state/route-pending";
 import { Button } from "@/components/ui/button";
-import { cameraQueryKeys } from "@/lib/camera-query-keys";
-import { listCameras } from "@/lib/cameras-api";
+import { cameraQueryKeys } from "@/features/cameras/api/camera-query-keys";
+import { listCameras } from "@/features/cameras/api/cameras-api";
 import { createCamerasMswScenario } from "@/mocks/cameras/scenarios";
 import { mockServer } from "@/mocks/node";
 

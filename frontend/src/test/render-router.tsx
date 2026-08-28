@@ -5,8 +5,10 @@ import {
   type AnyRoute,
   type RouterConstructorOptions,
 } from "@tanstack/react-router";
+import { QueryClientProvider } from "@tanstack/react-query";
 import { render } from "@testing-library/react";
 
+import { Toaster } from "@/components/ui/sonner";
 import { apiClient } from "@/lib/api-client";
 import { queryClient } from "@/lib/query-client";
 import { ThemeProvider } from "@/providers/theme-provider";
@@ -71,7 +73,10 @@ export function renderAppRoute(
 
   const renderResult = render(
     <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
-      <RouterProvider router={router} />
+      <QueryClientProvider client={queryClient}>
+        <RouterProvider router={router} />
+        <Toaster />
+      </QueryClientProvider>
     </ThemeProvider>,
   );
 

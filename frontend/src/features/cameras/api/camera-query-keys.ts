@@ -1,7 +1,7 @@
 import {
   normalizeCameraListQuery,
   type CameraListQuery,
-} from "@/lib/cameras-api";
+} from "@/features/cameras/api/cameras-api";
 
 /**
  * Foundation 冻结的全部 Cameras Query Key。

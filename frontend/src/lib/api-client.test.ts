@@ -3,7 +3,10 @@ import { afterEach, describe, expect, test, vi } from "vitest";
 
 import { apiClient } from "@/lib/api-client";
 import { ApiTransportError } from "@/lib/api-errors";
-import { createCamera, type CameraCreateRequest } from "@/lib/cameras-api";
+import {
+  createCamera,
+  type CameraCreateRequest,
+} from "@/features/cameras/api/cameras-api";
 import { CAMERA_FIXTURE_SECRET } from "@/mocks/cameras/fixtures";
 
 const originalAdapter = apiClient.defaults.adapter;

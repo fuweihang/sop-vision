@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import { cameraQueryKeys } from "@/lib/camera-query-keys";
+import { cameraQueryKeys } from "@/features/cameras/api/camera-query-keys";
 
 describe("Cameras Query Key", () => {
   test("列表 Key 固定默认分页并把空白 q 规范化为未提供", () => {

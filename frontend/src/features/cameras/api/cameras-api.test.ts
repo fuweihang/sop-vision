@@ -5,6 +5,7 @@ import axios, {
 } from "axios";
 import { describe, expect, test } from "vitest";
 
+// 这些测试固定 Camera HTTP Client 的路径、参数规范化和敏感响应处理行为。
 import {
   createCamera,
   deleteCamera,
@@ -15,7 +16,7 @@ import {
   updateCamera,
   type CameraCreateRequest,
   type CameraUpdateRequest,
-} from "@/lib/cameras-api";
+} from "@/features/cameras/api/cameras-api";
 
 const CAMERA_ID = "6f9619ff-8b86-4e4f-9f68-bb3f8f6f4f21";
 const SOURCE_ID = "3f2504e0-4f89-41d3-9a0c-0305e82c3301";

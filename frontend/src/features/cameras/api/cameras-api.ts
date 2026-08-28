@@ -3,6 +3,8 @@ import type { AxiosInstance } from "axios";
 import type { operations } from "@/generated/openapi";
 import { apiClient } from "@/lib/api-client";
 
+/** Camera Feature 的类型安全 HTTP 边界；测试可注入独立 Axios Client。 */
+
 export type CameraListQuery = NonNullable<
   operations["listCameras"]["parameters"]["query"]
 >;

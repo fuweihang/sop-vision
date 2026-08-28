@@ -1,10 +1,12 @@
 # 05.2｜Frontend Camera 新增 Dialog
 
-> 状态：待实施
+> 状态：已完成
 >
 > 父方案：[05｜创建 Camera](README.md)
 >
 > 前置任务：[05.1｜Backend Camera 创建 API](01-backend-camera-create.md)
+>
+> 后续任务：[05.3｜Frontend Camera 目录与创建 Dialog 重构](03-frontend-camera-structure-refactor.md)
 
 ## 任务目标
 
@@ -45,10 +47,10 @@ shadcn add 命令。
   默认源的 Source。
 - Camera 字段包括 `name/ip_address/rtsp_port/username/password`；每路 Source 包括
   `name/url_suffix/is_default_preview`，请求中不得加入 `source_id`。
-- Source 新增到末尾且不改变已有默认项；最后一路不可删除；删除默认项后选择剩余数组第一项。
-- 使用上移/下移按钮调整数组顺序，不引入拖拽库。按钮按边界禁用，全部图标按钮有可访问名称。
-- 默认源使用 `RadioGroup` 表达唯一选择；重排不能改变默认 Source 身份。
-- Body 使用有界滚动区域，Footer 始终可见。提交中禁用关闭、取消、字段修改、增删、排序与重复提交；
+- Source 新增到末尾且不改变已有默认项，保存顺序固定为添加时的视觉顺序，不提供排序；最后一路不可
+  删除；删除默认项后选择剩余数组第一项。
+- 默认源使用 `RadioGroup` 表达唯一选择；切换默认源不能改变 Source 顺序。
+- Body 使用有界滚动区域，Footer 始终可见。提交中禁用关闭、取消、字段修改、增删与重复提交；
   加载状态保持按钮尺寸并提供可感知文本。
 - Label、描述、字段错误与控件按现有 `Field` 组合；密码使用 password input 和合适 autocomplete，任何
   Alert、Sonner、测试失败信息都不能回显凭据。
@@ -90,7 +92,7 @@ shadcn add 命令。
 1. 核对 05.1 的真实 OpenAPI、Frontend 生成类型和 `createCamera` 错误行为；若契约已改变，先使用项目
    命令重新生成类型，不能手改生成文件。
 2. 阅读设计系统 Camera Form Dialog、Field、loading/error 和布局规则，核对现有组件公共 API。
-3. 实现表单值 Schema、默认值和 Source 数组操作的纯辅助逻辑，先覆盖增删、排序和默认源身份测试。
+3. 实现表单值 Schema、默认值和 Source 数组操作的纯辅助逻辑，先覆盖增删、固定顺序和默认源身份测试。
 4. 组合 Create Dialog，完成可访问标签、滚动 Body、固定 Footer 和提交中锁定行为。
 5. 接入 mutation，分别实现成功、可信 422、结果未知和其他确定错误分支，关闭默认写重试。
 6. 把主操作接入 `/cameras` 页面，同时保留属于 08 的列表占位正文。
@@ -117,9 +119,9 @@ uv run python scripts/check_camera_placeholders.py foundation
 
 还要执行以下组件行为检查：
 
-- 打开时为端口 554、一路默认 Source；新增、上移、下移和删除保持顺序及唯一默认源。
+- 打开时为端口 554、一路默认 Source；新增和删除保持添加顺序及唯一默认源，界面不提供排序操作。
 - 最后一路不可删除；删除默认项选择剩余第一项；十路 Source 仍可在有界 Body 中操作。
-- 提交期间 Escape、外部点击、取消、关闭、编辑、增删排序和再次保存均不起作用。
+- 提交期间 Escape、外部点击、取消、关闭、编辑、增删和再次保存均不起作用。
 - 成功后 Dialog 重置并关闭、显示通知、仅失效 Cameras 前缀且当前路由仍为 `/cameras`。
 - 嵌套 `422` 聚焦第一个可定位错误；未知字段路径进入表单级错误且输入保留。
 - 网络失败、未知响应和 `503` 均显示结果未知且请求次数保持一次；用户明确再次保存前可看到重复风险。
@@ -135,8 +137,9 @@ uv run python scripts/check_camera_placeholders.py foundation
 
 ## 与下一任务的衔接
 
-05.2 是创建切片最后一个任务。完成后，06 可直接复用 05.1 提供的 Camera 状态聚合与
-`CameraDetail` 映射实现 GET 详情；08 可在 `/cameras` 当前页面保留新增入口并替换列表占位正文。
+05.2 是创建功能的最后一个任务。完成后先执行不改变行为的 05.3 Frontend 结构重构；06 可直接复用
+05.1 提供的 Camera 状态聚合与 `CameraDetail` 映射实现 GET 详情，08 可在 `/cameras` 当前页面保留
+新增入口并替换列表占位正文。
 
 交接时必须记录：实际执行的验证命令、是否跳过 PostgreSQL 集成测试、可见 UI 变更，以及任何未完成
 验收。不得把 06 或 08 的待办留在 05 状态中并仍标记 05 已完成。

@@ -1,6 +1,6 @@
 # 05｜创建 Camera
 
-> 状态：待实现
+> 状态：已完成
 >
 > 前置：[Foundation](../01-foundation/README.md)、[Stream Gateway Adapter](../03-stream-gateway-adapter/README.md)、[媒体对账](../04-media-reconciliation/README.md)
 >
@@ -20,16 +20,18 @@
 
 ## 任务拆分与执行顺序
 
-本切片跨越 Backend 创建事务/媒体投影与 Frontend 动态表单两个可独立验证的运行边界，按以下顺序
-执行，不在一个会话中同时实施：
+本切片跨越 Backend 创建事务/媒体投影与 Frontend 动态表单两个可独立验证的运行边界。05.1、05.2
+按顺序交付创建功能；功能验收完成后，再执行不改变行为的 Frontend 结构重构：
 
 1. [05.1｜Backend Camera 创建 API](01-backend-camera-create.md)：交付可独立调用和验证的真实
    `POST /api/v1/cameras`，其余 handler 保持占位。
 2. [05.2｜Frontend Camera 新增 Dialog](02-frontend-camera-create-dialog.md)：以上一步实际落地的
    HTTP/错误行为为输入，交付 `/cameras` 新增入口、表单交互和前端场景测试。
+3. [05.3｜Frontend Camera 目录与创建 Dialog 重构](03-frontend-camera-structure-refactor.md)：保持
+   路由、API 和交互不变，把 Camera 业务代码移入 Feature 目录，并拆分过大的创建 Dialog。
 
-两个任务都完成后才把根状态表和本文件状态改为已完成。共享 Camera 状态投影属于 05.1 创建响应的
-必要能力，不另拆成只有内部抽象、没有完整对外交付物的任务。
+05.1、05.2 交付创建行为，05.3 在不改变行为的前提下完成 Frontend 目录和组件重构。共享 Camera
+状态投影属于 05.1 创建响应的必要能力，不另拆成只有内部抽象、没有完整对外交付物的任务。
 
 ## 请求与响应
 
@@ -129,9 +131,9 @@ Schema 直接复用同一枚举，不能复制一套同值类型。纯函数返�
   `RadioGroup`、`Button`、`ScrollArea`、`Alert`、`Spinner` 和根级 Sonner，不新增 UI primitive。
 - 使用现有 React Hook Form 与 Zod。初始值包含一路空 Source 且默认选中，`rtsp_port=554`；用户名和
   密码使用合适的 `autocomplete`，密码输入不在错误或通知中回显。
-- Source 使用“上移/下移”按钮排序，不引入拖拽依赖。新增 Source 追加到末尾且不改变当前默认；
-  删除默认源时选择删除后剩余数组的第一项；最后一路不可删除。图标按钮均有可访问名称。
-- Dialog Body 可滚动、Footer 保持可见。提交期间禁用取消、关闭、增删排序和再次提交，并保留按钮
+- Source 新增到末尾且不改变当前默认，顺序固定为添加时的视觉顺序，不提供排序；删除默认源时选择
+  删除后剩余数组的第一项；最后一路不可删除。图标按钮均有可访问名称。
+- Dialog Body 可滚动、Footer 保持可见。提交期间禁用取消、关闭、增删和再次提交，并保留按钮
   尺寸与可感知的加载文案。
 - `422 VALIDATION_ERROR` 使用现有 Problem 字段路径映射到 React Hook Form，保留服务端顺序并聚焦
   第一个可定位字段；无法定位的错误显示在表单级 Alert。失败不清空或关闭表单。
@@ -171,8 +173,8 @@ Schema 直接复用同一枚举，不能复制一套同值类型。纯函数返�
 
 ### Frontend
 
-- 初始值、增删、上移/下移、默认源重选、最后一路保护、十 Source 和提交期间禁止关闭/重复提交均有
-  组件测试。
+- 初始值、增删、固定添加顺序、默认源重选、最后一路保护、十 Source 和提交期间禁止关闭/重复提交
+  均有组件测试。
 - 成功关闭并重置 Dialog、显示通知、失效 Cameras 前缀且不跳转；创建响应不进入持久化缓存，也不
   自动启动播放器。
 - 嵌套 `422` 映射并聚焦第一个字段；数据库失败保留输入；网络中断、未知响应和 `503` 显示结果未知、
