@@ -60,6 +60,10 @@ Camera 至少包含一路 Source，且恰好一路默认。规范化后缀在同
 rtsp://{username}:{password}@{ip_address}:{rtsp_port}/{url_suffix}
 ```
 
+返回前必须按 URI 组件执行百分号编码：用户名和密码整体编码；Source Path 保留 `/` 层级；query
+保留 `?`、`&`、`=` 结构并分别编码参数名和值。这样空格及 `@`、`:`、`%`、`#` 等保留字符不会
+改变 URL 的解析结果。该字段仍指向 Camera 原始源，不改为 MediaMTX 输出地址。
+
 公共字段错误 code 包括 `REQUIRED`、`STRING_TOO_LONG`、`INVALID_IP_ADDRESS`、
 `INVALID_UUID`、`OUT_OF_RANGE` 和 `UNKNOWN_FIELD`。聚合和所有权错误由对应功能契约定义。
 

@@ -25,6 +25,9 @@ def test_build_camera_desired_sources_preserves_order_and_encodes_credentials() 
     assert desired[0].source_url.startswith(
         "rtsp://operator%20name:p%40ss%3A%2F%3F%23@192.168.1.64:554/"
     )
+    # CameraDetail 和 MediaMTX 都应拿到可使用的编码 URL；两条路径不能再次出现一边编码、一边
+    # 裸拼接的差异。
+    assert desired[0].source_url == camera.rtsp_url_for(camera.sources[0].source_id)
     assert desired[0].source_on_demand is False
     assert builder.password not in repr(desired)
     assert desired[0].source_url not in repr(desired[0])

@@ -3,6 +3,7 @@
 import logging
 from dataclasses import FrozenInstanceError
 from datetime import UTC, datetime, timedelta
+from ipaddress import IPv4Address
 from uuid import UUID
 
 import pytest
@@ -10,10 +11,13 @@ import pytest
 from app.modules.cameras.domain import (
     Camera,
     CameraAggregateCorruptedError,
+    CameraCredentials,
     CameraSource,
     CameraSourceChange,
     CameraValidationError,
     NewCameraSource,
+    SecretValue,
+    build_rtsp_url,
 )
 from tests.modules.cameras.builders import (
     FIXED_TIME,
@@ -27,6 +31,25 @@ from tests.modules.cameras.constants import CAMERA_LEAK_SENTINEL
 
 def error_pairs(error: CameraValidationError) -> list[tuple[str, str]]:
     return [(item.field, item.code.value) for item in error.errors]
+
+
+def test_rtsp_url_encodes_credentials_path_and_query_by_component() -> None:
+    """保留 Source 路径和 query 结构，同时避免保留字符改变 URL 含义。"""
+
+    result = build_rtsp_url(
+        credentials=CameraCredentials(
+            username="operator@:%# name",
+            password=SecretValue("secret@:%# word"),
+        ),
+        camera_ip=IPv4Address("192.168.1.64"),
+        rtsp_port=554,
+        url_suffix="Streaming Folder/track#1?token=a:b%# c&mode=main stream&enabled",
+    )
+
+    assert result == (
+        "rtsp://operator%40%3A%25%23%20name:secret%40%3A%25%23%20word@192.168.1.64:554/"
+        "Streaming%20Folder/track%231?token=a%3Ab%25%23%20c&mode=main%20stream&enabled"
+    )
 
 
 def test_create_normalizes_sources_generates_uuid4_and_continuous_order() -> None:

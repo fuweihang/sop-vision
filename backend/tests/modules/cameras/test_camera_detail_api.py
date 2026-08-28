@@ -68,7 +68,9 @@ async def test_get_camera_returns_complete_detail_no_store_and_one_snapshot(
 ) -> None:
     """成功详情包含完整配置和同批状态，并明确禁止缓存敏感响应。"""
 
-    camera = CameraBuilder().build(source_count=2)
+    builder = CameraBuilder()
+    builder.username = "operator name"
+    camera = builder.build(source_count=2)
     first_source = camera.sources[0]
     gateway = FakeStreamGateway(
         RuntimePathSnapshot(
@@ -96,7 +98,9 @@ async def test_get_camera_returns_complete_detail_no_store_and_one_snapshot(
     assert [item["source_id"] for item in body["sources"]] == [
         str(source.source_id) for source in camera.sources
     ]
-    assert body["sources"][0]["rtsp_url"] == camera.rtsp_url_for(first_source.source_id)
+    assert body["sources"][0]["rtsp_url"] == (
+        f"rtsp://operator%20name:{CAMERA_LEAK_SENTINEL}@192.168.1.64:554/Streaming/Channels/001"
+    )
     assert body["sources"][0]["whep_url"] == (
         f"https://media.example.invalid/{first_source.source_id}/whep"
     )

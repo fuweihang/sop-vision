@@ -16,8 +16,8 @@ def camera_detail_from_runtime(
     """把完整 Camera 配置和同批运行投影转换为敏感详情响应。
 
     映射前重新校验统计，防止未来详情或更新用例把另一批 Source 投影与当前聚合混用。完整
-    RTSP URL 只能通过领域方法按展示语义生成；MediaMTX 使用的百分号编码上游 URL 不得进入
-    CameraDetail。
+    RTSP URL 只能通过领域方法从当前聚合生成，不能读取 MediaMTX 中可能已经漂移或丢失的
+    上游配置。领域方法会按 URI 组件编码，因此响应仍是可直接使用的 Camera 原始源地址。
     """
 
     projections = tuple(source_runtime)

@@ -112,14 +112,14 @@ async def test_create_camera_router_returns_complete_detail_and_protocol_headers
         str(uuid4_from_index(3)),
     ]
     assert body["sources"][0]["rtsp_url"] == (
-        f"rtsp://operator name:{TEST_PASSWORD}@192.0.2.64:554/Streaming/Channels/101"
+        f"rtsp://operator%20name:{TEST_PASSWORD}@192.0.2.64:554/Streaming/Channels/101"
     )
     assert body["sources"][0]["whep_url"] == (
         f"https://media.example.invalid/{first_source_id}/whep"
     )
     assert body["sources"][1]["whep_url"] is None
     assert uow.commit_count == 1
-    # 发给 MediaMTX 的上游 URL 使用组件编码，不能误用 CameraDetail 的展示 URL。
+    # 详情响应和发给 MediaMTX 的上游 URL 都必须按 URI 组件编码，避免同一源出现两个不同地址。
     assert gateway.ensure_calls[0].source_url.startswith(
         "rtsp://operator%20name:camera-create-api-password@192.0.2.64:554/"
     )

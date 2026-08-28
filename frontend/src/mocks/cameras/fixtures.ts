@@ -83,6 +83,59 @@ function aggregateStatus(
   return onlineSourceCount === 0 ? "OFFLINE" : "DEGRADED";
 }
 
+function encodeRtspComponent(value: string) {
+  /**
+   * encodeURIComponent 不编码 `!'()*`，而 Backend 使用 RFC 3986 的严格组件编码。额外处理这
+   * 五个字符，确保 MSW 详情与真实 API 返回的 RTSP URL 完全一致。
+   */
+  return encodeURIComponent(value).replace(
+    /[!'()*]/g,
+    (character) => `%${character.charCodeAt(0).toString(16).toUpperCase()}`,
+  );
+}
+
+function buildFixtureRtspUrl(
+  username: string,
+  password: string,
+  ipAddress: string,
+  rtspPort: number,
+  urlSuffix: string,
+) {
+  /**
+   * Source 后缀允许携带 query。Path 只保留 `/` 层级，query 只保留 `&` 和第一个 `=` 的
+   * 参数结构；其他保留字符必须编码，否则 Fixture 会掩盖真实 API 已修复的裸拼接问题。
+   */
+  const querySeparatorIndex = urlSuffix.indexOf("?");
+  const path =
+    querySeparatorIndex === -1
+      ? urlSuffix
+      : urlSuffix.slice(0, querySeparatorIndex);
+  const encodedPath = path.split("/").map(encodeRtspComponent).join("/");
+  let encodedSuffix = encodedPath;
+
+  if (querySeparatorIndex !== -1) {
+    const query = urlSuffix.slice(querySeparatorIndex + 1);
+    const encodedQuery = query
+      .split("&")
+      .map((pair) => {
+        const valueSeparatorIndex = pair.indexOf("=");
+        if (valueSeparatorIndex === -1) {
+          return encodeRtspComponent(pair);
+        }
+        const name = pair.slice(0, valueSeparatorIndex);
+        const value = pair.slice(valueSeparatorIndex + 1);
+        return `${encodeRtspComponent(name)}=${encodeRtspComponent(value)}`;
+      })
+      .join("&");
+    encodedSuffix = `${encodedPath}?${encodedQuery}`;
+  }
+
+  return (
+    `rtsp://${encodeRtspComponent(username)}:${encodeRtspComponent(password)}` +
+    `@${ipAddress}:${rtspPort}/${encodedSuffix}`
+  );
+}
+
 /**
  * 构造始终满足 Camera 聚合不变量的敏感详情。
  *
@@ -137,7 +190,13 @@ export function buildCameraDetail(
       source_id: sourceId,
       name: input.name ?? `视频源 ${index + 1}`,
       url_suffix: urlSuffix,
-      rtsp_url: `rtsp://${username}:${password}@${ipAddress}:${rtspPort}/${urlSuffix}`,
+      rtsp_url: buildFixtureRtspUrl(
+        username,
+        password,
+        ipAddress,
+        rtspPort,
+        urlSuffix,
+      ),
       is_default_preview: index === defaultSourceIndex,
       status,
       last_checked_at: input.last_checked_at ?? CAMERA_FIXTURE_TIMES.checkedAt,

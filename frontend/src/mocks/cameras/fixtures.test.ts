@@ -49,6 +49,24 @@ describe("Cameras Fixture Builder", () => {
     expect(detail.sources[1]?.is_default_preview).toBe(true);
   });
 
+  test("RTSP URL 按组件编码凭据、Path 和 query", () => {
+    const detail = buildCameraDetail({
+      username: "operator@:%# name",
+      password: "secret@:%# word",
+      sources: [
+        {
+          url_suffix:
+            "Streaming Folder/track#1?token=a:b%# c&mode=main stream&enabled",
+        },
+      ],
+    });
+
+    expect(detail.sources[0]?.rtsp_url).toBe(
+      "rtsp://operator%40%3A%25%23%20name:secret%40%3A%25%23%20word@192.0.2.64:554/" +
+        "Streaming%20Folder/track%231?token=a%3Ab%25%23%20c&mode=main%20stream&enabled",
+    );
+  });
+
   test("写请求保留敏感配置，非详情响应严格排除敏感字段", () => {
     const detail = buildCameraDetail();
     const createRequest = buildCameraCreateRequest(detail);

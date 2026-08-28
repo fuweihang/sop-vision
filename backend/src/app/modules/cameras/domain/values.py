@@ -3,6 +3,7 @@
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from ipaddress import IPv4Address, ip_address
+from urllib.parse import quote
 from uuid import RFC_4122, UUID
 
 from app.modules.cameras.domain.errors import (
@@ -204,11 +205,31 @@ def build_rtsp_url(
     rtsp_port: int,
     url_suffix: str,
 ) -> str:
-    """按已冻结的 MVP 语义生成完整 URL，不擅自编码或持久化结果。"""
+    """按 URI 组件编码生成可直接使用的完整 RTSP URL，不持久化派生结果。
+
+    用户名、密码和 Path 中的保留字符如果直接拼接，可能被客户端误解为凭据分隔符、fragment
+    或空白，从而让详情返回的地址无法使用。Source 后缀允许携带 query，因此只保留 ``/``、
+    ``?``、``&`` 和 ``=`` 的结构含义，其余字符均按所在组件进行百分号编码。
+    """
+
+    path, separator, query = url_suffix.partition("?")
+    encoded_suffix = quote(path, safe="/")
+    if separator:
+        # query 允许多个同名参数，并可能存在没有 ``=`` 的 flag。逐项编码可以保留调用方配置的
+        # 参数顺序与结构，又不会让参数值中的 ``:``、``#`` 或空白改变 RTSP URL 的解析结果。
+        encoded_pairs: list[str] = []
+        for pair in query.split("&"):
+            name, value_separator, value = pair.partition("=")
+            encoded_name = quote(name, safe="")
+            encoded_pairs.append(
+                f"{encoded_name}={quote(value, safe='')}" if value_separator else encoded_name
+            )
+        encoded_suffix = f"{encoded_suffix}?{'&'.join(encoded_pairs)}"
 
     return (
-        f"rtsp://{credentials.username}:{credentials.password.reveal()}@"
-        f"{camera_ip}:{rtsp_port}/{url_suffix}"
+        f"rtsp://{quote(credentials.username, safe='')}:"
+        f"{quote(credentials.password.reveal(), safe='')}@"
+        f"{camera_ip}:{rtsp_port}/{encoded_suffix}"
     )
 
 
