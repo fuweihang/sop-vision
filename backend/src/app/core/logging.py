@@ -6,7 +6,7 @@ import logging.config
 import math
 import sys
 import traceback
-from collections.abc import Iterator
+from collections.abc import Generator
 from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
@@ -546,7 +546,7 @@ def migration_logging_context(
     *,
     log_format: BackendLogFormat,
     database_echo: bool,
-) -> Iterator[None]:
+) -> Generator[None]:
     """在迁移执行期间提供统一日志，并完整保留宿主日志状态。
 
     正常的 ``alembic`` CLI 进程没有 root Handler，此时安装一个统一 stderr Handler；Handler
