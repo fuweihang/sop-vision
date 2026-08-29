@@ -205,7 +205,7 @@ LEVEL_NAMES: dict[int, str] = {
 # console 使用 ANSI 颜色弱化时间并区分级别。颜色不做 TTY 判断：console 格式的用途就是
 # 人读输出，因此 Docker 和重定向文件也会原样包含转义码；JSON 格式完全不引用这些常量。
 ANSI_RESET = "\x1b[0m"
-CONSOLE_TIMESTAMP_COLOR = "\x1b[94m"  # 高亮蓝色保证时间清晰可见。
+CONSOLE_TIMESTAMP_COLOR = "\x1b[90m"  # 灰色，弱化时间。
 CONSOLE_COMPONENT_COLOR = "\x1b[36m"  # 青色标识日志来源，保持组件原有的可见度。
 LEVEL_COLORS: dict[int, str] = {
     logging.DEBUG: "\x1b[90m",  # 灰色，弱化开发诊断信息。
@@ -382,11 +382,11 @@ class ConsoleFormatter(logging.Formatter):
         level = _colored_console_level(record)
         component = _visible_text(resolve_component(record.name))
         message = _visible_text(record.getMessage())
-        # 时间、级别和组件组成紧凑前缀：时间使用高亮蓝色，级别表达严重程度，组件使用青色
-        # 标识来源。每段颜色都在消息前重置，正文和参数因此保持终端默认前景色。
+        # 时间使用灰色弱化且不加方括号；级别和组件保留方括号，并用空格分隔三段，
+        # 避免连续括号挤在一起。每段颜色都在消息前重置，正文和参数保持终端默认前景色。
         header = (
-            f"{CONSOLE_TIMESTAMP_COLOR}[{timestamp}]{ANSI_RESET}{level}"
-            f"{CONSOLE_COMPONENT_COLOR}[{component}]{ANSI_RESET}"
+            f"{CONSOLE_TIMESTAMP_COLOR}{timestamp}{ANSI_RESET} {level} "
+            f"{CONSOLE_COMPONENT_COLOR}[{component}]{ANSI_RESET} "
         )
         body = message
 

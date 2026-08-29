@@ -45,13 +45,13 @@ Runtime 通过 `python -m app.server` 启动。该入口先加载配置和安装
 console 示例：
 
 ```text
-[08-28 16:48:45][INFO][media.reconciliation]MediaMTX 已恢复，对账完成: result=success desired=4 managed=4 ensured=1 released=0 failures=7 degraded=1033.1s duration=12ms
-[08-28 16:49:01][INFO][http.access]HTTP 请求完成: method=GET path=/api/v1/cameras status=200 result=completed duration=18ms trace=tr_abc123
+08-28 16:48:45 [INFO] [media.reconciliation] MediaMTX 已恢复，对账完成: result=success desired=4 managed=4 ensured=1 released=0 failures=7 degraded=1033.1s duration=12ms
+08-28 16:49:01 [INFO] [http.access] HTTP 请求完成: method=GET path=/api/v1/cameras status=200 result=completed duration=18ms trace=tr_abc123
 ```
 
-console 的时间使用 ANSI 高亮蓝色；级别沿用不同严重程度的颜色，component
-使用青色；
-紧随其后的 message 和参数使用终端默认前景色。该格式适合人工阅读，采集器应使用 JSON：
+console 的时间不加方括号并使用 ANSI 灰色弱化；级别沿用不同严重程度的颜色，component
+使用青色。时间、级别、component 和 message 之间使用空格分隔，message 和参数使用终端默认
+前景色。该格式适合人工阅读，采集器应使用 JSON：
 
 ```json
 {
