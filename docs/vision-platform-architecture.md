@@ -33,7 +33,7 @@ flowchart LR
 | PostgreSQL | Compose 服务、连接池、迁移、Camera 关系模型与创建事务          | 详情、列表、更新和删除 handler 尚未读写聚合             |
 | Redis      | Compose 服务、AOF 与健康检查                                   | Backend Settings/Client、消息协议和消费者均未实现       |
 | MediaMTX   | RTSP、WHEP、v1.20.1 Adapter、创建后即时同步与后台对账          | 尚无更新/删除即时同步和浏览器播放器                     |
-| FastAPI    | 公共基础、统一日志、Camera 创建、MediaMTX Adapter 与后台对账   | 其余六个 Cameras handler 占位；无鉴权、Redis、WebSocket |
+| FastAPI    | 公共基础、统一日志、Camera 创建、MediaMTX Adapter 与后台对账   | 其余四个 Cameras handler 占位；无鉴权、Redis、WebSocket |
 | Frontend   | App Shell、Camera 新增 Dialog、API Client/类型、MSW 和通用状态 | 无 Camera 列表/详情/播放器，Tasks 仍为页面骨架          |
 | Detector   | 空的预留目录                                                   | 无进程、协议、模型或 Compose 服务                       |
 
@@ -94,8 +94,8 @@ URL 后缀、顺序和时间。完整 RTSP URL 由聚合派生，不单独持久
 ## HTTP 与跨端契约
 
 - 公共 API 前缀是 `/api/v1`；健康检查和 `POST /api/v1/cameras` 当前可用。
-- Cameras 七个目标 operation 已注册到真实应用并导出到 `contracts/openapi.json`；创建已实现，
-  其余六个 handler 仍为占位。
+- Cameras 六个目标 operation 已注册到真实应用并导出到 `contracts/openapi.json`；创建和详情已实现，
+  其余四个 handler 仍为占位。
 - OpenAPI 生成 Frontend operation 类型；Frontend 不维护第二份手写 DTO。
 - 错误使用 `application/problem+json`，Header 和 body 共享同一 Trace ID。
 - Cameras 写请求禁止未知字段；路径 ID 只接受标准小写 UUID v4。
@@ -127,10 +127,7 @@ PostgreSQL 读取 Desired State，在启动、周期和 MediaMTX 内存状态丢
 其余项。连续失败按配置上限指数退避，锁竞争按正常周期重试。
 
 列表和详情只观察一次 Path 快照，严格在线时返回 WHEP 地址，浏览器正常播放直接连接 MediaMTX。
-公共 Playback 操作 `POST /api/v1/camera-sources/{source_id}/playback`
-（`prepareCameraSourcePlayback`）是有副作用的幂等准备/恢复命令，只在 Path 缺失或播放恢复时
-使用，不能成为每张 Camera Card 的必经 N+1 请求，也不能替代后台对账。配置提交成功与媒体映射
-成功始终是两个可区分结果。
+配置提交成功与媒体映射成功始终是两个可区分结果。
 
 ## 目标检测链路
 
@@ -171,7 +168,7 @@ Detector 拉流目标支持 Direct Camera 与 MediaMTX 两种模式，但具体�
 | Detector   | 对应检测停止；MediaMTX 视频仍可播放           |
 
 Backend readiness 已只检查 PostgreSQL，不再因 MediaMTX 故障将仍可用的配置读写从部署层摘除。
-媒体状态投影和重启对账已经实现；Playback 自愈仍在 Cameras MVP 剩余计划中。
+媒体状态投影和重启对账已经实现。
 
 ## 部署与配置约束
 
@@ -185,7 +182,7 @@ Backend readiness 已只检查 PostgreSQL，不再因 MediaMTX 故障将仍可�
 ## 安全现状与上线前约束
 
 - 当前 Camera 关系模型保存明文用户名和密码，Cameras 目标详情契约也会返回完整配置。
-- Foundation 已阻止凭据进入列表、Playback、Problem、日志、默认 `repr` 和浏览器持久化存储。
+- Foundation 已阻止凭据进入列表、Problem、日志、默认 `repr` 和浏览器持久化存储。
 - 项目尚无鉴权、RBAC、审计、Secret 管理和数据库字段加密，因此当前 Camera 能力不具备生产
   暴露条件。
 - 上线前必须明确可信网络边界、凭据加密/轮换策略、详情读取权限、TLS、日志与追踪采集规则。

@@ -26,8 +26,6 @@ export type SetDefaultPreviewSourceRequest =
   operations["setDefaultPreviewSource"]["requestBody"]["content"]["application/json"];
 export type DefaultPreviewSourceResponse =
   operations["setDefaultPreviewSource"]["responses"][200]["content"]["application/json"];
-export type PlaybackInfo =
-  operations["prepareCameraSourcePlayback"]["responses"][200]["content"]["application/json"];
 
 const DEFAULT_PAGE = 1;
 const DEFAULT_PAGE_SIZE = 20;
@@ -110,14 +108,4 @@ export async function deleteCamera(
   client: AxiosInstance = apiClient,
 ) {
   await client.delete(`/cameras/${encodeURIComponent(cameraId)}`);
-}
-
-export async function prepareCameraSourcePlayback(
-  sourceId: string,
-  client: AxiosInstance = apiClient,
-): Promise<PlaybackInfo> {
-  const response = await client.post<PlaybackInfo>(
-    `/camera-sources/${encodeURIComponent(sourceId)}/playback`,
-  );
-  return response.data;
 }

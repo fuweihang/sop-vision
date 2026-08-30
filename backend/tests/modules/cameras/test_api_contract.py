@@ -20,7 +20,6 @@ from app.modules.cameras.api.schemas import (
     CameraPage,
     CameraUpdateRequest,
     DefaultPreviewSourceResponse,
-    PlaybackInfo,
     SetDefaultPreviewSourceRequest,
 )
 from scripts.check_camera_placeholders import GateMode, check_camera_placeholders
@@ -47,10 +46,6 @@ EXPECTED_CAMERA_OPERATIONS = {
         "deleteCamera",
         {"204", "404", "422", "503"},
     ),
-    ("/api/v1/camera-sources/{source_id}/playback", "post"): (
-        "prepareCameraSourcePlayback",
-        {"200", "404", "409", "422", "502", "503"},
-    ),
 }
 SENSITIVE_FIELDS = {"username", "password", "url_suffix", "rtsp_url"}
 
@@ -71,7 +66,7 @@ def _collect_property_names(
     components: Mapping[str, Any],
     visited_refs: set[str] | None = None,
 ) -> set[str]:
-    """递归解析响应 Schema 的引用，防止敏感字段通过嵌套模型重新进入列表或播放。"""
+    """递归解析响应 Schema 的引用，防止敏感字段通过嵌套模型重新进入列表。"""
 
     visited = visited_refs or set()
     reference = schema.get("$ref")
@@ -169,7 +164,7 @@ def test_request_examples_are_validated_by_their_schema(model: type[BaseModel]) 
 
 @pytest.mark.parametrize(
     "model",
-    [CameraDetail, CameraPage, DefaultPreviewSourceResponse, PlaybackInfo],
+    [CameraDetail, CameraPage, DefaultPreviewSourceResponse],
 )
 def test_response_examples_are_validated_by_their_schema(model: type[BaseModel]) -> None:
     """响应 example 使用固定 UUID/时间，不能靠手写 JSON 绕过 Schema 漂移。"""
@@ -185,37 +180,31 @@ def test_canonical_source_id_rejects_uppercase_text() -> None:
 
 
 @pytest.mark.sensitive_data
-def test_list_and_playback_models_forbid_sensitive_fields_recursively(
+def test_list_model_forbids_sensitive_fields_recursively(
     application: FastAPI,
 ) -> None:
     """黑名单同时检查模型图和固定 example，阻止嵌套响应重新引入连接秘密。"""
 
     openapi = application.openapi()
     components = openapi["components"]["schemas"]
-    for model_name, model in (("CameraPage", CameraPage), ("PlaybackInfo", PlaybackInfo)):
-        property_names = _collect_property_names(components[model_name], components=components)
-        assert property_names.isdisjoint(SENSITIVE_FIELDS)
-        example_text = json.dumps(_model_example(model), ensure_ascii=False)
-        assert "rtsp://" not in example_text
-        assert TEST_PASSWORD not in example_text
+    property_names = _collect_property_names(components["CameraPage"], components=components)
+    assert property_names.isdisjoint(SENSITIVE_FIELDS)
+    example_text = json.dumps(_model_example(CameraPage), ensure_ascii=False)
+    assert "rtsp://" not in example_text
+    assert TEST_PASSWORD not in example_text
 
 
 def test_openapi_has_exact_target_paths_operations_responses_and_tags(
     application: FastAPI,
 ) -> None:
-    """七条业务路径只能声明 Foundation 冻结的目标成功与业务错误。"""
+    """六条业务路径只能声明 Foundation 冻结的目标成功与业务错误。"""
 
     openapi = application.openapi()
-    playback_path = openapi["paths"]["/api/v1/camera-sources/{source_id}/playback"]
-    # Playback 会收敛 MediaMTX Path，属于有副作用的幂等命令；禁止旧 GET 与 POST 并存，
-    # 否则生成客户端和调用方可能继续把它当成安全读取并进行预取或透明重试。
-    assert set(playback_path) == {"post"}
     for (path, method), (operation_id, statuses) in EXPECTED_CAMERA_OPERATIONS.items():
         operation = openapi["paths"][path][method]
         assert operation["operationId"] == operation_id
         assert set(operation["responses"]) == statuses
-        expected_tag = "camera-sources" if "camera-sources" in path else "cameras"
-        assert operation["tags"] == [expected_tag]
+        assert operation["tags"] == ["cameras"]
         for response in operation["responses"].values():
             assert "X-Trace-Id" in response["headers"]
 
@@ -223,7 +212,7 @@ def test_openapi_has_exact_target_paths_operations_responses_and_tags(
 def test_openapi_uses_problem_media_type_and_required_protocol_headers(
     application: FastAPI,
 ) -> None:
-    """错误媒体类型和缓存/重试 header 必须在生成 Client 前固定下来。"""
+    """错误媒体类型和成功响应 header 必须在生成 Client 前固定下来。"""
 
     openapi = application.openapi()
     for (path, method), (_, statuses) in EXPECTED_CAMERA_OPERATIONS.items():
@@ -244,12 +233,6 @@ def test_openapi_uses_problem_media_type_and_required_protocol_headers(
             "200"
         ]["headers"]
         assert "Cache-Control" in detail_headers
-    playback_response = openapi["paths"]["/api/v1/camera-sources/{source_id}/playback"]["post"][
-        "responses"
-    ]
-    retry_headers = playback_response["409"]["headers"]
-    assert "Retry-After" in retry_headers
-    assert "Cache-Control" in playback_response["200"]["headers"]
     assert (
         "content"
         not in openapi["paths"]["/api/v1/cameras/{camera_id}"]["delete"]["responses"]["204"]
@@ -277,7 +260,6 @@ def test_placeholder_handlers_only_raise_not_implemented() -> None:
         "update_camera",
         "set_default_preview_source",
         "delete_camera",
-        "prepare_camera_source_playback",
     )
 
 

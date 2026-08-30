@@ -9,10 +9,10 @@
 排列的 Source，以及同一次 MediaMTX 快照得到的运行状态。Frontend `/cameras/$cameraId` 提供对应的
 只读页面，并沿用应用外壳中的“返回摄像头列表”链接。
 
-本能力不创建播放器，不调用 Playback 接口，也不执行编辑、切换默认源或删除操作。页面为这些后续
+本能力不创建播放器，也不执行编辑、切换默认源或删除操作。页面为这些后续
 能力保留禁用的按钮和单选控件，但点击不会产生业务请求。完整 RTSP URL 只作为可换行的等宽普通文本
-展示，不是链接，也没有复制按钮或 Clipboard 调用。播放和恢复由
-[Source 播放计划](../../plans/cameras-mvp/07-source-playback/README.md)后续实现。
+展示，不是链接，也没有复制按钮或 Clipboard 调用。播放器由
+[Source 播放计划](../../plans/cameras-mvp/07-whep-player/README.md)后续实现。
 
 ## Backend 行为
 
@@ -63,7 +63,7 @@ Runtime Path 快照。这样媒体请求等待期间不会继续占用数据库�
 
 密码使用固定星号占位，不显示实际长度；用户点击眼睛按钮后可以在当前页面显隐。页面不展示
 `created_at/updated_at`。窄屏下连接信息与预览区域改为单列，视频源表格只在自身容器内横向滚动，
-不扩大整个页面。预览区域只为后续播放器保留位置，当前不会创建 `video`、PeerConnection 或恢复控件。
+不扩大整个页面。预览区域只为后续播放器保留位置，当前不会创建 `video` 或 PeerConnection。
 
 ## 敏感数据与排查
 

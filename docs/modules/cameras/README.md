@@ -39,7 +39,7 @@ Frontend → FastAPI Cameras API → Cameras Application → PostgreSQL
 ## 当前不支持
 
 - 搜索分页列表、编辑、切换默认预览源和删除。
-- 浏览器详情播放器、Playback 恢复和预览操作。
+- 浏览器详情播放器和预览操作。
 - 鉴权、RBAC、多租户、录像、截图、回放和 WebSocket 状态推送。
 - 软删除以及事务级 Outbox/Saga 媒体投递。
 

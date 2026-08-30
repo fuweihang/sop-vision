@@ -10,7 +10,6 @@ import {
   buildCameraDetail,
   buildCameraPage,
   buildDefaultPreviewSourceResponse,
-  buildPlaybackInfo,
   buildProblem,
   CAMERA_FIXTURE_IDS,
   CAMERA_FIXTURE_TRACE_ID,
@@ -22,9 +21,6 @@ export const CAMERAS_MSW_SCENARIO_NAMES = [
   "search-no-results",
   "nested-validation-error",
   "camera-not-found",
-  "source-not-found",
-  "playback-not-available",
-  "playback-invalid-response",
   "dependency-unavailable",
   "initial-failure",
   "background-refresh-failure",
@@ -45,7 +41,6 @@ const normalizedApiBaseUrl = apiBaseUrl.replace(/\/$/, "");
 const camerasUrl = `${normalizedApiBaseUrl}/cameras`;
 const cameraUrl = `${camerasUrl}/:cameraId`;
 const defaultSourceUrl = `${cameraUrl}/default-preview-source`;
-const playbackUrl = `${normalizedApiBaseUrl}/camera-sources/:sourceId/playback`;
 
 const successHeaders = {
   "X-Trace-Id": CAMERA_FIXTURE_TRACE_ID,
@@ -81,11 +76,11 @@ function problemResponse(
   });
 }
 
-function unavailableProblem(instance: string, mediaService = false) {
+function unavailableProblem(instance: string) {
   return problemResponse(
     buildProblem({
       status: 503,
-      code: mediaService ? "MEDIA_SERVICE_UNAVAILABLE" : "DATABASE_UNAVAILABLE",
+      code: "DATABASE_UNAVAILABLE",
       instance,
       title: "服务暂不可用",
     }),
@@ -96,7 +91,7 @@ function unavailableProblem(instance: string, mediaService = false) {
  * 创建一个完全独立的 Cameras 场景。
  *
  * 计数器位于工厂闭包内，不能导出或共享；测试每次重新调用本函数即可得到确定的请求序列。
- * 返回七条目标 operation 的完整 handler，任何未声明请求都交给全局 `onUnhandledRequest=error`
+ * 返回六条目标 operation 的完整 handler，任何未声明请求都交给全局 `onUnhandledRequest=error`
  * 阻断，绝不会透传到真实 Backend 或 MediaMTX。
  */
 export function createCamerasMswScenario(
@@ -261,46 +256,6 @@ export function createCamerasMswScenario(
         );
       }
       return new HttpResponse(null, { status: 204, headers: successHeaders });
-    }),
-
-    http.post(playbackUrl, ({ request }) => {
-      const instance = new URL(request.url).pathname;
-      if (scenario === "dependency-unavailable") {
-        return unavailableProblem(instance, true);
-      }
-      if (scenario === "source-not-found") {
-        return problemResponse(
-          buildProblem({
-            status: 404,
-            code: "SOURCE_NOT_FOUND",
-            instance,
-            title: "视频源不存在",
-            context: { source_id: CAMERA_FIXTURE_IDS.primarySource },
-          }),
-        );
-      }
-      if (scenario === "playback-not-available") {
-        return problemResponse(
-          buildProblem({
-            status: 409,
-            code: "PLAYBACK_NOT_AVAILABLE",
-            instance,
-            title: "预览尚未就绪",
-          }),
-          { "Retry-After": "2" },
-        );
-      }
-      if (scenario === "playback-invalid-response") {
-        return problemResponse(
-          buildProblem({
-            status: 502,
-            code: "MEDIA_SERVICE_INVALID_RESPONSE",
-            instance,
-            title: "媒体服务响应无效",
-          }),
-        );
-      }
-      return jsonResponse(buildPlaybackInfo());
     }),
   ];
 }

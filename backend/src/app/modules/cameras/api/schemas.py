@@ -4,7 +4,6 @@
 定义的框架无关状态枚举；不依赖 ORM、Repository 或业务用例实现。
 """
 
-from enum import StrEnum
 from ipaddress import IPv4Address
 from typing import Annotated, Any
 
@@ -33,7 +32,7 @@ UPDATED_AT_EXAMPLE = "2026-08-19T03:10:00Z"
 LAST_CHECKED_AT_EXAMPLE = "2026-08-19T03:10:01Z"
 TEST_USERNAME = "openapi-test-user"
 # 该值是敏感数据门禁唯一的泄漏 canary。它会合法出现在写请求和 CameraDetail example 中；
-# 列表、Playback、Problem 与日志的专项测试则必须证明该值无法越过各自的安全边界。
+# 列表、Problem 与日志的专项测试则必须证明该值无法越过各自的安全边界。
 TEST_PASSWORD = "cameras-mvp-leak-sentinel"
 
 
@@ -64,18 +63,6 @@ UrlSuffix = Annotated[
     BeforeValidator(_normalize_url_suffix),
     StringConstraints(min_length=1, max_length=1024),
 ]
-
-
-class PlaybackProtocol(StrEnum):
-    """MVP 唯一支持的浏览器播放协议。"""
-
-    WHEP = "WHEP"
-
-
-class PlaybackStatus(StrEnum):
-    """只有媒体 Path 严格在线时才返回的成功状态。"""
-
-    AVAILABLE = "AVAILABLE"
 
 
 class _RequestModel(BaseModel):
@@ -402,30 +389,3 @@ class DefaultPreviewSourceResponse(_ResponseModel):
     camera_id: UUID4
     default_preview_source_id: UUID4
     updated_at: AwareDatetime
-
-
-class PlaybackInfo(_ResponseModel):
-    """不含上游连接信息的 WHEP 播放准备结果。"""
-
-    model_config = ConfigDict(
-        extra="forbid",
-        frozen=True,
-        hide_input_in_errors=True,
-        json_schema_extra={
-            "examples": [
-                {
-                    "source_id": SECONDARY_SOURCE_ID_EXAMPLE,
-                    "protocol": "WHEP",
-                    "url": (f"https://media.example.invalid/{SECONDARY_SOURCE_ID_EXAMPLE}/whep"),
-                    "status": "AVAILABLE",
-                    "expires_at": None,
-                }
-            ]
-        },
-    )
-
-    source_id: UUID4
-    protocol: PlaybackProtocol
-    url: str
-    status: PlaybackStatus
-    expires_at: AwareDatetime | None

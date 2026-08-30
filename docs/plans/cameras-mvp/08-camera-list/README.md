@@ -1,7 +1,7 @@
 # 08｜Camera 列表与 Cards 预览
 
 > 前置：[Camera 创建](../../../modules/cameras/camera-create.md)、
-> [Stream Gateway](../../../modules/cameras/stream-gateway.md)、[Playback](../07-source-playback/README.md)
+> [Stream Gateway](../../../modules/cameras/stream-gateway.md)、[WHEP 播放器](../07-whep-player/README.md)
 >
 > 交付：`GET /api/v1/cameras`（`listCameras`）和 Camera Cards
 
@@ -28,15 +28,14 @@
 - 严格在线的默认 Source 返回 `whep_url`；其他情况为 `null`。读取不创建或修复 Path。
 - 数据库不可用返回 `503 DATABASE_UNAVAILABLE`；非法分页返回 `422`；额外查询参数被忽略。
 
-## Cards 与恢复
+## Cards 播放
 
 - 路由 `/cameras`，URL 保存 `q/page/page_size`；搜索防抖 `300ms`，改变 q 后回到第一页。
 - `total=0` 且无 q 显示空数据和创建入口；存在 q 时显示搜索无结果和清除操作。
 - 首次加载使用骨架；页面可见时每 `15s` 后台刷新，保留旧 Cards；页面隐藏时暂停。
 - Card 进入视口且 `whep_url` 非空时直接建立 WHEP，会话离开视口、切页或搜索变化时释放。
-- `whep_url=null` 时默认不创建播放器。仅 `MTX_PATH_NOT_FOUND` 可按 Playback 契约自动恢复一次；
-  真实离线或 Control API 故障不能触发逐 Card 重试风暴。
-- 同一卡片不能并行创建多个播放器或恢复请求；列表正常路径不存在逐 Card FastAPI Playback 请求。
+- `whep_url=null` 时默认不创建播放器。
+- 同一卡片不能并行创建多个播放器。
 - 列表只使用内存 Query cache；所有配置写入成功后按公共缓存矩阵失效。
 
 ## 验收
@@ -47,5 +46,5 @@
 - 一页无论多少 Source 只取一次 Path 快照；Control API 故障仍返回配置和确定降级状态。
 - 列表批量组装复用 Cameras Application 共享状态聚合，并覆盖全在线、全离线和混合 Camera，不在
   Stream Gateway 或列表 Router 复制聚合规则。
-- 在线 Cards 直接使用列表 URL；Path 丢失只恢复可见默认 Source；离线 Cards 不循环请求。
+- 在线 Cards 直接使用列表 URL；离线 Cards 不创建播放器。
 - 列表不泄密；不可见 Card 和卸载组件不保留播放器会话。

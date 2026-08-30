@@ -30,7 +30,7 @@ Cameras MVP 已提供创建能力，剩余计划提供：
 - 查看完整配置、Source 状态和默认 Source。
 - 完整更新 Camera 与 Source 集合，或独立切换默认预览源。
 - 更新提交后把最新 Source Desired State 同步到 MediaMTX，并从 MediaMTX 获取运行状态。
-- 列表和详情直接使用 Backend 返回的在线 WHEP 地址预览；映射丢失时可按需准备和恢复。
+- 列表和详情直接使用 Backend 返回的在线 WHEP 地址预览。
 - 二次确认后删除 Camera，并在数据库提交后尽力释放媒体映射；周期对账恢复 MTX 重启后的
   合法 Path 并清理受管孤儿 Path。
 

@@ -40,12 +40,10 @@ const problemSchema: z.ZodType<ProblemDetails> = z.strictObject({
 export class ApiProblemError extends Error {
   override readonly name = "ApiProblemError";
   readonly problem: ProblemDetails;
-  readonly retryAfterSeconds: number | undefined;
 
-  constructor(problem: ProblemDetails, retryAfterSeconds?: number) {
+  constructor(problem: ProblemDetails) {
     super("API 返回了结构化业务错误。");
     this.problem = problem;
-    this.retryAfterSeconds = retryAfterSeconds;
   }
 }
 
@@ -93,18 +91,6 @@ function isProblemMediaType(contentType: string | undefined) {
   );
 }
 
-function parseRetryAfter(
-  headers: AxiosResponse["headers"],
-): number | undefined {
-  const value = readHeader(headers, "retry-after")?.trim();
-  if (value === undefined || !/^\d+$/.test(value)) {
-    return undefined;
-  }
-
-  const seconds = Number(value);
-  return Number.isSafeInteger(seconds) ? seconds : undefined;
-}
-
 /**
  * 把未知异常收敛为可安全传播的前端错误。
  *
@@ -134,7 +120,7 @@ export function mapApiError(error: unknown): unknown {
     traceId !== undefined &&
     parsed.data.trace_id === traceId
   ) {
-    return new ApiProblemError(parsed.data, parseRetryAfter(response.headers));
+    return new ApiProblemError(parsed.data);
   }
 
   return new ApiUnexpectedResponseError(response.status, traceId);

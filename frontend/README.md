@@ -34,9 +34,7 @@ Shell 已支持桌面 Sidebar、移动 Sheet、Light/Dark 主题、跳转主内�
 ## API 与生成文件
 
 - `src/lib/api-client.ts` 是唯一 Axios 实例和错误入口。
-- `src/features/cameras/api/cameras-api.ts` 封装七个已冻结的目标 operation。
-- Playback Client 使用 `POST prepareCameraSourcePlayback`；它是按需准备/恢复命令，不是常规播放
-  前的查询接口。
+- `src/features/cameras/api/cameras-api.ts` 封装六个已冻结的目标 operation。
 - `src/generated/openapi.ts` 从 `contracts/openapi.json` 生成，不得手工修改。
 - `src/routeTree.gen.ts` 由 TanStack Router 插件生成，不得手工修改。
 - `CameraDetail` 含凭据，只能短期保存在内存；不得进入浏览器持久化存储或错误上报。
@@ -58,18 +56,16 @@ Frontend 类型同步。
 VITE_API_MOCK_SCENARIO=success
 ```
 
-| 场景                                    | 行为                            |
-| --------------------------------------- | ------------------------------- |
-| `success`                               | 七个 Cameras operation 全部成功 |
-| `empty-list`                            | 列表没有 Camera                 |
-| `search-no-results`                     | 搜索没有匹配项                  |
-| `nested-validation-error`               | 创建和更新返回嵌套字段 `422`    |
-| `camera-not-found` / `source-not-found` | 返回对应 `404`                  |
-| `playback-not-available`                | 返回带 `Retry-After` 的 `409`   |
-| `playback-invalid-response`             | 返回 `502`                      |
-| `dependency-unavailable`                | 返回 `503`                      |
-| `initial-failure`                       | 列表首次失败、重试成功          |
-| `background-refresh-failure`            | 首次成功、后台刷新失败          |
+| 场景                         | 行为                            |
+| ---------------------------- | ------------------------------- |
+| `success`                    | 六个 Cameras operation 全部成功 |
+| `empty-list`                 | 列表没有 Camera                 |
+| `search-no-results`          | 搜索没有匹配项                  |
+| `nested-validation-error`    | 创建和更新返回嵌套字段 `422`    |
+| `camera-not-found`           | 返回 `404`                      |
+| `dependency-unavailable`     | 返回 `503`                      |
+| `initial-failure`            | 列表首次失败、重试成功          |
+| `background-refresh-failure` | 首次成功、后台刷新失败          |
 
 Mock 仅在开发模式且变量非空时启动。无效场景或未处理请求会直接失败，不会透传到真实网络。
 生产构建不会注册 MSW Worker。

@@ -192,7 +192,7 @@ function ConnectionInformation({
 
 /**
  * 06 只保留后续播放器需要的 16:9 区域。
- * 布局只显示左下角默认源名称，不创建 video、PeerConnection 或 Playback 请求。
+ * 布局只显示左下角默认源名称，不创建 video 或 PeerConnection。
  */
 function ReadonlyPreview({ source }: { source: CameraSourceDetail }) {
   return (

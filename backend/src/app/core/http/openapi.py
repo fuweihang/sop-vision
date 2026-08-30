@@ -14,18 +14,14 @@ TRACE_HEADER_OPENAPI: dict[str, Any] = {
 }
 _PROBLEM_CODES = {
     404: "NOT_FOUND",
-    409: "PLAYBACK_NOT_AVAILABLE",
     422: "VALIDATION_ERROR",
     500: "INTERNAL_SERVER_ERROR",
-    502: "MEDIA_SERVICE_INVALID_RESPONSE",
     503: "SERVICE_UNAVAILABLE",
 }
 _PROBLEM_TITLES = {
     404: "资源不存在",
-    409: "播放尚不可用",
     422: "请求字段验证失败",
     500: "服务器内部错误",
-    502: "媒体服务响应无效",
     503: "服务暂不可用",
 }
 
@@ -99,8 +95,6 @@ def no_content_response(description: str) -> dict[str, Any]:
 
 def problem_responses(
     statuses: Sequence[int],
-    *,
-    retry_after_statuses: Sequence[int] = (),
 ) -> dict[int, dict[str, Any]]:
     """生成引用公共 ProblemDetails 的错误响应集合。
 
@@ -112,11 +106,6 @@ def problem_responses(
     responses: dict[int, dict[str, Any]] = {}
     for status_code in statuses:
         headers = response_headers()
-        if status_code in retry_after_statuses:
-            headers["Retry-After"] = {
-                "description": "建议客户端再次检查播放可用性的秒数。",
-                "schema": {"type": "integer", "minimum": 0},
-            }
         responses[status_code] = {
             "description": f"HTTP {status_code} Problem Details",
             "model": ProblemDetails,

@@ -41,7 +41,6 @@ function buildAxiosErrorResponse(
     contentType?: string;
     traceId?: string;
     includeTraceId?: boolean;
-    retryAfter?: string;
   } = {},
 ) {
   const headers: Record<string, string> = {
@@ -51,10 +50,6 @@ function buildAxiosErrorResponse(
   if (options.includeTraceId !== false) {
     headers["x-trace-id"] = options.traceId ?? TRACE_ID;
   }
-  if (options.retryAfter !== undefined) {
-    headers["retry-after"] = options.retryAfter;
-  }
-
   return {
     isAxiosError: true,
     config: { data: "不得传播的请求体" },
@@ -68,13 +63,10 @@ function buildAxiosErrorResponse(
 
 describe("API 错误映射", () => {
   test("只把媒体类型、Schema、状态和 trace 一致的响应识别为 Problem", () => {
-    const mapped = mapApiError(
-      buildAxiosErrorResponse(buildProblem(), { retryAfter: "3" }),
-    );
+    const mapped = mapApiError(buildAxiosErrorResponse(buildProblem()));
 
     expect(mapped).toBeInstanceOf(ApiProblemError);
     expect(mapped).toMatchObject({
-      retryAfterSeconds: 3,
       problem: {
         status: 422,
         code: "VALIDATION_ERROR",

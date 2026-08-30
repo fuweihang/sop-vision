@@ -54,8 +54,8 @@ whep_url_for(source_id)
 ```
 
 运行态和配置快照均由 Adapter 执行 `500ms` 总等待上限；共享 HTTP Client 的默认 timeout 只是
-单次请求安全上限，不能覆盖外层预算。Adapter 不自动重试：播放准备的 `3s` 和删除全部 Path 的
-`2s` 总预算分别由对应 Application Service 控制，周期恢复与退避由 Reconciler 跨轮处理。
+单次请求安全上限，不能覆盖外层预算。Adapter 不自动重试；删除全部 Path 的 `2s` 总预算由对应
+Application Service 控制，周期恢复与退避由 Reconciler 跨轮处理。
 
 `app/modules/stream_gateway/ports.py` 保存框架无关 Port 与最小数据形状；
 `app/modules/stream_gateway/urls.py` 保存 RTSP 组件编码和 WHEP 地址规则。具体 `httpx`、分页聚合、

@@ -18,7 +18,7 @@ def build_desired_source(camera: Camera, source: CameraSource) -> DesiredSource:
     Raises:
         ValueError: Source 不属于传入 Camera，或聚合字段无法构造合法 RTSP URL。
 
-    归属检查不能省略。未来创建、更新、Playback 和后台对账都会复用此函数；若误把另一个
+    归属检查不能省略。创建、更新和后台对账都会复用此函数；若误把另一个
     Camera 的 Source 与当前凭据拼接，会把错误地址写入同名 MediaMTX Path。
     """
 

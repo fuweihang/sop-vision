@@ -131,7 +131,7 @@ trace 由统一日志 Handler 从请求上下文补充，Adapter 不手工读取
 ## 接入约束
 
 - 媒体对账已使用配置快照实现启动和周期恢复，并在轮次之间负责重试与退避。
-- Camera 业务用例通过 `StreamGatewayPort` 完成提交后媒体同步、请求级运行态投影和播放准备。
+- Camera 业务用例通过 `StreamGatewayPort` 完成提交后媒体同步和请求级运行态投影。
 - Application Service 负责把 Port 错误转换为 API 降级或 HTTP Problem；Adapter 不依赖 FastAPI。
 - MediaMTX 版本升级必须同步更新受控协议、Fixture 和真实容器门禁，不能在运行时猜测字段别名。
 

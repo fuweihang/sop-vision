@@ -7,7 +7,6 @@ import {
   deleteCamera,
   getCamera,
   listCameras,
-  prepareCameraSourcePlayback,
   setDefaultPreviewSource,
   updateCamera,
 } from "@/features/cameras/api/cameras-api";
@@ -36,7 +35,7 @@ async function captureProblem(promise: Promise<unknown>) {
   throw new Error("请求应返回结构化 ApiProblemError。");
 }
 
-test("成功场景覆盖七个 Cameras operation", async () => {
+test("成功场景覆盖六个 Cameras operation", async () => {
   useScenario("success");
 
   const page = await listCameras();
@@ -51,9 +50,6 @@ test("成功场景覆盖七个 Cameras operation", async () => {
     { source_id: CAMERA_FIXTURE_IDS.primarySource },
   );
   await deleteCamera(CAMERA_FIXTURE_IDS.primaryCamera);
-  const playback = await prepareCameraSourcePlayback(
-    CAMERA_FIXTURE_IDS.primarySource,
-  );
 
   expect(page.total).toBe(1);
   expect(created.camera_id).toBe(CAMERA_FIXTURE_IDS.primaryCamera);
@@ -62,7 +58,6 @@ test("成功场景覆盖七个 Cameras operation", async () => {
   expect(defaultSource.default_preview_source_id).toBe(
     CAMERA_FIXTURE_IDS.primarySource,
   );
-  expect(playback.status).toBe("AVAILABLE");
 });
 
 test("MSW 非详情响应不携带唯一泄漏哨兵或完整 RTSP 配置", async () => {
@@ -73,7 +68,6 @@ test("MSW 非详情响应不携带唯一泄漏哨兵或完整 RTSP 配置", asyn
     await setDefaultPreviewSource(CAMERA_FIXTURE_IDS.primaryCamera, {
       source_id: CAMERA_FIXTURE_IDS.primarySource,
     }),
-    await prepareCameraSourcePlayback(CAMERA_FIXTURE_IDS.primarySource),
   ];
 
   // Problem 也属于禁止泄密的公共响应。通过真实 MSW handler 和 Client 错误边界取回它，
@@ -119,34 +113,17 @@ test("嵌套 422 保留字段路径并通过 Client 严格 Problem 边界", asyn
 });
 
 test.each([
-  ["camera-not-found", "camera", 404, "CAMERA_NOT_FOUND"],
-  ["source-not-found", "playback", 404, "SOURCE_NOT_FOUND"],
-  ["playback-not-available", "playback", 409, "PLAYBACK_NOT_AVAILABLE"],
-  [
-    "playback-invalid-response",
-    "playback",
-    502,
-    "MEDIA_SERVICE_INVALID_RESPONSE",
-  ],
-  ["dependency-unavailable", "camera", 503, "DATABASE_UNAVAILABLE"],
-  ["dependency-unavailable", "playback", 503, "MEDIA_SERVICE_UNAVAILABLE"],
-] as const)(
-  "%s 返回稳定的 %i Problem",
-  async (scenario, operation, status, code) => {
-    useScenario(scenario);
-    const promise =
-      operation === "camera"
-        ? getCamera(CAMERA_FIXTURE_IDS.primaryCamera)
-        : prepareCameraSourcePlayback(CAMERA_FIXTURE_IDS.primarySource);
-    const error = await captureProblem(promise);
+  ["camera-not-found", 404, "CAMERA_NOT_FOUND"],
+  ["dependency-unavailable", 503, "DATABASE_UNAVAILABLE"],
+] as const)("%s 返回稳定的 %i Problem", async (scenario, status, code) => {
+  useScenario(scenario);
+  const error = await captureProblem(
+    getCamera(CAMERA_FIXTURE_IDS.primaryCamera),
+  );
 
-    expect(error.problem.status).toBe(status);
-    expect(error.problem.code).toBe(code);
-    if (status === 409) {
-      expect(error.retryAfterSeconds).toBe(2);
-    }
-  },
-);
+  expect(error.problem.status).toBe(status);
+  expect(error.problem.code).toBe(code);
+});
 
 test("首次失败与后台刷新失败按独立计数器返回确定序列", async () => {
   useScenario("initial-failure");

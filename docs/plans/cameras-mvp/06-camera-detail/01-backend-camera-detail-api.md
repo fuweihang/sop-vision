@@ -69,12 +69,12 @@ Frontend 页面仍可以保持现状。
 - PostgreSQL 集成测试覆盖真实 Repository 详情读取和损坏聚合路径；必须证明 Source 顺序、默认源、
   计数和派生 RTSP URL 正确。
 - 日志测试断言聚合损坏只产生一条已注册 ERROR，并执行现有敏感数据门禁。
-- 占位门禁必须确认 `get_camera` 已实现，另外五个未实现 handler 仍是纯占位。
+- 占位门禁必须确认 `get_camera` 已实现，另外四个未实现 handler 仍是纯占位。
 
 ## 明确不做
 
 - 不修改 Frontend 路由、Query、页面组件或样式。
-- 不实现 WHEP Player、Playback、列表、编辑、默认源切换或删除。
+- 不实现 WHEP Player、列表、编辑、默认源切换或删除。
 - 不修改 `CameraDetail` 字段形状，不增加新的公开 DTO 或第二套状态枚举。
 - 不调用 `ensure_path()`、`release_path()`，不增加重试、Outbox、Saga、Query Bus、Generic Repository
   或 Base Service。

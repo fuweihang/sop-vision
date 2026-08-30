@@ -93,8 +93,6 @@ Token 或其他敏感值直接拼入 SQL 文本。
 - API 前缀 `/api/v1`；JSON 字段使用 `snake_case`，枚举使用大写英文值。
 - UUID 路径和字段只接受小写、带连字符、RFC variant 正确的 UUID v4 文本。
 - 每条路由使用显式、全局唯一的 `operation_id`。
-- Playback 占位契约是 `POST /camera-sources/{source_id}/playback`
-  （`prepareCameraSourcePlayback`）；该命令可能收敛 MediaMTX Path，不能声明为安全读取。
 - 成功响应为 `application/json`；结构化错误为 `application/problem+json`。
 - 列表参数：`page >= 1`，`1 <= page_size <= 100`，`q` trim 后最长 100，空白等同未提供。
 - 额外查询参数被忽略；请求 DTO 的未知字段返回 `422 UNKNOWN_FIELD`。
@@ -123,11 +121,9 @@ Problem 的稳定分支字段是 `status/code/errors/context`。Frontend 不比�
 | HTTP  | 公共用途                             |
 | ----- | ------------------------------------ |
 | `400` | 请求整体语义无效                     |
-| `404` | Camera 或 Source 不存在              |
-| `409` | 播放尚不可用                         |
+| `404` | Camera 不存在                        |
 | `422` | 路径、查询或请求字段错误             |
 | `500` | 持久化聚合损坏等服务端不变量错误     |
-| `502` | MediaMTX 响应无效                    |
 | `503` | 当前请求必需的数据库或媒体依赖不可用 |
 
 框架校验不公开 Pydantic 原始 input；数据库错误不公开 SQL、参数或约束名。只有应用能准确定位
@@ -137,7 +133,7 @@ Problem 的稳定分支字段是 `status/code/errors/context`。Frontend 不比�
 
 - `CameraDetail` 是唯一返回 `username/password/rtsp_url` 的公共形状，成功响应必须
   `Cache-Control: no-store`。
-- 列表、Playback、Problem、日志、指标、追踪和错误上报不得包含凭据或完整 RTSP URL。
+- 列表、Problem、日志、指标、追踪和错误上报不得包含凭据或完整 RTSP URL。
 - Secret、ORM 和领域对象的默认 `repr/str` 不得输出密码。
 - `CameraDetail` 只在当前浏览器会话内存中短期保存，不进入 localStorage、IndexedDB、离线
   缓存或持久化 Query cache。
@@ -151,16 +147,15 @@ Query Key 固定为：
 ```text
 ["cameras", {q, page, page_size}]
 ["camera", cameraId]
-["playback", sourceId]
 ```
 
-| 变更       | 更新或失效                                                  |
-| ---------- | ----------------------------------------------------------- |
-| 创建       | `cameras`                                                   |
-| 更新       | `cameras`、当前 `camera`、受连接变化或删除影响的 `playback` |
-| 切换默认源 | `cameras`、当前 `camera`                                    |
-| 删除       | `cameras`、当前 `camera`、所属 Source 的 `playback`         |
-| 状态刷新   | 只合并 `cameras/camera` 的状态字段                          |
+| 变更       | 更新或失效                         |
+| ---------- | ---------------------------------- |
+| 创建       | `cameras`                          |
+| 更新       | `cameras`、当前 `camera`           |
+| 切换默认源 | `cameras`、当前 `camera`           |
+| 删除       | `cameras`、当前 `camera`           |
+| 状态刷新   | 只合并 `cameras/camera` 的状态字段 |
 
 首次加载、后台刷新、空数据、搜索无结果和可恢复失败必须分开；后台刷新保留旧内容。页面 URL
 负责恢复列表查询或详情定位。MSW 只在 Vite 开发模式显式启用，未知场景或未处理请求直接失败。

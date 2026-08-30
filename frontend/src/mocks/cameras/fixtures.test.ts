@@ -6,7 +6,6 @@ import {
   buildCameraPage,
   buildCameraSummary,
   buildCameraUpdateRequest,
-  buildPlaybackInfo,
   buildProblem,
   CAMERA_FIXTURE_IDS,
   CAMERA_FIXTURE_SECRET,
@@ -74,7 +73,6 @@ describe("Cameras Fixture Builder", () => {
     const nonDetailPayloads = [
       buildCameraSummary(detail),
       buildCameraPage({ items: [buildCameraSummary(detail)] }),
-      buildPlaybackInfo(),
       buildProblem({
         status: 503,
         code: "DATABASE_UNAVAILABLE",

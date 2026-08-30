@@ -148,15 +148,7 @@ test("RTSP URL 只以可换行等宽文本展示，占位操作不会发起业�
     configurable: true,
     value: { writeText: clipboardWrite },
   });
-  let playbackRequests = 0;
   mockServer.use(...createCamerasMswScenario("success"));
-  // 后注册的专用 handler 优先于场景中的 Playback 成功响应，确保误调用一定会被计数。
-  mockServer.use(
-    http.post(`${apiBaseUrl}/camera-sources/:sourceId/playback`, () => {
-      playbackRequests += 1;
-      return HttpResponse.error();
-    }),
-  );
 
   const { container } = renderAppRoute(CAMERA_DETAIL_PATH);
   await screen.findByRole("heading", { level: 1, name: detail.name });
@@ -181,7 +173,6 @@ test("RTSP URL 只以可换行等宽文本展示，占位操作不会发起业�
   expect(screen.getAllByRole("radio")[1]).not.toBeChecked();
   expect(screen.queryByText(/复制/)).toBeNull();
   expect(clipboardWrite).not.toHaveBeenCalled();
-  expect(playbackRequests).toBe(0);
 });
 
 test("窄屏保持单列，视频源表格只在组件内横向滚动", async () => {

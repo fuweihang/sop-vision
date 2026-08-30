@@ -11,7 +11,6 @@ import {
   deleteCamera,
   getCamera,
   listCameras,
-  prepareCameraSourcePlayback,
   setDefaultPreviewSource,
   updateCamera,
   type CameraCreateRequest,
@@ -86,7 +85,7 @@ function createRecordingClient() {
 }
 
 describe("Cameras operation Client", () => {
-  test("七个请求严格使用 OpenAPI 冻结的方法、路径、参数和请求体", async () => {
+  test("六个请求严格使用 OpenAPI 冻结的方法、路径、参数和请求体", async () => {
     const { client, requests } = createRecordingClient();
 
     await listCameras({ q: "  洗手区  ", page: 2, page_size: 10 }, client);
@@ -95,7 +94,6 @@ describe("Cameras operation Client", () => {
     await updateCamera(CAMERA_ID, updateRequest, client);
     await setDefaultPreviewSource(CAMERA_ID, { source_id: SOURCE_ID }, client);
     await deleteCamera(CAMERA_ID, client);
-    await prepareCameraSourcePlayback(SOURCE_ID, client);
 
     expect(requests).toEqual([
       {
@@ -131,12 +129,6 @@ describe("Cameras operation Client", () => {
       {
         method: "delete",
         url: `/cameras/${CAMERA_ID}`,
-        params: undefined,
-        data: undefined,
-      },
-      {
-        method: "post",
-        url: `/camera-sources/${SOURCE_ID}/playback`,
         params: undefined,
         data: undefined,
       },

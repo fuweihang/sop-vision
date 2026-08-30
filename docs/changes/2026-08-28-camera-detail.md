@@ -15,7 +15,7 @@
 - Camera 不存在返回 `404 CAMERA_NOT_FOUND`；聚合损坏返回脱敏的
   `500 CAMERA_AGGREGATE_INVALID`；数据库不可用返回 `503 DATABASE_UNAVAILABLE`。
 - MediaMTX 故障降级为 `200` 和确定的离线状态，不阻止用户查看 PostgreSQL 中的配置。
-- 详情只保存在浏览器当前会话的内存 Query cache；不创建播放器，不调用 Playback，也没有复制操作。
+- 详情只保存在浏览器当前会话的内存 Query cache；不创建播放器，也没有复制操作。
 - 开始预览、编辑、默认源切换和删除只显示禁用的占位控件，不会发起业务请求。
 - 数据库结构和配置项无变化。
 

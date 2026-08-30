@@ -1,8 +1,8 @@
 # SOP Vision Backend
 
 Backend 是平台的 FastAPI 控制面。当前已完成公共 HTTP/数据库基础、Camera 领域与持久化层、
-MediaMTX v1.20.1 Adapter、PostgreSQL 到 MediaMTX 的后台媒体对账和 Camera 创建；其余 Camera
-handler、Redis 和 Detector 控制尚未实现。
+MediaMTX v1.20.1 Adapter、PostgreSQL 到 MediaMTX 的后台媒体对账、Camera 创建和详情；其余
+Camera handler、Redis 和 Detector 控制尚未实现。
 
 ## 当前能力
 
@@ -13,8 +13,8 @@ handler、Redis 和 Detector 控制尚未实现。
 | MediaMTX 协议与 Adapter      | 可用     | `contracts/mediamtx-openapi.json`、`ports.py` |
 | Camera 领域与持久化          | 可用     | `app/modules/cameras/domain`、`persistence`   |
 | 媒体后台对账                 | 可用     | `application/reconciliation.py`               |
-| Cameras HTTP 契约            | 已冻结   | 七个路由和 Schema 已进入 OpenAPI              |
-| Cameras HTTP 行为            | 部分可用 | 创建可用，其余六个 handler 仍为占位           |
+| Cameras HTTP 契约            | 已冻结   | 六个路由和 Schema 已进入 OpenAPI              |
+| Cameras HTTP 行为            | 部分可用 | 创建和详情可用，其余四个 handler 仍为占位     |
 | Redis / WebSocket / Detector | 未实现   | Compose 变量和目标设计不等于应用接入          |
 
 `/api/v1/health/ready` 当前只检查 PostgreSQL，不检查 MediaMTX 或 Redis。MediaMTX 不可用不会令
@@ -72,7 +72,7 @@ uv run --env-file .env.local python -m app.server \
 | `TZ`                                       | `Asia/Shanghai`         | 日志显示地区，使用 IANA 时区名称                   |
 | `MEDIAMTX_API_URL`                         | `http://mediamtx:9997`  | MediaMTX Control API 地址                          |
 | `MEDIAMTX_API_TIMEOUT`                     | `5`                     | Control API 请求超时秒数                           |
-| `PUBLIC_WEBRTC_BASE_URL`                   | `http://localhost:8889` | WHEP 公网基础地址；当前播放 handler 尚未使用       |
+| `PUBLIC_WEBRTC_BASE_URL`                   | `http://localhost:8889` | WHEP 公网基础地址                                |
 | `MEDIA_RECONCILIATION_INTERVAL_SECONDS`    | `30`                    | 对账成功或锁竞争后的轮询间隔秒数                   |
 | `MEDIA_RECONCILIATION_MAX_BACKOFF_SECONDS` | `300`                   | 连续失败时指数退避的上限秒数                       |
 | `BACKEND_CORS_ORIGINS`                     | `http://localhost:8000` | 允许的 Origin，多个值使用逗号分隔                  |

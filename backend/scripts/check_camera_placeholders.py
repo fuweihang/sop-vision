@@ -23,7 +23,6 @@ CAMERA_HANDLERS = (
     camera_router_module.update_camera,
     camera_router_module.set_default_preview_source,
     camera_router_module.delete_camera,
-    camera_router_module.prepare_camera_source_playback,
 )
 
 
@@ -46,7 +45,7 @@ def _raises_not_implemented(node: ast.AST) -> bool:
 
 
 def analyze_camera_placeholders() -> PlaceholderReport:
-    """分类七个冻结 handler，并拒绝夹带临时代码的半占位实现。
+    """分类六个冻结 handler，并拒绝夹带临时代码的半占位实现。
 
     后续切片可以把 handler 原位替换成完整实现；只要函数中不再残留 ``NotImplementedError``，
     Foundation 门禁就会把它视为已实现。若函数仍含占位异常，则函数体必须严格只有这一条语句，

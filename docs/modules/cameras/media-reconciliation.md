@@ -8,15 +8,14 @@ Backend 启动后立即在后台执行首轮对账，之后周期执行，用数
 
 ## 职责与边界
 
-- `cameras/application/media.py` 从最新 `Camera` 聚合构造 `DesiredSource`。创建、更新、Playback 和
+- `cameras/application/media.py` 从最新 `Camera` 聚合构造 `DesiredSource`。创建、更新和
   后台对账必须复用这里的安全 RTSP URL 构造，不能各自拼接凭据或上游地址。
 - `cameras/application/reconciliation.py` 负责纯差异计算、单轮执行、结果分类、周期和退避。
 - `cameras/persistence/reconciliation.py` 用 PostgreSQL 完成全量聚合读取和跨实例互斥。
 - `stream_gateway` 仍只负责 MediaMTX 协议适配、受管 Path 判断和实际 I/O，不读取 Camera 数据库。
 - `app/factory.py` 只组装并管理这个窄用途后台任务，不提供通用任务调度框架。
 
-Camera 创建、更新和删除提交后的即时媒体调用属于各自业务用例；Playback 的存在性检查、预算、
-single-flight 和 HTTP 错误转换属于播放用例。对账不实现 Camera CRUD、运行状态聚合、播放器、
+Camera 创建、更新和删除提交后的即时媒体调用属于各自业务用例。对账不实现 Camera CRUD、运行状态聚合、播放器、
 媒体健康路由、指标框架或事务级 Outbox/Saga。
 
 ## Desired State 与所有权
@@ -63,7 +62,7 @@ single-flight 和 HTTP 错误转换属于播放用例。对账不实现 Camera C
   Mapper 并报告损坏，不能被内连接静默漏掉。
 - 数据查询只在短只读事务中执行；MediaMTX HTTP 调用期间保留 session lock，但不持有数据库事务。
 - 正常、异常和取消路径都必须释放锁。无法证明解锁成功时丢弃底层连接，禁止带锁连接返回连接池。
-- 锁只排除其他 Reconciler，不阻塞 CRUD 或 Playback。快照后的并发提交允许造成短暂旧写，系统
+- 锁只排除其他 Reconciler，不阻塞 CRUD。快照后的并发提交允许造成短暂旧写，系统
   空闲后的下一轮必须以最新数据库状态恢复一致。
 
 ## 周期与资源生命周期
@@ -116,5 +115,5 @@ uv run pytest tests/modules/cameras/test_media.py \
 ```
 
 PostgreSQL 集成测试要求独立的 `TEST_DATABASE_URL`；跳过这些测试不等于锁和 Reader 已通过验证。
-真实 MediaMTX 重启，以及 CRUD/Playback 与对账交错，仍由
+真实 MediaMTX 重启，以及 CRUD 与对账交错，仍由
 [发布门禁](../../plans/cameras-mvp/11-release-gates/README.md)在完整系统中验证。

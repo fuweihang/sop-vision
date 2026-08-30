@@ -13,5 +13,4 @@ export const cameraQueryKeys = {
   cameras: (query: CameraListQuery = {}) =>
     ["cameras", normalizeCameraListQuery(query)] as const,
   camera: (cameraId: string) => ["camera", cameraId] as const,
-  playback: (sourceId: string) => ["playback", sourceId] as const,
 };

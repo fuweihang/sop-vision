@@ -4,7 +4,6 @@ import type {
   CameraPage,
   CameraUpdateRequest,
   DefaultPreviewSourceResponse,
-  PlaybackInfo,
 } from "@/features/cameras/api/cameras-api";
 import type { ProblemDetails } from "@/lib/api-errors";
 
@@ -327,19 +326,6 @@ export function buildDefaultPreviewSourceResponse(
     camera_id: detail.camera_id,
     default_preview_source_id: detail.default_preview_source_id,
     updated_at: detail.updated_at,
-  };
-}
-
-/** 构造可用的 WHEP 播放信息；URL 使用保留测试域名，避免测试误连真实媒体服务。 */
-export function buildPlaybackInfo(
-  sourceId: string = CAMERA_FIXTURE_IDS.primarySource,
-): PlaybackInfo {
-  return {
-    source_id: sourceId,
-    protocol: "WHEP",
-    url: `https://media.example.invalid/${sourceId}/whep`,
-    status: "AVAILABLE",
-    expires_at: null,
   };
 }
 

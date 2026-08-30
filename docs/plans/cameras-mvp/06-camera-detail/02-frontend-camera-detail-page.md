@@ -44,7 +44,7 @@
 - Connection Information 展示 IPv4、RTSP 端口、用户名、默认隐藏且可显隐的密码，以及
   默认 Source 最近检查时间，并在标题右侧展示 Camera 聚合状态；不展示创建和更新时间。
 - 只读预览区域使用 `AspectRatio` 保留后续播放器位置，左下角只展示 Source 名称，不重复展示状态；
-  不得创建 `video`、PeerConnection、Playback 请求或恢复控件。
+  不得创建 `video` 或 PeerConnection。
 - “摄像头视频源”按原型排列为语义 Table，按响应顺序展示禁用的默认源 RadioGroup、名称、完整
   `rtsp_url` 和 Badge 状态；表格使用 Card 的默认水平留白，窄屏时仍只在表格容器内横向滚动。
 - RTSP URL 使用可换行的等宽普通文本，不渲染为链接，不提供复制按钮、菜单、提示、复制说明或
@@ -60,7 +60,7 @@
   后台刷新保留内容以及卸载后缓存进入回收周期。
 - 页面测试覆盖连接配置、密码显隐、默认 Source、Source 顺序、状态、最近检查时间、RTSP URL 普通
   文本、窄屏局部滚动、Light/Dark、Reduced Motion、键盘和焦点。
-- 负向断言页面不存在复制控件、Clipboard 调用、`video` 或 Playback 请求；预览、编辑、默认源切换
+- 负向断言页面不存在复制控件、Clipboard 调用或 `video`；预览、编辑、默认源切换
   和删除占位控件必须禁用且不发请求。
 - 保持 CameraDetail 仅在会话内存中；测试结束清空共享 Query cache，敏感 Fixture 不得跨测试保留。
 - 完成代码与全套验证后：
@@ -74,7 +74,7 @@
 ## 明确不做
 
 - 不修改 Backend 业务行为；若发现 06.1 与 OpenAPI 不一致，停止本任务并先修复或重新审核 06.1。
-- 不创建播放器、不调用 Playback、不实现 WHEP 恢复或 PeerConnection 生命周期。
+- 不创建播放器、不实现 WHEP 或 PeerConnection 生命周期。
 - 不实现编辑、默认源切换、删除、列表 Cards 或搜索分页；相关控件只能是禁用占位。
 - 不提供任何 RTSP URL 复制能力，不把完整详情写入 localStorage、IndexedDB、离线缓存、通知或日志。
 - 不新增 UI primitive、全局主题能力、通用详情框架或持久化 Query cache。
@@ -115,7 +115,7 @@ pnpm build
 - 用户可通过直接 URL、浏览器刷新或站内导航打开同一只读详情页，Breadcrumb 使用 Camera 名称。
 - 首次 Pending、后台刷新、隐藏暂停、404、其他错误和 retry 次数均有确定测试。
 - 页面完整展示连接信息、默认 Source 与按序 Source；RTSP URL 只是普通文本。
-- 页面不存在播放器、Playback、复制、编辑、默认源切换或删除行为，敏感数据门禁通过。
+- 页面不存在播放器、复制、编辑、默认源切换或删除行为，敏感数据门禁通过。
 - 前后端完整验证通过，当前能力文档和变更记录已增加，父计划与 07 链接已更新；06 计划目录仍然
   保留，未由本任务自动删除。
 
@@ -124,5 +124,5 @@ pnpm build
 07 应复用本任务留下的只读预览区域、默认 Source 投影和详情 Query：
 
 - 非空 `whep_url` 由 07 在预览区域内直接建立 WHEP 会话。
-- 空 `whep_url` 按稳定 error 决定是否调用 Playback 或提示用户。
+- 空 `whep_url` 不创建播放器。
 - 07 不得重新实现详情读取、Query Key、404 页面或 Connection/Source 信息布局。

@@ -27,14 +27,10 @@ describe("Cameras Query Key", () => {
     expect(key[1]).not.toHaveProperty("sort");
   });
 
-  test("详情与播放 Key 使用各自稳定 ID", () => {
+  test("详情 Key 使用稳定 Camera ID", () => {
     expect(cameraQueryKeys.camera("camera-id")).toEqual([
       "camera",
       "camera-id",
-    ]);
-    expect(cameraQueryKeys.playback("source-id")).toEqual([
-      "playback",
-      "source-id",
     ]);
   });
 });

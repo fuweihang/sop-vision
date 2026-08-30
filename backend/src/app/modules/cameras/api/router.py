@@ -1,6 +1,6 @@
 """Cameras Router 与完整目标 OpenAPI 契约。
 
-创建 handler 已由 05.1 实现；其余六个 handler 在对应切片落地前继续保持纯
+创建和详情 handler 已实现；其余四个 handler 在对应切片落地前继续保持纯
 ``raise NotImplementedError``。全部路径预先注册到真实应用，使 OpenAPI、前端生成类型和 MSW
 共享同一棵路由树；剩余占位的临时 500 不属于声明契约。
 """
@@ -29,7 +29,6 @@ from app.modules.cameras.api.schemas import (
     CameraPage,
     CameraUpdateRequest,
     DefaultPreviewSourceResponse,
-    PlaybackInfo,
     SetDefaultPreviewSourceRequest,
 )
 from app.modules.cameras.application import (
@@ -241,31 +240,4 @@ async def set_default_preview_source(
     },
 )
 async def delete_camera(camera_id: CanonicalUUID4) -> None:
-    raise NotImplementedError
-
-
-@router.post(
-    "/camera-sources/{source_id}/playback",
-    operation_id="prepareCameraSourcePlayback",
-    tags=["camera-sources"],
-    response_model=PlaybackInfo,
-    responses={
-        status.HTTP_200_OK: success_response(
-            "准备或恢复 Source 映射，并返回已就绪的 WHEP 播放地址。",
-            example=_example(PlaybackInfo),
-            no_store=True,
-        ),
-        **problem_responses(
-            [
-                status.HTTP_404_NOT_FOUND,
-                status.HTTP_409_CONFLICT,
-                status.HTTP_422_UNPROCESSABLE_CONTENT,
-                status.HTTP_502_BAD_GATEWAY,
-                status.HTTP_503_SERVICE_UNAVAILABLE,
-            ],
-            retry_after_statuses=[status.HTTP_409_CONFLICT],
-        ),
-    },
-)
-async def prepare_camera_source_playback(source_id: CanonicalUUID4) -> PlaybackInfo:
     raise NotImplementedError
