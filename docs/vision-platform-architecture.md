@@ -28,14 +28,14 @@ flowchart LR
     DET[Detector 预留目录] -. "未实现" .-> REDIS
 ```
 
-| 组件       | 当前实现                                                       | 当前限制                                                |
-| ---------- | -------------------------------------------------------------- | ------------------------------------------------------- |
-| PostgreSQL | Compose 服务、连接池、迁移、Camera 关系模型与创建事务          | 详情、列表、更新和删除 handler 尚未读写聚合             |
-| Redis      | Compose 服务、AOF 与健康检查                                   | Backend Settings/Client、消息协议和消费者均未实现       |
-| MediaMTX   | RTSP、WHEP、v1.20.1 Adapter、创建后即时同步与后台对账          | 尚无更新/删除即时同步和浏览器播放器                     |
-| FastAPI    | 公共基础、统一日志、Camera 创建、MediaMTX Adapter 与后台对账   | 其余四个 Cameras handler 占位；无鉴权、Redis、WebSocket |
-| Frontend   | App Shell、Camera 新增 Dialog、API Client/类型、MSW 和通用状态 | 无 Camera 列表/详情/播放器，Tasks 仍为页面骨架          |
-| Detector   | 空的预留目录                                                   | 无进程、协议、模型或 Compose 服务                       |
+| 组件       | 当前实现                                                    | 当前限制                                                |
+| ---------- | ----------------------------------------------------------- | ------------------------------------------------------- |
+| PostgreSQL | Compose 服务、连接池、迁移、Camera 关系模型、创建与详情读取 | 列表、更新和删除 handler 尚未读写聚合                   |
+| Redis      | Compose 服务、AOF 与健康检查                                | Backend Settings/Client、消息协议和消费者均未实现       |
+| MediaMTX   | RTSP、WHEP、v1.20.1 Adapter、创建后即时同步与后台对账       | 尚无更新/删除即时同步和浏览器播放器                     |
+| FastAPI    | 公共基础、Camera 创建/详情、MediaMTX Adapter 与后台对账     | 其余四个 Cameras handler 占位；无鉴权、Redis、WebSocket |
+| Frontend   | App Shell、Camera 新增和只读详情、API Client/类型、MSW      | 无 Camera 列表/播放器，Tasks 仍为页面骨架               |
+| Detector   | 空的预留目录                                                | 无进程、协议、模型或 Compose 服务                       |
 
 [目标架构概念图](vision-platform-architecture.png) 描述完整演进方向，其中 Worker、gRPC、
 WebSocket、Redis 数据链路和大部分业务模块尚未落地。
@@ -93,7 +93,8 @@ URL 后缀、顺序和时间。完整 RTSP URL 由聚合派生，不单独持久
 
 ## HTTP 与跨端契约
 
-- 公共 API 前缀是 `/api/v1`；健康检查和 `POST /api/v1/cameras` 当前可用。
+- 公共 API 前缀是 `/api/v1`；健康检查、`POST /api/v1/cameras` 和
+  `GET /api/v1/cameras/{camera_id}` 当前可用。
 - Cameras 六个目标 operation 已注册到真实应用并导出到 `contracts/openapi.json`；创建和详情已实现，
   其余四个 handler 仍为占位。
 - OpenAPI 生成 Frontend operation 类型；Frontend 不维护第二份手写 DTO。
@@ -129,6 +130,24 @@ PostgreSQL 读取 Desired State，在启动、周期和 MediaMTX 内存状态丢
 列表和详情只观察一次 Path 快照，严格在线时返回 WHEP 地址，浏览器正常播放直接连接 MediaMTX。
 配置提交成功与媒体映射成功始终是两个可区分结果。
 
+## 浏览器视频与检测展示
+
+Frontend 目标实现按以下边界组合，避免 Camera Card、详情和 Detection Task 各自实现一套 WHEP：
+
+```text
+MediaMTX reader.js → WhepSession → StreamSessionManager → MediaStream
+                                                        ├→ Card VideoSurface
+                                                        ├→ Detail VideoSurface
+                                                        └→ Task VideoSurface + BoxCanvas
+```
+
+- `reader.js` 只处理 MediaMTX WHEP/WebRTC；`WhepSession` 提供项目内状态和 Stream 边界。
+- `StreamSessionManager` 按稳定 `source_id` 共享一路 Session，消费者使用独立 video、canvas 和 overlay。
+- `VideoSurface` 让浏览器直接渲染 video。Detection 阶段才增加由视频帧回调驱动的 Canvas，不通过
+  Canvas 重绘媒体帧。
+- 视频默认实时播放，Box 依据同一时钟域的时间戳匹配；第一版不为等待 Box 强制延迟视频。
+- WebRTC 质量采样通过 `WhepSession` 的受控接口扩展，不能让 React 读取 vendored reader 私有字段。
+
 ## 目标检测链路
 
 ```mermaid
@@ -137,7 +156,7 @@ flowchart LR
     API[FastAPI] -->|gRPC command| DET
     DET -->|Telemetry / State / Event| R[(Redis)]
     R --> API
-    API -->|WebSocket metadata| FE[Frontend canvas]
+    API -->|WebSocket DetectionResult| FE[Frontend BoxBuffer / Canvas]
     MTX[MediaMTX] -->|WHEP video| FE
 ```
 

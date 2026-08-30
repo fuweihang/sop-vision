@@ -12,7 +12,7 @@
 本能力不创建播放器，也不执行编辑、切换默认源或删除操作。页面为这些后续
 能力保留禁用的按钮和单选控件，但点击不会产生业务请求。完整 RTSP URL 只作为可换行的等宽普通文本
 展示，不是链接，也没有复制按钮或 Clipboard 调用。播放器由
-[Source 播放计划](../../plans/cameras-mvp/07-whep-player/README.md)后续实现。
+[WHEP 播放计划](../../plans/cameras-mvp/07-whep-player/README.md)后续实现。
 
 ## Backend 行为
 

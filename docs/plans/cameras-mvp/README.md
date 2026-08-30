@@ -9,7 +9,7 @@
 
 | #   | 任务                                                      | 状态   | 主要交付                         |
 | --- | --------------------------------------------------------- | ------ | -------------------------------- |
-| 07  | [Source 播放器](07-whep-player/README.md)                 | 待实施 | WHEP 播放器生命周期              |
+| 07  | [WHEP 播放基础](07-whep-player/README.md)                 | 待实施 | 共享 Session 与详情播放器        |
 | 08  | [Camera 列表](08-camera-list/README.md)                   | 待实施 | `GET /cameras`、搜索、分页与卡片 |
 | 09  | [更新与默认源](09-camera-update-default-source/README.md) | 待实施 | 编辑 Camera 和切换默认预览源     |
 | 10  | [Camera 删除](10-camera-delete/README.md)                 | 待实施 | 删除聚合并尽力释放媒体 Path      |
@@ -21,10 +21,10 @@
 ## MVP 目标范围
 
 完成本计划后，用户可以搜索和分页浏览 Camera，查看详情，完整编辑 Camera/Source 集合，切换默认
-预览源，通过 WHEP 预览并删除 Camera。
+预览源，通过可共享的 WHEP Session 在列表与详情预览并删除 Camera。
 
-本计划不包含鉴权、RBAC、多租户、录像、截图、回放、WebSocket 状态推送、软删除和事务级
-Outbox/Saga。
+本计划不包含鉴权、RBAC、多租户、录像、截图、回放、Detection WebSocket、检测 Canvas、视频帧与
+Box 同步、WebRTC 质量统计、软删除和事务级 Outbox/Saga。
 
 ## 完成任务时如何处理文档
 

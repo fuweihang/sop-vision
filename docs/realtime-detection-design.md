@@ -49,9 +49,10 @@ vision:events                       # Stream
 只用 `camera_id` 会混合同一路 Source 上多个 Algorithm 的结果。Channel/Key 中的 ID 必须使用
 持久化稳定标识，不能使用展示名称。
 
-## Telemetry 公共字段
+## DetectionResult 与坐标
 
-正式 schema 尚未生成；至少需要以下与算法无关的字段：
+正式 WebSocket schema 尚未生成。传输层至少需要以下与算法无关的字段，Frontend Client 校验后再
+转换成 camelCase 的 `DetectionResult`，业务组件不依赖 WebSocket 消息格式：
 
 ```json
 {
@@ -60,29 +61,121 @@ vision:events                       # Stream
   "camera_id": "camera UUID",
   "source_id": "source UUID",
   "frame_id": 18272,
-  "frame_ts": "2026-08-26T10:00:00.123Z",
+  "rtp_timestamp": 3912740032,
+  "capture_timestamp": 1787738400123.25,
+  "unix_timestamp_ms": 1787738400123,
   "published_at": "2026-08-26T10:00:00.160Z",
   "source_width": 1920,
   "source_height": 1080,
-  "detections": [
+  "boxes": [
     {
       "track_id": "12",
-      "class_name": "person",
+      "label": "person",
       "confidence": 0.96,
-      "bbox": [0.21, 0.11, 0.48, 0.91]
+      "x": 0.21,
+      "y": 0.11,
+      "width": 0.27,
+      "height": 0.8
     }
   ]
 }
 ```
 
-- `bbox` 使用 `[x_min, y_min, x_max, y_max]` 的 `[0, 1]` 归一化坐标。
-- `frame_id` 与 `frame_ts` 用于去重、乱序判断和后续视频同步。
+- `x/y/width/height` 使用源视频左上角为原点的 `[0, 1]` 归一化坐标；服务端不根据 Card、Detail、
+  浏览器窗口或 CSS `object-fit` 返回像素坐标。
+- `frame_id` 用于同一 Task 内去重和乱序判断。`rtp_timestamp` 是首选视频匹配键，但只有 Detector
+  与浏览器 WHEP 帧使用同一 RTP 时钟域且正确处理 32 位回绕时才能启用。
+- `capture_timestamp` 和 `unix_timestamp_ms` 的单位、时钟来源与误差预算必须进入正式 schema；不能
+  只给一个没有时钟含义的数字。
 - `schema_version` 必须支持消费者拒绝未知的不兼容协议，不能在运行时猜字段。
 - Algorithm 扩展字段应位于独立命名空间，不能改变公共字段语义。
 - 消息不得包含 Camera 凭据、完整 RTSP URL 或原始内部异常。
 
-具体 UUID、时间格式、最大消息大小、发布频率和算法扩展 schema 必须在实现前通过正式契约
-冻结；上面的示例不等同于已发布 API。
+Frontend 内部公共类型使用：
+
+```ts
+interface DetectionBox {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  label?: string;
+  confidence?: number;
+  trackId?: string;
+}
+
+interface DetectionResult {
+  taskId: string;
+  sourceId: string;
+  frameId: number;
+  rtpTimestamp?: number;
+  captureTimestamp?: number;
+  unixTimestampMs?: number;
+  receivedAt: number;
+  boxes: DetectionBox[];
+}
+```
+
+Keypoint、Track 轨迹和 Algorithm 扩展结果沿用归一化源坐标，但使用各自明确类型，不能把不同形状
+塞进 `DetectionBox` 的可选字段。具体 UUID、时间单位、最大消息大小、发布频率和扩展 schema 必须
+在实现前冻结；上面的示例不等同于已发布 API。
+
+## Frontend 播放与 Overlay 边界
+
+Detection Task 复用 Cameras 07 提供的 `WhepSession`、`StreamSessionManager` 和 `VideoSurface`。
+同一路 Source 的 Card、Camera Detail 与 Task Detail 共享 `MediaStream`，但每个消费者有独立的
+`<video>`、`<canvas>` 和 HTML overlay。
+
+```text
+VideoSurface
+├── video                 浏览器直接渲染媒体
+├── BoxCanvas             只绘制 Box、Label、Keypoint、Track
+└── HTML overlay          控件、LIVE、连接和业务状态
+```
+
+Detection 阶段扩展 `VideoSurface`：
+
+- 使用 `ResizeObserver`、`video.videoWidth/video.videoHeight`、容器尺寸和 `object-fit` 计算媒体实际
+  显示矩形；`contain` 处理留白，`cover` 处理裁剪。
+- Canvas CSS 尺寸跟随容器，绘图缓冲区按 `devicePixelRatio` 缩放，避免高 DPI 模糊。
+- 坐标转换只属于 `VideoSurface/BoxCanvas`；Backend 不知道 Card 或 Detail 的像素尺寸。
+- 普通状态和 controls 使用 HTML，Canvas 不重绘整个视频，也不承担点击按钮或可访问文本。
+
+推荐目录：
+
+```text
+frontend/src/features/detection/
+├── api/detection-socket.ts
+├── model/detection-result.ts
+├── sync/box-buffer.ts
+├── hooks/use-video-synced-boxes.ts
+├── components/box-canvas.tsx
+└── testing/fakes.ts
+```
+
+## BoxBuffer 与视频帧同步
+
+WebSocket Client 只负责校验、转换和重连，结果进入每个 Task 消费者自己的 `BoxBuffer`。业务组件
+不读取 WebSocket 原始消息；未来改用 DataChannel 时仍产出同一个 `DetectionResult`，并且必须携带
+可与视频帧关联的时间戳，不能依赖消息到达顺序。
+
+`VideoSurface` 使用 `video.requestVideoFrameCallback()` 驱动查找与绘制，并在卸载或 Stream 变化时
+调用 `cancelVideoFrameCallback()`。匹配优先级为：
+
+```text
+同一时钟域的 RTP Timestamp
+> 同一时钟基准的 Capture Timestamp
+> Unix Timestamp
+> receivedAt
+```
+
+`BoxBuffer` 负责按时间排序、去重、在允许窗口内返回最近结果、清理过期结果和限制最大容量。窗口、
+过期时间与容量通过真实发布频率和延迟测量确定，不能使用固定 `setTimeout(200ms)` 补偿 AI 或网络
+延迟，也不能用 `setInterval + video.currentTime` 作为主要同步机制。
+
+默认策略是视频优先：视频继续实时播放，当前视频帧只绘制时间窗口内可匹配的结果；没有结果时清空
+旧 Box，不能让上一帧标注长期停留。第一版不强制延迟视频。只有业务确认严格同步且实测证明需要时，
+才为播放器增加可配置 `syncDelayMs`，建议评估范围为 `200–500ms`。
 
 ## FastAPI Gateway 边界
 
@@ -102,9 +195,8 @@ vision:events                       # Stream
 - Detector Publisher、FastAPI fan-out 和每个 WebSocket 都使用有界队列。
 - Telemetry 优先保留最新帧；慢客户端不能拖慢其他客户端或积压历史帧。
 - 状态和心跳使用 TTL，消费者根据服务端时间判断过期；跨节点部署需要时钟同步。
-- Frontend 使用 `frame_id`/`frame_ts` 去重，不把每帧数据写入全局持久化状态。
-- 视频与 metadata 经不同链路到达，第一版允许小幅 overlay 延迟；只有实测需要时才引入
-  jitter buffer 或更复杂同步。
+- Frontend 使用 `frame_id` 和可用时间戳去重，不把每帧数据写入全局持久化状态。
+- 视频与 metadata 经不同链路到达，第一版采用视频优先；只有实测需要时才引入可配置同步延迟。
 
 ## 可靠事件
 
@@ -133,8 +225,19 @@ Redis 与 WebSocket 必须位于受控网络；订阅 task 前执行鉴权和资
 
 ## 实现前未决项
 
-1. Telemetry、runtime state 和 durable event 的正式 schema 与兼容策略。
-2. 目标发布频率、端到端延迟、TTL、队列容量和丢帧指标。
-3. WebSocket 鉴权、重连协议、心跳和客户端订阅 API。
-4. Stream 重试上限、死信策略、事件保留和 PostgreSQL 数据模型。
-5. 多 Backend/Detector 实例的 ownership、部署容量和压测基线。
+1. Detector 输出与 MediaMTX WHEP 帧是否保留同一 RTP timestamp/clock rate，以及回绕测试方法；不满足
+   时必须固定 Capture/Unix timestamp 的同钟方案。
+2. Telemetry、runtime state 和 durable event 的正式 schema、时间单位与兼容策略。
+3. Box 最近帧匹配窗口、过期时间、发布频率、端到端延迟、TTL、队列容量和丢帧指标。
+4. WebSocket 鉴权、重连协议、心跳和客户端订阅 API。
+5. Stream 重试上限、死信策略、事件保留和 PostgreSQL 数据模型。
+6. 多 Backend/Detector 实例的 ownership、部署容量和压测基线。
+
+## 实施阶段
+
+1. Cameras 07 只实现共享 WHEP Session、基础 `VideoSurface` 和 Camera Detail controls。
+2. Cameras 08 复用同一 Session Manager 接入 Card，并处理 IntersectionObserver 和列表容量。
+3. Detection Tasks 实时数据阶段冻结 schema、WebSocket 和 timestamp 时钟，产出 `DetectionResult`。
+4. Detection overlay 阶段实现 `BoxBuffer`、帧回调、坐标转换和 `BoxCanvas`。
+5. 播放与检测稳定后，再在 `WhepSession` 内增加受控 `getStats()`，按 `1–2s` 采样 FPS、Bitrate、
+   Packet Loss、Jitter、RTT 和 Connection State；不每帧调用，也不让 React 读取 reader 私有字段。

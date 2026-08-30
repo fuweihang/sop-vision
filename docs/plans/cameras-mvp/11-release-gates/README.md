@@ -9,7 +9,8 @@
 
 ## 契约与静态门禁
 
-- 锁定的 MediaMTX 版本、受控 OpenAPI、Adapter Fixture、真实 Adapter 门禁和运行镜像完全一致。
+- 锁定的 MediaMTX 版本、受控 OpenAPI、vendored `reader.js`、Adapter Fixture、真实 Adapter 门禁和
+  运行镜像完全一致。
 - Router、Backend Schema、`contracts/openapi.json`、Frontend 类型、Client、MSW 与 Fixture 无漂移。
 - 六个公共 handler 都有真实 Application Service 和依赖装配，零占位。
 - Markdown 相对链接、切片状态、Path 命名和公共规则没有重复事实源。
@@ -24,11 +25,17 @@
 
 ## 播放与浏览器
 
-- 在线 Camera Card 直接使用列表 `whep_url`，正常一页只有列表 REST 请求和 WHEP 媒体请求。
+- 在线 Camera Card 直接使用列表 `whep_url`，正常一页只有列表 REST 请求和按可见 Source 去重后的
+  WHEP 媒体请求。
 - 覆盖支持的 Camera Codec、浏览器范围、HTTPS、ICE additional hosts、局域网/NAT 可达性和
   `PUBLIC_WEBRTC_BASE_URL` 带路径前缀的 URL 连接。
-- 离开视口、隐藏页面、切页、切源、删除和卸载均关闭 PeerConnection、停止轨道并清空
+- Card 与 Detail 同时消费一路 Source 时只有一个 reader 和 MediaStream，各自使用独立 video DOM；
+  单个消费者 release 不停止共享 Track，最后一个消费者 release 后清空 Session 缓存和全部
   `srcObject`。
+- 离开视口、隐藏页面、切页、切源、删除和卸载都 release 对应 Lease，React Strict Mode 重挂载不
+  重复建连或产生负引用。
+- 详情页自动开始、开始/停止、音量、全屏、PiP、LIVE、连接状态和主动重连通过支持浏览器验收；
+  Card 保持静音且不显示详情 controls。
 - 容量基线至少覆盖一页 20 个 Camera、多路 Source 配置和同时可见 Card 会话；资源上限与失败
   文案必须通过真实部署验证，不能只依赖 jsdom。
 
@@ -38,7 +45,7 @@
 - CameraDetail 之外的列表、Problem、结构化日志、追踪和错误上报不存在用户名、密码、
   后缀或完整 RTSP URL。
 - Control API 不暴露给浏览器网络；WHEP 使用部署要求的 HTTPS 与来源限制。
-- CameraDetail 不进入浏览器持久化存储；播放器释放后不保留媒体对象。
+- CameraDetail 不进入浏览器持久化存储；最后一个播放器 Lease 释放后不保留媒体对象。
 - 当前无鉴权、字段加密和 Secret 管理的风险继续作为发布网络边界，不因媒体门禁通过而消失。
 
 ## 验证命令

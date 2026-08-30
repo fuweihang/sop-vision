@@ -1,27 +1,167 @@
-# 07｜CameraSource WHEP 播放器
+# 07｜WHEP 播放基础与 Camera 详情播放器
 
 > 前置：[Stream Gateway](../../../modules/cameras/stream-gateway.md)、
-> [媒体对账](../../../modules/cameras/media-reconciliation.md)、
 > [Camera 详情](../../../modules/cameras/camera-detail.md)
 >
-> 交付：可复用 WHEP 播放器
+> 交付：共享 WHEP Session、通用视频表面和 Camera 详情页自定义播放器
 
-## 播放入口
+## 范围
 
-列表和详情中的非空 `whep_url` 是正常播放入口，Frontend 直接使用它连接 MediaMTX。
+07 只完成可复用的浏览器播放基础，并把它接入现有 Camera 详情页。播放入口是详情响应中默认
+Source 的 `source_id` 和非空 `whep_url`；Frontend 不拼接 WHEP 地址，也不访问 MediaMTX Control
+API。
 
-## Frontend 播放
+本阶段包含：
 
-- 07 在 06 已有的只读预览区域内接入播放器；06 不创建播放器。
-- 列表或详情拿到非空 `whep_url` 时直接创建静音、内联播放器。
-- `whep_url=null` 时不创建播放器。
-- 已有 URL 的 WHEP 协商失败时，先关闭 PeerConnection 和轨道，再仅重试一次 WHEP；仍失败交给
-  用户处理。
-- 同一 Source 具有 single-flight 和冷却时间；离开视口、切页、页面隐藏或卸载立即关闭浏览器
-  资源，但不删除 MediaMTX Path。
+- 固定使用 MediaMTX `v1.20.1` 官方 `reader.js`，在项目内保存可审查副本。
+- 使用 `WhepSession` 屏蔽 `MediaMTXWebRTCReader`、回调和 `MediaStream` 组装细节。
+- 使用 `StreamSessionManager` 按 `source_id` 共享连接并管理引用计数。
+- 提供只负责视频、HTML overlay 和媒体 DOM 生命周期的 `VideoSurface`。
+- 在 Camera 详情页实现自动开始、开始/停止、静音/音量、全屏、PiP、LIVE、连接状态和重连。
+
+本阶段不包含：
+
+- Camera Card、列表视口检测和列表播放器容量控制，这些由 08 负责。
+- Detection WebSocket、Canvas、BoxBuffer、检测框坐标转换和帧时间同步，这些跟随 Detection Tasks
+  实时数据链路实现。
+- 进度条、seek、快进、快退和 DVR。
+- `getStats()` 采样、FPS、码率、丢包、Jitter、RTT 和质量面板。
+
+## MediaMTX reader 边界
+
+把 MediaMTX `v1.20.1` 的
+`internal/servers/webrtc/reader.js` 原样保存到 `frontend/src/vendor/mediamtx/reader.js`，保留上游
+版权信息，并在同目录记录版本、来源 URL 和 SHA-256
+`a802f229b803c33713d4c69c4cc0d480108a5bf384947aeee4aaf04268bf85c1`。项目代码不直接修改该文件；
+升级 MediaMTX 时必须同时审查和更新 vendored 文件、类型声明与真实播放验收。
+
+官方 reader 负责 OPTIONS、SDP POST、Trickle ICE、PeerConnection、WHEP Session 和它内置的
+断线重试。`WhepSession` 只通过官方构造参数、`onTrack`、`onError` 和 `close()` 工作，不读取其私有
+字段。React 组件、Session 共享、播放器状态、HTML UI 和页面生命周期不得写入 vendor 文件。
+
+`reader.js` 使用浏览器全局类而不是 ES Module。项目为公开构造参数和 `close()` 补充最小 TypeScript
+声明，禁止用 `any` 或让业务组件直接访问 `window.MediaMTXWebRTCReader`。官方版本没有公开
+`RTCPeerConnection`，因此本阶段不伪造 `getStats()`；后续质量监控只能在 `WhepSession` 边界内增加
+受控能力，并同步审查上游升级或最小补丁，React 组件不得依赖 reader 私有实现。
+
+## WHEP Session 与共享
+
+`WhepSession` 对外提供只读状态快照、当前 `MediaStream`、状态订阅和幂等 `close()`。状态至少区分：
+
+```text
+idle → connecting → playing
+                    ↘ reconnecting
+connecting → failed
+idle / connecting / playing / reconnecting / failed → closed
+```
+
+- 第一个 `onTrack` 到达时创建或更新同一个 `MediaStream`，音视频 Track 都加入其中。
+- `onError` 进入 `reconnecting`；官方 reader 继续执行自身重试。再次收到 Track 后回到 `playing`。
+- 主动重连先关闭旧 reader、清理旧 Stream，再创建新 reader，不能同时保留两个 reader 的重试循环。
+- codec 检测或首次连接无法进入官方重试时转为 `failed`，由用户主动重连。
+- `close()` 后忽略迟到回调，关闭 reader 并停止该 Session 拥有的 Track。
+- 错误状态和日志不得包含 WHEP URL query、远端响应正文、Camera 凭据或 RTSP URL。
+
+`StreamSessionManager.acquire(sourceId, whepUrl)` 返回一个可订阅的 Lease；Lease 的 `release()` 必须
+幂等。缓存项保存 `WhepSession` 和 `refCount`：
+
+```text
+source_id
+  └─ WhepSession
+      ├─ MediaStream
+      └─ refCount
+```
+
+- 同一 `source_id` 的并发 acquire 共享一次创建过程和同一个 `MediaStream`。
+- 每个消费者拥有自己的 `<video>`；可以独立设置 muted、volume、PiP 和全屏。
+- 消费者 release 时只清空自己的 `video.srcObject`，不能停止共享 Track。
+- 只有最后一个 Lease release 后才关闭 `WhepSession`、停止 Track 并删除缓存项。
+- React 重挂载、Effect 清理重复执行、连接仍在创建时 release 都不能产生负引用或遗留 Session。
+- 当前部署中同一 `source_id` 的公开 WHEP URL 在页面生命周期内通常稳定。若仍收到同一 Source 的
+  新 URL，Manager 必须原子关闭旧 Session、创建一个新 Session 并把新快照通知全部现存 Lease，不能
+  在切换窗口保留两条连接。`source_id` 或 `whep_url` 是否为空发生变化时，React hook 先 release 旧
+  Lease，再按最新输入决定是否 acquire。
+
+Manager 由应用 Provider 创建，一次页面应用只创建一个实例；测试和应用卸载时统一关闭全部缓存项，
+不使用不可重置的模块全局单例。
+
+## VideoSurface 与目录
+
+推荐目录按“媒体基础能力”和“Camera 业务组合”分开：
+
+```text
+frontend/src/
+├── vendor/mediamtx/
+│   ├── reader.js
+│   ├── reader.d.ts
+│   └── README.md
+└── features/
+    ├── video/
+    │   ├── mediamtx/whep-session.ts
+    │   ├── sessions/stream-session-manager.ts
+    │   ├── react/stream-session-provider.tsx
+    │   ├── react/use-stream-session.ts
+    │   ├── components/video-surface.tsx
+    │   ├── components/video-controls.tsx
+    │   ├── types.ts
+    │   └── testing/fakes.ts
+    └── cameras/components/camera-detail-player.tsx
+```
+
+`VideoSurface` 接收 `MediaStream`、`objectFit` 和 HTML overlay slot，内部使用无原生 controls 的
+`<video autoPlay muted playsInline controls={false}>`。它负责设置和清空 `srcObject`、调用 `play()`、
+报告自动播放失败，以及在尺寸变化时保持媒体区域稳定；不读取 Camera DTO，也不创建 WHEP Session。
+
+07 不为尚无数据来源的检测结果创建空 Canvas 或通用帧回调 API。Detection 阶段在 `VideoSurface`
+上增加 `BoxCanvas`，每个 Card/Detail 仍使用各自的 video 和 canvas DOM。
+
+## Camera 详情行为
+
+- 默认 Source 的 `whep_url` 非空时自动 acquire；页面现有按钮改为“停止预览”。用户停止后按钮改为
+  “开始预览”，不会因为 15 秒详情刷新自动恢复。
+- `whep_url=null` 时不 acquire，预览区显示“当前视频源不可播放”和对应 Source 状态，开始按钮禁用；
+  后续详情刷新得到非空 URL 时，仅在用户没有主动停止过的情况下自动开始。
+- `connecting/reconnecting/playing/failed/stopped` 使用文字和图标表达，不能只依赖颜色。只有实际播放
+  时显示 LIVE。
+- `reconnecting` 和 `failed` 时提供“重新连接”；点击后调用 Session 的主动重连，不调用 Camera 配置
+  写 API。
+- 默认静音以满足自动播放限制；用户手势后可以静音、调节音量。没有音频 Track 时隐藏音量操作。
+- 浏览器支持时提供全屏和 PiP；能力不可用时不显示对应操作。操作失败在播放器区域内给出可恢复提示。
+- 页面隐藏时 release Session；恢复可见时，仅当隐藏前处于用户期望的播放状态才重新 acquire。
+- 切换 Source、详情数据返回新的播放入口、路由离开和组件卸载都 release 旧 Lease。
+
+## 实施顺序
+
+1. 保存和校验官方 reader、副本说明与最小 TypeScript 声明。
+2. 实现 `WhepSession`、状态快照及 Fake，覆盖 Track 组装、官方重试回调、主动重连和幂等关闭。
+3. 实现 `StreamSessionManager`、Provider 和 hook，覆盖并发 acquire、引用计数及 React 重挂载。
+4. 实现 `VideoSurface` 和自定义 controls，覆盖 `srcObject`、自动播放、音量、全屏、PiP 与清理。
+5. 接入 Camera 详情预览区和开始/停止按钮，补齐离线、连接、失败、隐藏、恢复及卸载测试。
+6. 更新 Cameras 当前能力文档和变更记录，再执行全部 Frontend 与安全门禁。
 
 ## 验收
 
-- 正常在线列表 Card 直接使用 `whep_url`。
-- 播放器 Fake 断言 PeerConnection 关闭、轨道停止、`srcObject` 清空和单次重试。
-- WHEP 地址、日志和缓存无 RTSP 凭据；停止预览不调用配置写 API。
+- 同一 `source_id` 的两个测试消费者只有一个 reader 和一个 `MediaStream`，但各自拥有 video DOM；
+  释放一个消费者不停止另一消费者，最后释放才关闭 Session。
+- 详情在线时默认播放，用户可以停止、再次开始和主动重连；15 秒数据刷新不重复建连。
+- `whep_url=null`、自动播放被拒绝、WHEP 失败、页面隐藏/恢复、路由离开和组件卸载都有确定行为。
+- `srcObject`、Track、reader 重试循环、Provider 缓存和事件订阅完成清理；React Strict Mode 下不泄漏。
+- 音量、全屏和 PiP 按浏览器能力工作，键盘焦点、可访问名称和状态文字符合现有 Design System。
+- 浏览器到 MediaMTX 的真实 WHEP 播放使用锁定版本验证；WHEP、日志和缓存不含 RTSP 凭据。
+
+```bash
+# 仓库根目录
+bash scripts/check-cameras-sensitive-data.sh
+
+# frontend/
+pnpm test
+pnpm lint
+pnpm format:check
+pnpm build
+```
+
+自动测试使用 Fake 隔离浏览器 WebRTC。完成 07 前还必须启动锁定版本的 Compose 技术栈，使用一条
+受控 RTSP 测试源创建在线 Camera，并在支持的 Chrome 中验证详情自动播放、停止/开始、主动重连、
+音量、全屏、PiP、隐藏/恢复和路由离开。Network 面板应只有该 Source 的一条活动 WHEP Session；
+浏览器 console、Backend 日志和测试记录不得出现 Camera 凭据或完整 RTSP URL。真实浏览器容量和
+多 Codec/NAT 组合继续由 11 发布门禁验收。

@@ -18,7 +18,7 @@ SOP Vision 是企业内部视觉检测平台，围绕两类核心资源工作：
 
 已交付的是工程运行栈、Backend/Frontend 公共基础、Cameras Foundation、MediaMTX Adapter 和
 后台媒体对账。数据库中已有 Camera Source 时，Backend 能在启动及周期轮询中恢复 MediaMTX Path
-并清理受管孤儿 Path；用户已经可以创建 Camera，但还不能查看、播放、搜索、更新或删除 Camera，
+并清理受管孤儿 Path；用户已经可以创建和查看 Camera，但还不能播放、搜索、更新或删除 Camera，
 也不能创建或运行 Detection Task。`/cameras` 已提供创建入口，列表内容仍为占位；`/tasks` 仍只用于
 验证 App Shell 和页面层级。
 
@@ -30,12 +30,16 @@ Cameras MVP 已提供创建能力，剩余计划提供：
 - 查看完整配置、Source 状态和默认 Source。
 - 完整更新 Camera 与 Source 集合，或独立切换默认预览源。
 - 更新提交后把最新 Source Desired State 同步到 MediaMTX，并从 MediaMTX 获取运行状态。
-- 列表和详情直接使用 Backend 返回的在线 WHEP 地址预览。
+- 列表和详情直接使用 Backend 返回的在线 WHEP 地址预览；同一 Source 共享一个 WHEP Session 和
+  MediaStream，Card 与 Detail 使用各自的 video DOM 和业务 overlay。
+- 详情使用无原生 controls 的实时播放器，提供开始/停止、静音/音量、全屏、PiP、LIVE、连接状态和
+  重连；实时 WHEP 不提供进度、seek、快进或快退。
 - 二次确认后删除 Camera，并在数据库提交后尽力释放媒体映射；周期对账恢复 MTX 重启后的
   合法 Path 并清理受管孤儿 Path。
 
 本阶段明确不包含 Camera 启停、厂商字段、批量操作、保存前连通性探测、录像、截图、回放、
-WebSocket 状态推送、软删除、跨业务删除保护和事务级 Outbox/Saga 媒体投递。周期 Desired State
+Detection WebSocket、检测 Canvas 与帧同步、WebRTC 质量统计、软删除、跨业务删除保护和事务级
+Outbox/Saga 媒体投递。周期 Desired State
 对账属于 MVP，但不提供与数据库同事务、零窗口或恰好一次的外部副作用保证。完整字段与错误语义
 不在本文重复，当前行为见 [Cameras 模块文档](modules/cameras/README.md)，目标行为见
 [Cameras MVP 剩余计划](plans/cameras-mvp/README.md)。
@@ -64,7 +68,8 @@ Detection Task 至少需要：
 - 创建、查看、编辑和删除任务。
 - 选择 CameraSource 和 Algorithm，按 schema 填写参数并绘制 ROI。
 - 启动、停止、重载和重启任务，并看到操作中的忙碌、成功和失败状态。
-- 查看绑定信息、实时画面、检测 overlay、ROI、运行状态和错误。
+- 查看绑定信息、实时画面、检测 overlay、ROI、运行状态和错误。实时画面复用 Cameras 阶段的
+  `VideoSurface`；检测结果通过独立 Canvas 绘制，不重绘视频。
 
 新任务保存后默认停止。编辑已存在任务不得隐式改变 `enabled`；“保存配置”和“把配置应用到
 运行实例”必须有清晰、可观测的边界。任务没有暂停状态。
@@ -81,7 +86,8 @@ Detection Task 至少需要：
 - 状态不能只用颜色表达；关键操作具有明确文字、可访问名称和键盘焦点。
 - 耗时操作保持控件尺寸、阻止重复提交，并提供恢复动作。
 - 不可逆删除使用明确对象名称和后果的二次确认。
-- 视频由 `<video>` 渲染，检测框和 ROI 由独立 overlay 绘制，避免复制全部视频帧。
+- 视频由 `<video>` 渲染；普通业务信息使用 HTML overlay，检测框、Keypoint、Track 和 ROI 使用独立
+  Canvas，不复制全部视频帧。
 
 组件、布局与交互细节见 [Design System](design-system/README.md)。
 

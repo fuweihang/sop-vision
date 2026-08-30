@@ -1,7 +1,7 @@
 # 09｜更新 Camera 与切换默认源
 
 > 前置：[详情](../06-camera-detail/README.md)、
-> [媒体对账](../../../modules/cameras/media-reconciliation.md)、[WHEP 播放器](../07-whep-player/README.md)
+> [媒体对账](../../../modules/cameras/media-reconciliation.md)、[WHEP 播放基础](../07-whep-player/README.md)
 >
 > 交付：`PUT /api/v1/cameras/{camera_id}`、`PATCH /api/v1/cameras/{camera_id}/default-preview-source` 和对应详情交互
 
@@ -73,8 +73,8 @@ PUT 完整替换 Camera 可变配置和 Source 集合。已有 Source 由稳定 
 ```
 
 后端锁定 Camera，确认 Source 属于该聚合，原子更新默认 ID 和 `updated_at`。离线 Source 也可以
-设为默认。切换不修改 Source 配置、顺序或 MediaMTX Path；当前浏览器播放器由 Frontend 正常
-关闭，再由新默认 Source 的最新列表/详情投影决定是否直接播放。
+设为默认。切换不修改 Source 配置、顺序或 MediaMTX Path；Frontend release 旧默认 Source 的
+Lease，再由新默认 Source 的最新列表/详情投影决定是否 acquire。
 
 Camera 不存在返回 `404 CAMERA_NOT_FOUND`；Source 不存在或不属于 Camera 返回
 `source_id/SOURCE_NOT_OWNED_BY_CAMERA`；数据库不可用返回 `503 DATABASE_UNAVAILABLE`。
@@ -86,6 +86,7 @@ Camera 不存在返回 `404 CAMERA_NOT_FOUND`；Source 不存在或不属于 Cam
 - 有未保存修改时离开需确认；提交失败保留输入和顺序。
 - 默认源提交期间禁用全部单选项；失败恢复原状态，不保留错误的乐观结果。
 - 更新成功后失效 `cameras` 和当前 `camera`。
-- 默认源切换成功后失效 `cameras` 和当前 `camera`，并关闭旧默认源播放器。
+- 默认源切换成功后失效 `cameras` 和当前 `camera`，并 release 旧默认 Source Lease；只有引用计数
+  归零时才关闭共享 Session。
 - 验收覆盖增删改排、连接字段变化、配置 diff、Path 同步失败及对账恢复、默认源在线/离线、
   所有权错误、事务回滚、并发更新和新旧密码脱敏。
