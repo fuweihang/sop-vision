@@ -143,8 +143,10 @@ MediaMTX reader.js → WhepSession → StreamSessionManager → MediaStream
 
 - `reader.js` 只处理 MediaMTX WHEP/WebRTC；`WhepSession` 提供项目内状态和 Stream 边界。
 - `StreamSessionManager` 按稳定 `source_id` 共享一路 Session，消费者使用独立 video、canvas 和 overlay。
-- `VideoSurface` 让浏览器直接渲染 video。Detection 阶段才增加由视频帧回调驱动的 Canvas，不通过
-  Canvas 重绘媒体帧。
+- `VideoSurface` 使用 React children 组合业务 overlay，并通过受控 Context 提供 video 元素和通用
+  测量值，不接受 Camera、Card、Detail 或 Detection 模式参数。
+- Detection 把由视频帧回调驱动的 Canvas 作为 child 组合进 `VideoSurface`，不通过 Canvas 重绘媒体
+  帧，也不让 video feature 依赖 Detection 类型。
 - 视频默认实时播放，Box 依据同一时钟域的时间戳匹配；第一版不为等待 Box 强制延迟视频。
 - WebRTC 质量采样通过 `WhepSession` 的受控接口扩展，不能让 React 读取 vendored reader 私有字段。
 

@@ -34,8 +34,10 @@
   `srcObject`。
 - 离开视口、隐藏页面、切页、切源、删除和卸载都 release 对应 Lease，React Strict Mode 重挂载不
   重复建连或产生负引用。
-- 详情页自动开始、开始/停止、音量、全屏、PiP、LIVE、连接状态和主动重连通过支持浏览器验收；
+- 详情页自动开始、开始/停止、音量、全屏、LIVE、连接状态和主动重连通过支持浏览器验收；
   Card 保持静音且不显示详情 controls。
+- 07 的 FFmpeg synthetic RTSP Source 只验证可重复的基础播放与浏览器生命周期；发布验收必须另外
+  使用目标 IPC/RTSP 设备覆盖支持的 Codec、厂商实现和长时间连接，不能用合成源代替。
 - 容量基线至少覆盖一页 20 个 Camera、多路 Source 配置和同时可见 Card 会话；资源上限与失败
   文案必须通过真实部署验证，不能只依赖 jsdom。
 
@@ -65,6 +67,7 @@ uv run python scripts/check_mediamtx_adapter.py
 uv run python scripts/check_camera_placeholders.py mvp
 
 # frontend/
+pnpm vendor:check
 pnpm test
 pnpm lint
 pnpm format:check

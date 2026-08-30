@@ -32,8 +32,8 @@ Cameras MVP 已提供创建能力，剩余计划提供：
 - 更新提交后把最新 Source Desired State 同步到 MediaMTX，并从 MediaMTX 获取运行状态。
 - 列表和详情直接使用 Backend 返回的在线 WHEP 地址预览；同一 Source 共享一个 WHEP Session 和
   MediaStream，Card 与 Detail 使用各自的 video DOM 和业务 overlay。
-- 详情使用无原生 controls 的实时播放器，提供开始/停止、静音/音量、全屏、PiP、LIVE、连接状态和
-  重连；实时 WHEP 不提供进度、seek、快进或快退。
+- 详情使用无原生 controls 的实时播放器，提供开始/停止、静音/音量、全屏、LIVE、连接状态和重连；
+  实时 WHEP 不提供进度、seek、快进或快退。
 - 二次确认后删除 Camera，并在数据库提交后尽力释放媒体映射；周期对账恢复 MTX 重启后的
   合法 Path 并清理受管孤儿 Path。
 

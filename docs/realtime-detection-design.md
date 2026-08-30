@@ -133,12 +133,13 @@ VideoSurface
 └── HTML overlay          控件、LIVE、连接和业务状态
 ```
 
-Detection 阶段扩展 `VideoSurface`：
+Detection 阶段把 `BoxCanvas` 作为 React child 组合到 `VideoSurface`，并通过 video feature 的受控
+Context 读取 video 元素和通用测量值；video feature 不导入 Detection 类型：
 
-- 使用 `ResizeObserver`、`video.videoWidth/video.videoHeight`、容器尺寸和 `object-fit` 计算媒体实际
-  显示矩形；`contain` 处理留白，`cover` 处理裁剪。
+- Context 使用 `ResizeObserver`、`video.videoWidth/video.videoHeight`、容器尺寸和 `object-fit` 计算
+  媒体实际显示矩形；`contain` 处理留白，`cover` 处理裁剪。
 - Canvas CSS 尺寸跟随容器，绘图缓冲区按 `devicePixelRatio` 缩放，避免高 DPI 模糊。
-- 坐标转换只属于 `VideoSurface/BoxCanvas`；Backend 不知道 Card 或 Detail 的像素尺寸。
+- 坐标转换只属于 Detection 的 `BoxCanvas`；Backend 不知道 Card 或 Detail 的像素尺寸。
 - 普通状态和 controls 使用 HTML，Canvas 不重绘整个视频，也不承担点击按钮或可访问文本。
 
 推荐目录：
