@@ -70,9 +70,6 @@ def create_app(
         title="SOP Vision Algorithm Daemon",
         version="0.1.0",
         lifespan=lifespan,
-        docs_url=None,
-        redoc_url=None,
-        openapi_url=None,
     )
 
     @app.get("/healthz", response_model=HealthResponse)

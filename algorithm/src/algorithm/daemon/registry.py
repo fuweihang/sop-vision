@@ -11,6 +11,8 @@ from pydantic import BaseModel
 
 from algorithm.workers.detector.app import run_detector
 from algorithm.workers.detector.config import DetectorConfig
+from algorithm.workers.tracker.app import run_tracker
+from algorithm.workers.tracker.config import TrackerConfig
 
 WorkerEntrypoint = Callable[..., None]
 
@@ -51,6 +53,7 @@ class WorkerDefinition:
 
 WORKER_REGISTRY: dict[str, WorkerDefinition] = {
     "detector": WorkerDefinition(DetectorConfig, run_detector),
+    "tracker": WorkerDefinition(TrackerConfig, run_tracker),
 }
 
 
