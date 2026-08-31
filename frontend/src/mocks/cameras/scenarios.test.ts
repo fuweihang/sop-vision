@@ -16,7 +16,11 @@ import {
   CAMERA_FIXTURE_IDS,
   CAMERA_FIXTURE_SECRET,
 } from "@/mocks/cameras/fixtures";
-import { createCamerasMswScenario } from "@/mocks/cameras/scenarios";
+import {
+  createCamerasMswScenario,
+  WHEP_TEST_PRIMARY_URL,
+  WHEP_TEST_SECONDARY_URL,
+} from "@/mocks/cameras/scenarios";
 import { mockServer } from "@/mocks/node";
 
 function useScenario(name: Parameters<typeof createCamerasMswScenario>[0]) {
@@ -95,6 +99,15 @@ test("空列表与搜索无结果是可独立选择的确定场景", async () =>
     items: [],
     total: 0,
   });
+});
+
+test("whep-player 场景为两路 Source 提供固定且不同的浏览器播放入口", async () => {
+  useScenario("whep-player");
+  const detail = await getCamera(CAMERA_FIXTURE_IDS.primaryCamera);
+  expect(detail.sources.map((source) => source.whep_url)).toEqual([
+    WHEP_TEST_PRIMARY_URL,
+    WHEP_TEST_SECONDARY_URL,
+  ]);
 });
 
 test("嵌套 422 保留字段路径并通过 Client 严格 Problem 边界", async () => {

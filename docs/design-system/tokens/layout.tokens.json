@@ -43,7 +43,7 @@
     "breakpoint": {
       "$type": "dimension",
       "wide": { "$value": "1200px" },
-      "detailStack": { "$value": "901px" },
+      "detailStack": { "$value": "1200px" },
       "sidebarSheet": { "$value": "768px" },
       "formStack": { "$value": "640px" },
       "cardGridSingle": { "$value": "520px" },

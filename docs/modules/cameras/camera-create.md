@@ -98,16 +98,16 @@
 诊断保留在 DEBUG。告警不记录 Camera、Source 列表、凭据、URL 或异常文本，trace 由统一 Handler
 从当前请求上下文补充。
 
-共享投影放在 Cameras Application：把当前只存在于 API Schema 的 `CameraStatus` 移到该模块，
-Schema 直接复用同一枚举，不能复制一套同值类型。纯函数返回包含状态和两个计数的不可变结果；创建
-用例返回 Camera、按序 Source 投影和该聚合结果的有类型结果对象，API 层再映射为 Pydantic
-`CameraDetail`。这样详情和列表可以复用 Camera 规则，同时 Application 不依赖 FastAPI/Pydantic。
+`CameraStatus` 和共享状态聚合位于 Cameras Application，API Schema 直接复用该枚举，不维护同值
+副本。纯函数返回包含状态和两个计数的不可变结果；创建用例返回 Camera、按序 Source 投影和聚合
+结果，API 层再映射为 Pydantic `CameraDetail`。详情使用同一组 Camera 状态规则，Application 不依赖
+FastAPI/Pydantic。
 
 ### 依赖、错误与测试替身
 
 - 生产依赖使用现有请求级 UoW 和 lifespan 级 Stream Gateway；生产 UUID/Clock 使用 Foundation 的
   `Uuid4Generator`、`SystemClock`，测试可以替换为固定序列和固定时间。
-- 创建 handler 原位替换 Foundation 占位；详情现已独立实现，其余五个 handler 仍保持占位。
+- 创建和详情 handler 当前可用；列表、更新、切默认源和删除仍保持占位。
 - 领域、持久化、Adapter 错误继续通过现有脱敏异常边界转换；创建服务、响应映射和日志不得记录
   请求 DTO、Camera 聚合、凭据、完整 RTSP URL 或 MediaMTX 原始响应。
 - 若客户端在数据库提交后、收到响应前中断，请求结果对客户端属于未知；服务端不为此回滚已提交
@@ -142,7 +142,7 @@ Schema 直接复用同一枚举，不能复制一套同值类型。纯函数返�
 - CameraDetail 和表单草稿只保存在当前页面内存；不得写入 localStorage、IndexedDB、离线缓存或持久化
   Query cache。
 
-## 验证重点
+## 行为门禁
 
 ### Backend
 
@@ -158,8 +158,8 @@ Schema 直接复用同一枚举，不能复制一套同值类型。纯函数返�
   `whep_url=null`。
 - 共享纯聚合函数覆盖全在线 `ONLINE`、全离线 `OFFLINE`、混合 `DEGRADED`、计数以及 Source
   ID/顺序/数量不匹配的防御分支。
-- API 集成测试断言 `201`、Location、no-store、完整 `CameraDetail`、请求级依赖替换和创建 handler
-  已通过对应占位门禁；其他 handler 仍保持占位。
+- API 集成测试断言 `201`、Location、no-store、完整 `CameraDetail` 和请求级依赖替换；占位门禁继续
+  阻止列表、更新、切默认源和删除被误报为已实现。
 
 ### Frontend
 
@@ -193,5 +193,6 @@ pnpm build
 ```
 
 需要 PostgreSQL 的事务验收必须配置独立 `TEST_DATABASE_URL`；相关测试被跳过时，不能宣称数据库
-回滚和延迟约束路径已完成验证。当前仍使用 `foundation` 占位门禁，完整 `mvp` 门禁由
-[发布门禁计划](../../plans/cameras-mvp/11-release-gates/README.md)负责。
+回滚和延迟约束路径已经验证。`foundation` 占位门禁用于允许 MVP 分步实现，完整 `mvp` 门禁用于
+发布前确认所有目标 handler 已实现，见
+[发布门禁计划](../../plans/cameras-mvp/11-release-gates/README.md)。

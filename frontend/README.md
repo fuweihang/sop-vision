@@ -1,8 +1,8 @@
 # SOP Vision Frontend
 
 Frontend 使用 React 19、TypeScript、Vite、TanStack Router/Query、Tailwind CSS v4 和 shadcn/ui。
-当前已完成应用 Shell、主题、路由状态、生成式 API Client、错误映射、Cameras MSW 和 Camera 新增
-Dialog；Cameras 列表/详情与 Detection Tasks 页面仍是业务骨架。
+当前已完成应用 Shell、主题、路由状态、生成式 API Client、错误映射、Cameras MSW、Camera 新增
+Dialog、只读详情和可临时切源的 WHEP 播放器；Cameras 列表与 Detection Tasks 页面仍是业务骨架。
 
 ## 环境与启动
 
@@ -24,12 +24,12 @@ pnpm dev
 | -------------------- | ------------------------------------------------- |
 | `/`                  | 重定向到 `/cameras`                               |
 | `/cameras`           | App Shell、Camera 新增 Dialog、路由状态和列表骨架 |
-| `/cameras/$cameraId` | 详情层级、Breadcrumb、返回操作和详情骨架          |
+| `/cameras/$cameraId` | 完整只读详情、WHEP 播放器和临时 Source 切换       |
 | `/tasks`             | App Shell、标题和列表骨架                         |
 | `/tasks/$taskId`     | 详情层级、Breadcrumb、返回操作和详情骨架          |
 
-Shell 已支持桌面 Sidebar、移动 Sheet、Light/Dark 主题、跳转主内容、路由后焦点恢复和响应式
-重排。页面文档中的表单、列表数据、播放器、ROI 和任务操作属于后续业务实现。
+Shell 已支持桌面 Sidebar、移动 Sheet、Light/Dark 主题、跳转主内容、路由后焦点恢复和响应式重排。
+Camera 列表数据、配置编辑、删除、ROI 和任务操作属于后续业务实现。
 
 ## API 与生成文件
 
@@ -50,7 +50,7 @@ Frontend 类型同步。
 
 ## Cameras MSW 场景
 
-后端业务 handler 尚未实现时，可在 Vite 开发模式显式启用一个场景：
+需要脱离真实 Backend 演示固定场景时，可在 Vite 开发模式显式启用一个场景：
 
 ```dotenv
 VITE_API_MOCK_SCENARIO=success
@@ -66,9 +66,13 @@ VITE_API_MOCK_SCENARIO=success
 | `dependency-unavailable`     | 返回 `503`                      |
 | `initial-failure`            | 列表首次失败、重试成功          |
 | `background-refresh-failure` | 首次成功、后台刷新失败          |
+| `whep-player`                | 双路 synthetic WHEP 播放入口    |
 
 Mock 仅在开发模式且变量非空时启动。无效场景或未处理请求会直接失败，不会透传到真实网络。
 生产构建不会注册 MSW Worker。
+
+`whep-player` 需要同时启动 Compose MediaMTX 和 `pnpm whep:test-source`；完整步骤见
+[WHEP 浏览器播放](../docs/modules/cameras/whep-player.md)。
 
 ## 目录约定
 
@@ -81,7 +85,14 @@ frontend/src/
 │   ├── route-state/      # Router Pending/Error/Not Found 状态
 │   └── ui/               # shadcn primitive
 ├── features/
-│   └── cameras/          # Camera API、Query Key、表单规则和业务组件
+│   ├── cameras/          # Camera API、Query Key、表单规则和业务组件
+│   └── video/            # 视频会话、MediaMTX 接入、播放组件和几何计算
+│       ├── components/
+│       │   ├── video-controls/ # 实时播放操作栏、反馈和浮层扩展入口
+│       │   └── video-surface/  # video DOM、媒体状态、布局和全屏能力
+│       ├── geometry/      # cover/contain 后的媒体区域纯计算
+│       ├── mediamtx/      # MediaMTX WHEP 适配器，首次连接时加载官方 reader
+│       └── stream-session/ # 通用 Session 类型、Manager、Provider 和 Hook
 ├── generated/            # OpenAPI 生成类型
 ├── lib/                  # Router、Query Client、Axios Client 和共享逻辑
 ├── mocks/                # 类型安全 Fixture 与 MSW 场景

@@ -15,6 +15,7 @@ export default defineConfig(
     "dist/**",
     "src/generated/openapi.ts",
     "src/routeTree.gen.ts",
+    "src/vendor/mediamtx/reader.js",
   ]),
   {
     files: ["**/*.{js,mjs,cjs,ts,tsx}"],
@@ -22,6 +23,12 @@ export default defineConfig(
   },
   {
     files: ["*.config.{js,ts}"],
+    languageOptions: {
+      globals: globals.node,
+    },
+  },
+  {
+    files: ["scripts/**/*.mjs"],
     languageOptions: {
       globals: globals.node,
     },

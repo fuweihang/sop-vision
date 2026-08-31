@@ -1,8 +1,7 @@
 """HTTP 公共机制的隔离 probe router 契约测试。
 
-Foundation 明确禁止新增 Camera CRUD handler，因此本文件使用不进入生产应用、不进入 OpenAPI
-的测试路由触发框架行为。这样既能覆盖 FastAPI 的真实参数解析与异常链，又不会让尚未实现的
-业务路径看起来已经可调用。
+本文件使用不进入生产路由和 OpenAPI 的测试路由触发公共框架行为。这样既能覆盖 FastAPI 的真实
+参数解析与异常链，也能让公共机制测试不依赖 Camera 业务 handler 的实现状态。
 """
 
 import logging

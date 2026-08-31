@@ -123,4 +123,11 @@ export function resetBrowserState() {
   document.documentElement.removeAttribute("style");
   document.body.className = "";
   document.body.removeAttribute("style");
+  // jsdom 自带的 scrollTo 只会输出“未实现”警告。Router 的滚动恢复不依赖测试中的真实滚动位置，
+  // 用确定的空实现替换它，避免重复警告淹没真正的 console error。
+  Object.defineProperty(window, "scrollTo", {
+    configurable: true,
+    writable: true,
+    value: () => undefined,
+  });
 }

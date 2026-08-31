@@ -1,7 +1,8 @@
 # 08｜Camera 列表与 Cards 预览
 
 > 前置：[Camera 创建](../../../modules/cameras/camera-create.md)、
-> [Stream Gateway](../../../modules/cameras/stream-gateway.md)、[WHEP 播放基础](../07-whep-player/README.md)
+> [Stream Gateway](../../../modules/cameras/stream-gateway.md)、
+> [WHEP 浏览器播放](../../../modules/cameras/whep-player.md)
 >
 > 交付：`GET /api/v1/cameras`（`listCameras`）和 Camera Cards
 
@@ -33,7 +34,7 @@
 - 路由 `/cameras`，URL 保存 `q/page/page_size`；搜索防抖 `300ms`，改变 q 后回到第一页。
 - `total=0` 且无 q 显示空数据和创建入口；存在 q 时显示搜索无结果和清除操作。
 - 首次加载使用骨架；页面可见时每 `15s` 后台刷新，保留旧 Cards；页面隐藏时暂停。
-- `CameraCard` 复用 07 的 `useStreamSession` 和 `VideoSurface`，使用 `object-fit: cover`；Card 只增加
+- `CameraCard` 复用已实现的 `useStreamSession` 和 `VideoSurface`，使用 `object-fit: cover`；Card 只增加
   现有列表响应可提供的设备名称、在线状态和 LIVE HTML overlay，不复制 WHEP 或 video 生命周期
   代码。告警与检测概要等待 Detection 数据来源，不在 08 添加模拟字段。
 - Card 进入视口且 `whep_url` 非空时，以默认 Source 的 `source_id` acquire；离开视口、切页或搜索
@@ -41,6 +42,7 @@
 - `whep_url=null` 时不 acquire，也不渲染一个无媒体来源的 video。
 - 同一 Source 同时出现在 Card 和 Detail 时，共享一个 `WhepSession` 和 `MediaStream`；各自保留独立
   video DOM、muted/volume 和 overlay。Card 始终静音且不显示详情 controls。
+- Detail 的临时 Source 选择不修改 Backend 默认源，也不改变 Card 使用列表默认 Source 的规则。
 - 页面隐藏时释放全部 Card Lease；恢复时只为重新进入视口的 Card acquire。
 - 列表只使用内存 Query cache；所有配置写入成功后按公共缓存矩阵失效。
 

@@ -1,6 +1,6 @@
 # 10｜删除 Camera
 
-> 前置：[详情](../06-camera-detail/README.md)、
+> 前置：[Camera 详情](../../../modules/cameras/camera-detail.md)、
 > [媒体对账](../../../modules/cameras/media-reconciliation.md)
 >
 > 交付：`DELETE /api/v1/cameras/{camera_id}`（`deleteCamera`）和危险操作确认

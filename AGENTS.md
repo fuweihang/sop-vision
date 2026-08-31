@@ -2,13 +2,13 @@
 
 ## 项目结构与模块组织
 
-`backend/src/app/` 包含 FastAPI 控制平面。共享配置应放在 `core/` 中，领域代码应放在 `modules/<domain>/` 下，并分别组织到 `api/`、`schemas/` 和 `services/` 中。后端测试位于 `backend/tests/`，其目录结构应与源代码保持一致。`frontend/src/` 包含 React 应用：基于文件的路由位于 `routes/`，可复用的基础组件位于 `components/ui/`，应用外壳组件位于 `components/app-shell/`，共享逻辑位于 `lib/`。前端测试应与被测对象放在一起，并命名为 `*.test.ts` 或 `*.test.tsx`。架构、需求和 UI 规则应记录在 `docs/` 中；修改共享 UI 前，请先查阅 `docs/design-system/`。不要手动编辑自动生成的 `frontend/src/routeTree.gen.ts`。
+`backend/src/app/` 包含 FastAPI 控制平面。共享配置应放在 `core/` 中，领域代码应放在 `modules/<domain>/` 下，并按职责组织到 `api/`、`application/`、`domain/` 和 `persistence/` 中。后端测试位于 `backend/tests/`，其目录结构应与源代码保持一致。`frontend/src/` 包含 React 应用：基于文件的路由位于 `routes/`，可复用的基础组件位于 `components/ui/`，应用外壳组件位于 `components/app-shell/`，共享逻辑位于 `lib/`。前端测试应与被测对象放在一起，并命名为 `*.test.ts` 或 `*.test.tsx`。架构、需求和 UI 规则应记录在 `docs/` 中；修改共享 UI 前，请先查阅 `docs/design-system/`。不要手动编辑自动生成的 `frontend/src/routeTree.gen.ts`。
 
 ## 构建、测试与开发命令
 
 - `cp .env.example .env && docker compose up --build --wait` 用于构建并启动完整的本地技术栈。
 - `docker compose config` 用于验证 Compose 配置和环境变量插值；`docker compose down` 用于停止该技术栈。
-- 在 `backend/` 中，先运行 `uv sync`，再运行 `uv run --env-file ../.env python -m app.server --host 127.0.0.1 --port 3001 --reload` 进行本地 API 开发。
+- 在 `backend/` 中，先运行 `uv sync`，再运行 `uv run --env-file .env.local python -m app.server --host 127.0.0.1 --port 3001 --reload` 进行本地 API 开发；宿主机配置不得复用根目录 `.env` 中的 Compose 服务地址。
 - 在 `frontend/` 中使用 Node 24 和 pnpm 11：通过 `pnpm install`、`pnpm dev` 和 `pnpm build` 分别安装依赖、启动开发服务以及执行类型检查并构建应用。
 - 在 `backend/` 中常规运行 `uv run pytest`；如果测试依赖配置在 `backend/.env.local` 中的环境变量（尤其是 `TEST_DATABASE_URL`），必须运行 `uv run --env-file .env.local pytest`，否则相关 PostgreSQL 测试会被跳过。后端静态检查使用 `uv run ruff check .` 和 `uv run ruff format --check .`；在 `frontend/` 中运行 `pnpm test`、`pnpm lint` 和 `pnpm format:check`。
 

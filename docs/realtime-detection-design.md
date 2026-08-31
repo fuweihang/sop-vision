@@ -122,7 +122,8 @@ Keypoint、Track 轨迹和 Algorithm 扩展结果沿用归一化源坐标，但�
 
 ## Frontend 播放与 Overlay 边界
 
-Detection Task 复用 Cameras 07 提供的 `WhepSession`、`StreamSessionManager` 和 `VideoSurface`。
+Detection Task 复用 [WHEP 浏览器播放](modules/cameras/whep-player.md)已经提供的 `WhepSession`、
+`StreamSessionManager` 和 `VideoSurface`。
 同一路 Source 的 Card、Camera Detail 与 Task Detail 共享 `MediaStream`，但每个消费者有独立的
 `<video>`、`<canvas>` 和 HTML overlay。
 
@@ -234,11 +235,14 @@ Redis 与 WebSocket 必须位于受控网络；订阅 task 前执行鉴权和资
 5. Stream 重试上限、死信策略、事件保留和 PostgreSQL 数据模型。
 6. 多 Backend/Detector 实例的 ownership、部署容量和压测基线。
 
-## 实施阶段
+## 与当前实现的关系
 
-1. Cameras 07 只实现共享 WHEP Session、基础 `VideoSurface` 和 Camera Detail controls。
-2. Cameras 08 复用同一 Session Manager 接入 Card，并处理 IntersectionObserver 和列表容量。
-3. Detection Tasks 实时数据阶段冻结 schema、WebSocket 和 timestamp 时钟，产出 `DetectionResult`。
-4. Detection overlay 阶段实现 `BoxBuffer`、帧回调、坐标转换和 `BoxCanvas`。
-5. 播放与检测稳定后，再在 `WhepSession` 内增加受控 `getStats()`，按 `1–2s` 采样 FPS、Bitrate、
-   Packet Loss、Jitter、RTT 和 Connection State；不每帧调用，也不让 React 读取 reader 私有字段。
+- 共享 `WhepSession`、`StreamSessionManager`、`VideoSurface` 和 Camera Detail controls 已实现，可作为
+  Detection 视频和 Overlay 的前置能力。
+- Camera Card 播放属于独立的 [Cameras 08 计划](plans/cameras-mvp/08-camera-list/README.md)，不由
+  Detection 实现提前承担。
+- Detector、Redis Client、WebSocket、`DetectionResult`、`BoxBuffer` 和 `BoxCanvas` 均未实现。
+  Detection 正式开发前应针对上面的 schema、WebSocket、时钟和容量未决项建立新的执行计划。
+- WebRTC Stats 仍是后续能力。实现时应在 `WhepSession` 内提供受控 `getStats()`，按 `1–2s` 采样
+  FPS、Bitrate、Packet Loss、Jitter、RTT 和 Connection State；不能每帧调用，也不能让 React 读取
+  reader 私有字段。

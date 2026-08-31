@@ -11,7 +11,7 @@ from typing import Protocol
 from app.modules.cameras.domain import Camera, CameraId
 
 # 搜索文本和单页数量在所有 Repository 实现中使用同一上限，避免真实数据库与测试 Fake
-# 对相同输入给出不同结果。API 层后续也会复用这两个业务边界。
+# 对相同输入给出不同结果。API 层当前也复用这两个业务边界。
 CAMERA_LIST_QUERY_MAX_LENGTH = 100
 CAMERA_LIST_PAGE_SIZE_MAX = 100
 
@@ -20,7 +20,7 @@ CAMERA_LIST_PAGE_SIZE_MAX = 100
 class CameraListCriteria:
     """已经去掉首尾空白的 Camera 搜索条件。
 
-    后续 API 层负责去掉 HTTP 查询参数的首尾空白，并把只包含空白的输入变成 ``None``。
+    API 层负责去掉 HTTP 查询参数的首尾空白，并把只包含空白的输入变成 ``None``。
     本类仍会再次检查，因为定时任务、脚本或单元测试也可以直接调用 Repository，不能假定
     所有调用都来自 HTTP。
     """

@@ -4,9 +4,31 @@ import { setupWorker } from "msw/browser";
 import {
   createCamerasMswScenario,
   isCamerasMswScenarioName,
+  WHEP_TEST_WHEP_URLS,
 } from "@/mocks/cameras/scenarios";
 
 const worker = setupWorker();
+
+function isWhepPlayerRequest(scenarioName: string, request: Request) {
+  if (scenarioName !== "whep-player") {
+    return false;
+  }
+
+  const requestUrl = new URL(request.url);
+  const pathAllowed = WHEP_TEST_WHEP_URLS.some((value) => {
+    const whepUrl = new URL(value);
+    return (
+      requestUrl.origin === whepUrl.origin &&
+      (requestUrl.pathname === whepUrl.pathname ||
+        requestUrl.pathname.startsWith(`${whepUrl.pathname}/`))
+    );
+  });
+  const methodAllowed = ["OPTIONS", "POST", "PATCH", "DELETE"].includes(
+    request.method,
+  );
+
+  return pathAllowed && methodAllowed;
+}
 
 /** 开发环境只接受显式场景名；拼写错误直接失败，避免无声访问真实服务。 */
 export async function startBrowserMocking(scenarioName: string) {
@@ -22,9 +44,15 @@ export async function startBrowserMocking(scenarioName: string) {
     onUnhandledRequest(request, print) {
       const { pathname } = new URL(request.url);
 
-      // Codex/Playwright 会把浏览器日志发回这个仅供开发工具使用的端点。它不是业务 API，
-      // 如果继续交给 MSW 的 error 策略，MSW 自己打印的错误又会触发同一请求并形成递归日志。
-      if (pathname === "/__tsd/console-pipe") {
+      // 只有标准播放器场景的两个固定 WHEP endpoint 和各自返回的 Session 子路径可以访问真实 MediaMTX。
+      // 不能按 8889 端口整体放行，否则漏写的媒体请求会绕过 MSW 的开发期保护。
+      if (isWhepPlayerRequest(scenarioName, request)) {
+        return;
+      }
+
+      // Codex/Playwright 日志端点和项目 favicon 都不是业务 API。日志请求如果继续交给 MSW 的
+      // error 策略，MSW 打印的错误还会再次触发同一请求；favicon 则由 Vite 直接提供。
+      if (pathname === "/__tsd/console-pipe" || pathname === "/favicon.ico") {
         return;
       }
 

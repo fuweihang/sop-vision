@@ -29,7 +29,7 @@ function CamerasPage() {
           路由骨架
         </h2>
         <p className="text-muted-foreground mt-1 text-sm">
-          此处仅用于验证应用 Shell；摄像头列表与 CRUD 尚未实现。
+          摄像头列表数据仍为占位；创建和详情已可用，编辑与删除尚未实现。
         </p>
       </section>
     </PageContainer>

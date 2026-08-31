@@ -42,7 +42,7 @@ components:
 
   badge:
     api:
-      variants: [default, secondary, destructive, outline, ghost, link]
+      variants: [default, secondary, destructive, outline, ghost, overlay, link]
     use_for: [resource_status, concise_label]
     status_roles:
       success:
@@ -67,7 +67,7 @@ components:
 
   button:
     api:
-      variants: [default, outline, secondary, ghost, destructive, link]
+      variants: [default, outline, secondary, ghost, overlay, destructive, link]
       sizes: [xs, sm, default, lg, icon-xs, icon-sm, icon, icon-lg]
     project_usage:
       default: page_primary_action
@@ -124,6 +124,12 @@ components:
     rules:
       - Placeholder never replaces Label.
 
+  popover:
+    use_for: [floating_surface, contextual_controls]
+    rules:
+      - Content is a floating surface whose focus and dismissal remain Base UI managed.
+      - Use the optional Portal container when content must stay inside a fullscreen or scoped overlay root.
+
   radio_group:
     use_for: [single_selection_with_visible_options]
     rules:
@@ -135,6 +141,11 @@ components:
       - Do not use ScrollArea to hide page-level Reflow failures.
 
   select:
+    api:
+      variants: [default, overlay]
+    project_usage:
+      default: form_or_page_selection
+      overlay: media_control_on_dark_surface
     use_for: [single_selection_with_collapsed_options]
     rules:
       - Do not substitute the prototype native select.
@@ -146,6 +157,14 @@ components:
     use_for: [visual_group_boundary]
     rules:
       - Decorative is the default; expose semantics only when meaningful.
+
+  slider:
+    api:
+      orientations: [horizontal, vertical]
+    use_for: [range_value, volume_or_continuous_setting]
+    rules:
+      - Use for bounded numeric values that benefit from direct adjustment.
+      - Orientation, keyboard behavior, and thumb state remain Base UI managed.
 
   sheet:
     api:

@@ -19,3 +19,5 @@
 - [2026-08-28｜Camera 创建](2026-08-28-camera-create.md)
 - [2026-08-28｜Camera 只读详情](2026-08-28-camera-detail.md)
 - [2026-08-28｜Backend 统一日志](2026-08-28-backend-logging.md)
+- [2026-08-30｜Camera WHEP 详情播放器](2026-08-30-whep-player.md)
+- [2026-08-31｜Camera 临时切源与播放器显示模式](2026-08-31-camera-source-display-modes.md)

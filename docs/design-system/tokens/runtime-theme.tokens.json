@@ -63,6 +63,18 @@
       "light": "oklch(0.577 0.245 27.325)",
       "dark": "oklch(0.704 0.191 22.216)"
     },
+    "--overlay-control-foreground": {
+      "light": "oklch(0.985 0 0)",
+      "dark": "oklch(0.985 0 0)"
+    },
+    "--overlay-control-surface": {
+      "light": "oklch(0.145 0 0)",
+      "dark": "oklch(0.145 0 0)"
+    },
+    "--overlay-control-hover": {
+      "light": "oklch(1 0 0 / 16%)",
+      "dark": "oklch(1 0 0 / 16%)"
+    },
     "--status-online": {
       "light": "color-mix(in oklch, var(--status-online-dot) 12%, transparent)",
       "dark": "color-mix(in oklch, var(--status-online-dot) 12%, transparent)"

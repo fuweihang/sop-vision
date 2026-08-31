@@ -8,8 +8,7 @@
       "height": 720,
       "devicePixelRatio": 1
     },
-    "theme": "light",
-    "updatedAt": "2026-08-19"
+    "theme": "light"
   },
   "implementation": {
     "framework": "React + Vite",

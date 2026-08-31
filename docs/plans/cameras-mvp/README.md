@@ -1,6 +1,7 @@
 # Cameras MVP 剩余计划
 
-> 当前状态：Camera 创建和只读详情已经完成；本计划只跟踪播放、列表、更新、删除和发布验收。
+> 当前状态：Camera 创建、只读详情和可临时切源的 WHEP 详情播放器已经完成；本计划跟踪列表、
+> 更新、删除和发布验收。
 
 已实现能力和当前约束见 [Cameras 模块文档](../../modules/cameras/README.md)。本目录不得复制这些
 当前事实；计划执行时以模块文档、代码、迁移、OpenAPI 和测试为输入。
@@ -9,7 +10,6 @@
 
 | #   | 任务                                                      | 状态   | 主要交付                         |
 | --- | --------------------------------------------------------- | ------ | -------------------------------- |
-| 07  | [WHEP 播放基础](07-whep-player/README.md)                 | 待实施 | 共享 Session 与详情播放器        |
 | 08  | [Camera 列表](08-camera-list/README.md)                   | 待实施 | `GET /cameras`、搜索、分页与卡片 |
 | 09  | [更新与默认源](09-camera-update-default-source/README.md) | 待实施 | 编辑 Camera 和切换默认预览源     |
 | 10  | [Camera 删除](10-camera-delete/README.md)                 | 待实施 | 删除聚合并尽力释放媒体 Path      |
@@ -20,8 +20,9 @@
 
 ## MVP 目标范围
 
-完成本计划后，用户可以搜索和分页浏览 Camera，查看详情，完整编辑 Camera/Source 集合，切换默认
-预览源，通过可共享的 WHEP Session 在列表与详情预览并删除 Camera。
+完成本计划后，用户可以在详情中分别控制预览 Session 和 video 播放，临时切换当次预览 Source，
+搜索和分页浏览 Camera，完整编辑 Camera/Source 集合，切换默认预览源，在列表复用现有 WHEP
+Session，并删除 Camera。
 
 本计划不包含鉴权、RBAC、多租户、录像、截图、回放、Detection WebSocket、检测 Canvas、视频帧与
 Box 同步、WebRTC 质量统计、软删除和事务级 Outbox/Saga。
@@ -32,8 +33,7 @@ Box 同步、WebRTC 质量统计、软删除和事务级 Outbox/Saga。
 
 1. 更新 `docs/modules/cameras/` 中对应的当前能力、边界和排障信息。
 2. 在 `docs/changes/` 新增一条变更记录，说明用户可见行为、API/配置影响和验证方式。
-3. 从本表和本目录移除已完成任务；不要在计划里长期维护“已完成”章节。06 Camera 详情是当前
-   明确例外：完成后只从本表移除，保留 `06-camera-detail/`，等待用户在后续流程中自行清理。
+3. 从本表和本目录移除已完成任务；不要在计划里长期维护“已完成”章节。
 4. 如果形成跨模块且难以撤销的技术决定，再在 `docs/decisions/` 新增决策记录。
 
 Git 历史保存执行过程，长期文档不保存逐步实施日志或测试通过数量。

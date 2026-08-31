@@ -72,7 +72,7 @@ uv run --env-file .env.local python -m app.server \
 | `TZ`                                       | `Asia/Shanghai`         | 日志显示地区，使用 IANA 时区名称                   |
 | `MEDIAMTX_API_URL`                         | `http://mediamtx:9997`  | MediaMTX Control API 地址                          |
 | `MEDIAMTX_API_TIMEOUT`                     | `5`                     | Control API 请求超时秒数                           |
-| `PUBLIC_WEBRTC_BASE_URL`                   | `http://localhost:8889` | WHEP 公网基础地址                                |
+| `PUBLIC_WEBRTC_BASE_URL`                   | `http://localhost:8889` | WHEP 公网基础地址                                  |
 | `MEDIA_RECONCILIATION_INTERVAL_SECONDS`    | `30`                    | 对账成功或锁竞争后的轮询间隔秒数                   |
 | `MEDIA_RECONCILIATION_MAX_BACKOFF_SECONDS` | `300`                   | 连续失败时指数退避的上限秒数                       |
 | `BACKEND_CORS_ORIGINS`                     | `http://localhost:8000` | 允许的 Origin，多个值使用逗号分隔                  |
@@ -139,7 +139,7 @@ backend/
 │   │   └── http/               # Trace、Problem、校验与 OpenAPI 公共机制
 │   └── modules/
 │       ├── cameras/
-│       │   ├── api/            # Schema、依赖、错误映射、创建和剩余占位 Router
+│       │   ├── api/            # Schema、依赖、错误映射、创建、详情和剩余占位 Router
 │       │   ├── application/    # 应用端口、媒体 Desired State 与后台对账
 │       │   ├── domain/         # 框架无关的 Camera 聚合和值对象
 │       │   └── persistence/    # Repository/UoW、Mapper、巡检和对账锁/读取

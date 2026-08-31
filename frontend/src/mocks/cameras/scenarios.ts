@@ -24,6 +24,7 @@ export const CAMERAS_MSW_SCENARIO_NAMES = [
   "dependency-unavailable",
   "initial-failure",
   "background-refresh-failure",
+  "whep-player",
 ] as const;
 
 export type CamerasMswScenarioName =
@@ -41,6 +42,15 @@ const normalizedApiBaseUrl = apiBaseUrl.replace(/\/$/, "");
 const camerasUrl = `${normalizedApiBaseUrl}/cameras`;
 const cameraUrl = `${camerasUrl}/:cameraId`;
 const defaultSourceUrl = `${cameraUrl}/default-preview-source`;
+
+export const WHEP_TEST_PRIMARY_URL =
+  "http://127.0.0.1:8889/whep-test-primary/whep";
+export const WHEP_TEST_SECONDARY_URL =
+  "http://127.0.0.1:8889/whep-test-secondary/whep";
+export const WHEP_TEST_WHEP_URLS = [
+  WHEP_TEST_PRIMARY_URL,
+  WHEP_TEST_SECONDARY_URL,
+] as const;
 
 const successHeaders = {
   "X-Trace-Id": CAMERA_FIXTURE_TRACE_ID,
@@ -99,7 +109,23 @@ export function createCamerasMswScenario(
 ): RequestHandler[] {
   let listRequestCount = 0;
   let detailRequestCount = 0;
-  const detail = buildCameraDetail();
+  const detail =
+    scenario === "whep-player"
+      ? buildCameraDetail({
+          sources: [
+            {
+              name: "动态测试图",
+              status: "ONLINE",
+              whep_url: WHEP_TEST_PRIMARY_URL,
+            },
+            {
+              name: "彩条测试图",
+              status: "ONLINE",
+              whep_url: WHEP_TEST_SECONDARY_URL,
+            },
+          ],
+        })
+      : buildCameraDetail();
   const page = buildCameraPage();
 
   return [

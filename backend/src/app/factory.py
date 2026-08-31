@@ -135,7 +135,7 @@ def create_lifespan(
             application.state.database_runtime = database_runtime
 
             # Adapter 持有唯一的共享 HTTP Client，并以框架无关 Port 身份进入 app.state。
-            # 后续 Cameras Service 只通过 dependency 获取 Port，不会接触 httpx 或具体实现。
+            # Camera 用例统一通过 dependency 获取 Port，不会接触 httpx 或具体实现。
             stream_gateway = MediaMTXAdapter(
                 control_api_url=settings.mediamtx_api_url,
                 request_timeout=settings.mediamtx_api_timeout,

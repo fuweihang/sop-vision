@@ -1,6 +1,6 @@
 # 11｜Cameras MVP 发布门禁
 
-> 前置：[Cameras 当前能力](../../../modules/cameras/README.md)与 06–10 全部任务
+> 前置：[Cameras 当前能力](../../../modules/cameras/README.md)与 08–10 全部任务
 >
 > 交付：真实依赖、端到端故障、安全、浏览器和容量验收；无新公共路由
 
@@ -32,11 +32,20 @@
 - Card 与 Detail 同时消费一路 Source 时只有一个 reader 和 MediaStream，各自使用独立 video DOM；
   单个消费者 release 不停止共享 Track，最后一个消费者 release 后清空 Session 缓存和全部
   `srcObject`。
-- 离开视口、隐藏页面、切页、切源、删除和卸载都 release 对应 Lease，React Strict Mode 重挂载不
-  重复建连或产生负引用。
-- 详情页自动开始、开始/停止、音量、全屏、LIVE、连接状态和主动重连通过支持浏览器验收；
-  Card 保持静音且不显示详情 controls。
-- 07 的 FFmpeg synthetic RTSP Source 只验证可重复的基础播放与浏览器生命周期；发布验收必须另外
+- Detail 按用户的开始/停止预览意图持有 Lease，隐藏页面时保持连接；Card 离开视口或页面隐藏时
+  release。切页、切源、删除和卸载会 release 对应 Lease，React Strict Mode 重挂载不重复建连或产生负引用。
+- 详情页的开始/停止预览与 video 播放/暂停独立；暂停保留当前帧和 Lease，继续直接进入实时
+  画面，不影响共享 MediaStream 的其他消费者。
+- 贴底全宽渐变操作栏的鼠标活动/自动隐藏、触摸、音量浮层、刷新、LIVE 和连接状态通过
+  支持浏览器验收；音量浮层可用键盘打开和关闭，Slider 可用键盘调整，焦点始终可见且关闭后正确
+  返回触发按钮。Card 保持静音且不显示 Detail controls。
+- 至少一路 Source 可播放时，Detail 按“Backend 默认源可播放时优先，否则响应中的第一路可播放源”
+  自动选择；全部 Source 不可播放时不创建 Session，并沿用不可播放展示。
+- 临时 Source 切换只影响当次 Detail 预览，不发送默认源 PATCH；旧 Lease 释放、新 Lease acquire、
+  Source 删除或不可播放后回退、网页全屏与浏览器全屏互斥/退出、模式切换不重建 Session 均通过验收。
+- 标准浏览器验收使用两路视觉可区分的 synthetic RTSP/WHEP 流，验证默认源回退、临时切源后的
+  画面变化，以及两个 Path 各自 Session 的 acquire/release。
+- Frontend 的 FFmpeg synthetic RTSP Source 只验证可重复的基础播放与浏览器生命周期；发布验收必须另外
   使用目标 IPC/RTSP 设备覆盖支持的 Codec、厂商实现和长时间连接，不能用合成源代替。
 - 容量基线至少覆盖一页 20 个 Camera、多路 Source 配置和同时可见 Card 会话；资源上限与失败
   文案必须通过真实部署验证，不能只依赖 jsdom。

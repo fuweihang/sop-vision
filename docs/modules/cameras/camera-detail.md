@@ -9,10 +9,9 @@
 排列的 Source，以及同一次 MediaMTX 快照得到的运行状态。Frontend `/cameras/$cameraId` 提供对应的
 只读页面，并沿用应用外壳中的“返回摄像头列表”链接。
 
-本能力不创建播放器，也不执行编辑、切换默认源或删除操作。页面为这些后续
-能力保留禁用的按钮和单选控件，但点击不会产生业务请求。完整 RTSP URL 只作为可换行的等宽普通文本
-展示，不是链接，也没有复制按钮或 Clipboard 调用。播放器由
-[WHEP 播放计划](../../plans/cameras-mvp/07-whep-player/README.md)后续实现。
+详情页使用 Backend 返回的 `whep_url` 解析并播放当前可用 Source；播放器行为与共享 Session 规则见
+[WHEP 浏览器播放](whep-player.md)。编辑、切换默认源和删除仍是禁用控件，不会产生业务请求。完整
+RTSP URL 只作为可换行的等宽普通文本展示，不是链接，也没有复制按钮或 Clipboard 调用。
 
 ## Backend 行为
 
@@ -54,8 +53,9 @@ Runtime Path 快照。这样媒体请求等待期间不会继续占用数据库�
 
 只读页面按以下顺序展示：
 
-1. Camera 名称，以及禁用的开始预览和编辑按钮；
-2. 默认 Source 的 16:9 只读区域，左下角只显示 Source 名称；
+1. Camera 名称、可用的开始/停止预览按钮，以及禁用的编辑按钮；
+2. 当前 Source 的 16:9 实时播放器，包含临时 Source Select、持续到当前 Stream 首帧出现的 loading、
+   首帧超时提示、连接状态、LIVE、重连、常驻音量、静音、网页全屏和浏览器全屏；
 3. IPv4、端口、用户名、默认隐藏的密码、默认 Source 最近检查时间，以及标题右侧的
    Camera 聚合状态 Badge；
 4. “摄像头视频源”表格，按响应顺序展示禁用的默认源单选控件、名称、完整 RTSP URL 和状态 Badge；
@@ -63,7 +63,14 @@ Runtime Path 快照。这样媒体请求等待期间不会继续占用数据库�
 
 密码使用固定星号占位，不显示实际长度；用户点击眼睛按钮后可以在当前页面显隐。页面不展示
 `created_at/updated_at`。窄屏下连接信息与预览区域改为单列，视频源表格只在自身容器内横向滚动，
-不扩大整个页面。预览区域只为后续播放器保留位置，当前不会创建 `video` 或 PeerConnection。
+不扩大整个页面。播放器先验证 Backend 默认 Source ID，再从 `status=ONLINE` 且 `whep_url` 非空的
+Source 中选择实际预览源：默认源可播放时优先，否则使用响应顺序中的第一路可播放源。用户可以只为
+当前页面临时切换 Source，不修改持久化默认源；临时 Source 在详情刷新后仍可播放时保留，删除或
+不可播放后回到默认规则。
+
+播放器按用户的开始/停止预览意图保持 Lease，页面隐藏时不主动断开；路由离开和组件卸载会释放当前
+Lease。15 秒详情刷新和 Backend 默认源变化不会覆盖用户主动停止预览的选择。停止预览时仍显示
+Source Select 和显示模式，播放、刷新和音量控件禁用；全部 Source 不可播放时不渲染操作栏。
 
 ## 敏感数据与排查
 
@@ -75,6 +82,8 @@ Runtime Path 快照。这样媒体请求等待期间不会继续占用数据库�
   MediaMTX Control API 和 Stream Gateway，不要把它误判成 Camera 配置读取失败。
 - 页面提示默认预览源无效表示返回数据没有匹配 `default_preview_source_id` 的 Source，应检查后端聚合
   与响应映射，Frontend 不会自行选择另一路 Source 掩盖数据问题。
+- 页面提示当前视频源不可播放时检查详情响应的 `whep_url` 和 Source 状态；Frontend 不会自行拼接或
+  修复 WHEP 地址。
 
 ## 验证命令
 
@@ -90,6 +99,7 @@ uv run ruff format --check .
 uv run python scripts/check_camera_placeholders.py foundation
 
 # frontend/
+pnpm vendor:check
 pnpm test
 pnpm lint
 pnpm format:check

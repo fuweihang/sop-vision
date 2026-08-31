@@ -42,8 +42,8 @@ COMPONENT_BY_LOGGER_PREFIX: dict[str, str] = {
     "alembic": "database.migration",
 }
 
-# 每个事件的顺序直接对应设计文档中的事件表。console 和 JSON 共用这张表，避免两种格式
-# 因各自拼字段而逐渐产生差异。任务 2/3 只需按事件附加这里已经允许的字段。
+# 每个事件的字段顺序对应日志文档中的事件表。console 和 JSON 共用这张白名单，避免两种格式
+# 因各自拼接字段而产生差异，也避免未知 extra 意外进入输出。
 EVENT_FIELD_ORDER: dict[str, tuple[str, ...]] = {
     "stream_gateway.io": (
         "operation",
@@ -114,8 +114,8 @@ EVENT_FIELD_ORDER: dict[str, tuple[str, ...]] = {
     ),
 }
 
-# 任务 1 暂时保留旧业务 message。这些记录还没有 event，因此使用公共字段顺序显示已有 extra；
-# 未知 extra 永远不会因为遍历 record.__dict__ 而被意外输出。
+# 没有 event 的兼容记录仍按公共白名单输出已有 extra；未知 extra 不会因为遍历
+# record.__dict__ 而被意外输出。
 FALLBACK_FIELD_ORDER: tuple[str, ...] = (
     "operation",
     "outcome",

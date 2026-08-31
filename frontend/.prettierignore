@@ -4,3 +4,4 @@ pnpm-lock.yaml
 public/mockServiceWorker.js
 src/generated/openapi.ts
 src/routeTree.gen.ts
+src/vendor/mediamtx/reader.js
