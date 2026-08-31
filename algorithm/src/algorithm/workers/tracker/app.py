@@ -1,4 +1,4 @@
-"""无界面 Detector Worker 的生命周期与组件编排。"""
+"""无界面 Tracker Worker 的生命周期与组件编排。"""
 
 from __future__ import annotations
 
@@ -8,7 +8,7 @@ import time
 import uuid
 from collections.abc import Callable
 
-from algorithm.algorithms.object_detection.detection import YoloDetector
+from algorithm.algorithms.object_tracking.bytetrack import YoloTracker
 from algorithm.common.config import redact_url
 from algorithm.common.redis_telemetry import RedisTelemetryPublisher
 from algorithm.common.roi import RoiState
@@ -20,18 +20,18 @@ from algorithm.workers.base import (
 )
 from algorithm.workers.frame_detection import build_frame_detection
 
-from .config import DetectorConfig
+from .config import TrackerConfig
 
 LOGGER = logging.getLogger(__name__)
 
 
-def run_detector(
-    config: DetectorConfig,
+def run_tracker(
+    config: TrackerConfig,
     *,
     stop_event: StopEvent | None = None,
     ready_callback: Callable[[], None] | None = None,
 ) -> None:
-    """持续拉流、推理并发布元数据，直到收到停止请求。"""
+    """持续拉流、追踪并发布带 ``track_id`` 的检测消息，直到收到停止请求。"""
 
     stop = stop_event or threading.Event()
     previous_signal_handlers = install_stop_signal_handlers(stop)
@@ -47,15 +47,16 @@ def run_detector(
         reconnect_delay_seconds=config.reconnect_delay_seconds,
     )
 
-    LOGGER.info("Starting detector task %s", config.task_id)
-    LOGGER.info("RTSP source: %s", redact_url(config.rtsp_url))
-    LOGGER.info("Telemetry channel: %s", config.telemetry_channel)
-    LOGGER.info("Loading YOLO model from %s", config.model_path)
-    LOGGER.info("YOLO inference device: %s", config.device or "auto")
+    LOGGER.info("正在启动追踪任务 %s", config.task_id)
+    LOGGER.info("RTSP 来源：%s", redact_url(config.rtsp_url))
+    LOGGER.info("遥测频道：%s", config.telemetry_channel)
+    LOGGER.info("正在加载 YOLO 模型：%s", config.model_path)
+    LOGGER.info("YOLO 推理设备：%s", config.device or "自动选择")
+    LOGGER.info("追踪配置：bytetrack.yaml")
 
     publisher.start()
     try:
-        detector = YoloDetector(
+        tracker = YoloTracker(
             config.model_path,
             image_size=config.image_size,
             confidence=config.confidence,
@@ -76,7 +77,7 @@ def run_detector(
                 continue
 
             last_sequence = packet.sequence
-            result = detector.predict(packet.frame)
+            result = tracker.track(packet.frame)
             now = time.monotonic()
             if previous_frame_at is not None:
                 instantaneous_fps = 1.0 / max(now - previous_frame_at, 1e-9)
@@ -86,6 +87,7 @@ def run_detector(
                     else 0.9 * fps + 0.1 * instantaneous_fps
                 )
             previous_frame_at = now
+
             height, width = packet.frame.shape[:2]
             message = build_frame_detection(
                 config,
@@ -104,4 +106,4 @@ def run_detector(
         reader.close()
         publisher.close()
         restore_signal_handlers(previous_signal_handlers)
-        LOGGER.info("Detector stopped")
+        LOGGER.info("追踪任务已停止")
