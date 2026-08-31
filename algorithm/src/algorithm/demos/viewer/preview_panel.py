@@ -109,7 +109,7 @@ class VideoCanvas(QWidget):
             color = _class_color(detection.class_id)
             painter.setPen(QPen(color, 2.0))
             painter.drawRect(QRectF(left, top, right - left, bottom - top))
-            label = f"{detection.class_name} {detection.confidence:.2f}"
+            label = _detection_label(detection)
             metrics = QFontMetrics(painter.font())
             label_width = metrics.horizontalAdvance(label) + 8
             label_height = metrics.height() + 4
@@ -530,7 +530,7 @@ class PreviewPanel(QGroupBox):
         if value.objects:
             self.result_status.setText(f"检测：{len(value.objects)} 个目标")
             summary = ", ".join(
-                f"{item.class_name} {item.confidence:.2f}" for item in value.objects
+                _detection_label(item) for item in value.objects
             )
             self.objects_label.setText(f"目标：{summary}")
         else:
@@ -559,6 +559,13 @@ class PreviewPanel(QGroupBox):
 def _class_color(class_id: int) -> QColor:
     colors = ("#22c55e", "#3b82f6", "#f59e0b", "#ef4444", "#a855f7")
     return QColor(colors[class_id % len(colors)])
+
+
+def _detection_label(detection: DetectionObject) -> str:
+    """生成画布和摘要共用的标签；普通检测结果不额外显示空轨迹编号。"""
+
+    track = f" #{detection.track_id}" if detection.track_id is not None else ""
+    return f"{detection.class_name}{track} {detection.confidence:.2f}"
 
 
 def _unix_ms() -> int:
