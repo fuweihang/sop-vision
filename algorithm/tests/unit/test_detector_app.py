@@ -1,11 +1,11 @@
 import time
 from pathlib import Path
 
-from algorithm.algorithms.object_detection.yolo import Detection, DetectionBatch
+from algorithm.algorithms.yolo import Detection, DetectionBatch
 from algorithm.common.roi import RoiConfig
-from algorithm.workers.detector.app import (
-    _detection_is_inside_roi,
+from algorithm.workers.frame_detection import (
     build_frame_detection,
+    detection_is_inside_roi,
 )
 from algorithm.workers.detector.config import DetectorConfig
 
@@ -27,9 +27,9 @@ def test_detection_uses_normalized_bbox_center() -> None:
     left = Detection(0, "person", 0.9, (10.0, 10.0, 30.0, 30.0))
     right = Detection(0, "person", 0.9, (70.0, 10.0, 90.0, 30.0))
 
-    assert _detection_is_inside_roi(left, roi, 100, 100)
-    assert not _detection_is_inside_roi(right, roi, 100, 100)
-    assert _detection_is_inside_roi(right, None, 100, 100)
+    assert detection_is_inside_roi(left, roi, 100, 100)
+    assert not detection_is_inside_roi(right, roi, 100, 100)
+    assert detection_is_inside_roi(right, None, 100, 100)
 
 
 def test_frame_message_filters_roi_and_normalizes_bbox() -> None:
@@ -90,3 +90,30 @@ def test_empty_frame_is_still_a_valid_message() -> None:
     assert message.frame_id == 1
     assert message.run_id == "run-1"
     assert message.published_at_ms >= before_publish_ms
+
+
+def test_frame_message_preserves_track_id_after_roi_filtering() -> None:
+    roi = RoiConfig(
+        points=((0.0, 0.0), (0.5, 0.0), (0.5, 1.0), (0.0, 1.0))
+    )
+    result = DetectionBatch(
+        detections=(
+            Detection(0, "person", 0.9, (10.0, 10.0, 30.0, 30.0), track_id=12),
+            Detection(0, "person", 0.8, (70.0, 10.0, 90.0, 30.0), track_id=13),
+        ),
+        inference_ms=5.0,
+    )
+
+    message = build_frame_detection(
+        detector_config(roi),
+        result,
+        roi,
+        run_id="run-1",
+        frame_id=2,
+        frame_ts_ms=1234,
+        frame_width=100,
+        frame_height=100,
+        fps=20.0,
+    )
+
+    assert [item.track_id for item in message.objects] == [12]

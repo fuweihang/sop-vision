@@ -7,6 +7,8 @@ from algorithm.daemon.configuration import WorkerConfigurationError, validate_re
 from algorithm.daemon.registry import get_worker_definition
 from algorithm.database import TaskParameterRecord
 from algorithm.workers.detector.config import DetectorConfig
+from algorithm.workers.config import VideoWorkerConfig
+from algorithm.workers.tracker.config import TrackerConfig
 
 
 def record(*, confidence: float = 0.5) -> TaskParameterRecord:
@@ -59,3 +61,26 @@ def test_public_schema_excludes_task_id_and_contains_nested_roi() -> None:
     } & schema["properties"].keys()
     assert schema["properties"]["confidence"]["default"] == 0.5
     assert "RoiConfig" in schema["$defs"]
+
+
+def test_worker_configs_share_base_without_referencing_each_other() -> None:
+    detector_schema = get_worker_definition("detector").parameter_schema()
+    tracker_schema = get_worker_definition("tracker").parameter_schema()
+
+    assert issubclass(DetectorConfig, VideoWorkerConfig)
+    assert issubclass(TrackerConfig, VideoWorkerConfig)
+    assert not issubclass(TrackerConfig, DetectorConfig)
+    assert detector_schema["properties"] == tracker_schema["properties"]
+    assert detector_schema["title"] == "DetectorConfig"
+    assert tracker_schema["title"] == "TrackerConfig"
+    assert "task_id" not in tracker_schema["properties"]
+    assert "tracker_config_path" not in tracker_schema["properties"]
+
+    tracker_record = TaskParameterRecord(
+        task_id="tracker-001",
+        worker_type="tracker",
+        config=record().config,
+        updated_at=datetime(2026, 8, 21, tzinfo=UTC),
+    )
+    loaded = validate_record(tracker_record, Path("/resources"))
+    assert isinstance(loaded.config, TrackerConfig)

@@ -35,13 +35,25 @@
     "description": "🧩 可复用算法",
     "tooltip": "不依赖具体 Worker 生命周期的视觉算法实现"
   },
+  "src/algorithm/algorithms/yolo.py": {
+    "description": "🧱 YOLO 公共基础",
+    "tooltip": "模型加载、公共推理参数、内部结果类型和结果转换"
+  },
   "src/algorithm/algorithms/object_detection": {
     "description": "🎯 目标检测",
     "tooltip": "目标检测模型及结果适配代码"
   },
-  "src/algorithm/algorithms/object_detection/yolo.py": {
-    "description": "🔬 YOLO 推理适配器",
-    "tooltip": "加载 Ultralytics YOLO 并转换为服务内部检测结果"
+  "src/algorithm/algorithms/object_detection/detection.py": {
+    "description": "🔬 YOLO 检测适配器",
+    "tooltip": "调用 Ultralytics predict 执行单帧目标检测"
+  },
+  "src/algorithm/algorithms/object_tracking": {
+    "description": "🎯 目标追踪",
+    "tooltip": "不依赖具体 Worker 生命周期的多目标追踪实现"
+  },
+  "src/algorithm/algorithms/object_tracking/bytetrack.py": {
+    "description": "🔗 ByteTrack 适配器",
+    "tooltip": "调用 Ultralytics track 并保持连续帧追踪状态"
   },
   "src/algorithm/common": {
     "description": "🔧 公共基础设施",
@@ -153,7 +165,15 @@
   },
   "src/algorithm/workers/base.py": {
     "description": "🧱 Worker 进程入口",
-    "tooltip": "以 spawn 模式重建配置、运行 Worker 并报告状态"
+    "tooltip": "以 spawn 模式重建配置、处理退出信号、运行 Worker 并报告状态"
+  },
+  "src/algorithm/workers/config.py": {
+    "description": "⚙️ 视频 Worker 公共配置",
+    "tooltip": "Detector 与 Tracker 共用的连接、模型、ROI 和发布参数"
+  },
+  "src/algorithm/workers/frame_detection.py": {
+    "description": "📨 帧消息转换",
+    "tooltip": "检测与追踪共用的 ROI 过滤、坐标归一化和消息构建"
   },
   "src/algorithm/workers/detector": {
     "description": "🔍 检测 Worker",
@@ -162,6 +182,22 @@
   "src/algorithm/workers/detector/__main__.py": {
     "description": "🧪 Detector 调试入口",
     "tooltip": "绕过守护进程，从 PostgreSQL 启动单个 Detector"
+  },
+  "src/algorithm/workers/tracker": {
+    "description": "🎯 ByteTrack 追踪 Worker",
+    "tooltip": "从 RTSP 连续追踪多个目标并向 Redis 发布 track_id"
+  },
+  "src/algorithm/workers/tracker/config.py": {
+    "description": "⚙️ Tracker 配置模型",
+    "tooltip": "继承视频 Worker 公共参数并生成独立 Daemon JSON Schema"
+  },
+  "src/algorithm/workers/tracker/app.py": {
+    "description": "▶️ 无界面追踪主循环",
+    "tooltip": "管理 YOLO、ByteTrack、RTSP 拉流和 Redis 发布"
+  },
+  "src/algorithm/workers/tracker/__main__.py": {
+    "description": "🧪 Tracker 调试入口",
+    "tooltip": "绕过 Daemon 启动单个 Tracker 任务"
   },
   "src/algorithm/workers/detector/app.py": {
     "description": "▶️ 无界面检测主循环",

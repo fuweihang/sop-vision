@@ -2,7 +2,8 @@
 
 `algorithm` 是 SOP Vision 的算法服务。外部客户端把任务参数保存到 PostgreSQL，再只携带
 `task_id` 调用 Algorithm Daemon；守护进程从数据库读取并严格校验配置，在有界独立进程池
-中运行 AIWorker。Detector 从 RTSP 拉流、执行 YOLO，并把检测元数据直接写入 Redis。
+中运行 AIWorker。Detector 从 RTSP 拉流并执行 YOLO 检测；Tracker 在相同输入上使用
+ByteTrack 维持多目标轨迹。两种 Worker 都把检测元数据直接写入 Redis。
 
 ## 架构
 
@@ -71,12 +72,13 @@ ALGORITHM_RESOURCE_ROOT=/absolute/path/to/sop-vision/algorithm
 相对模型路径以 `ALGORITHM_RESOURCE_ROOT` 为基准；未设置时使用安装包所在的 algorithm
 工程根目录。配置和错误日志不会回显 RTSP、Redis 或数据库凭据。
 
-当前 Detector 参数示例（存入 `config` 列）：
+当前 Detector 和 Tracker 共用以下参数（存入 `config` 列），通过数据库记录的
+`worker_type` 分别选择 `detector` 或 `tracker`：
 
 ```json
 {
   "rtsp_url": "rtsp://user:password@camera/stream",
-  "redis_url": "redis://127.0.0.1:63793/0",
+  "redis_url": "redis://127.0.0.1:6379/0",
   "model_path": "resources/models/yolo26n.pt",
   "image_size": 640,
   "confidence": 0.5,
@@ -90,7 +92,8 @@ ALGORITHM_RESOURCE_ROOT=/absolute/path/to/sop-vision/algorithm
 ```
 
 `roi=null` 表示全画面检测。ROI 坐标归一化到 `[0, 1]`，至少需要三个不重复且能组成
-非零面积多边形的点。
+非零面积多边形的点。Tracker 始终在全画面维护轨迹，ROI 只过滤发布结果；目标离开 ROI
+后仍可能在重新进入时继续使用原来的 `track_id`。
 
 ## 启动与控制
 
@@ -103,6 +106,7 @@ uv run algorithm-daemon --host 127.0.0.1 --port 8090
 ```bash
 curl http://127.0.0.1:8090/v1/worker-types
 curl http://127.0.0.1:8090/v1/worker-types/detector/schema
+curl http://127.0.0.1:8090/v1/worker-types/tracker/schema
 ```
 
 控制命令只接受空请求体：
@@ -122,10 +126,11 @@ curl http://127.0.0.1:8090/healthz
 404 表示任务或类型不存在，422 表示配置非法，429 表示进程容量耗尽，503 表示数据库
 不可用，504 表示 Worker 未在期限内就绪。命令同步等待模型加载与主循环就绪。
 
-绕过守护进程调试单个 Detector 时也从数据库读取：
+绕过守护进程调试单个 Detector 或 Tracker 时也从数据库读取：
 
 ```bash
 uv run detector --task-id detector-001
+uv run tracker --task-id tracker-001
 ```
 
 ## Qt Viewer 外部客户端模拟
@@ -151,9 +156,10 @@ Redis、ROI 和其他算法参数。Viewer 从 Daemon 获取标准 JSON Schema �
 
 Viewer 不做 RTP/RTCP/PTS 时间同步，也不缓存历史视频帧；它把最近 2 秒内收到的最新检测
 结果叠加到当前画面，适合联调消息和绘制效果，不作为逐帧准确性验收工具。关闭 Viewer
-只断开预览，不会停止 Worker。
+只断开预览，不会停止 Worker。Tracker 结果会在类别名后显示 `#track_id`，例如
+`person #12 0.91`；普通 Detector 结果仍显示为 `person 0.91`。
 
-## 检测结果
+## 检测与追踪结果
 
 Worker 对每个推理帧执行：
 
@@ -164,6 +170,11 @@ SET vision:task:{task_id}:latest <json> EX 5
 
 Redis 只传输检测元数据，不传输原始视频。断线或发布落后时只保留最新待发送结果，不阻塞
 推理，也不补发过期帧。消息契约定义在 `src/algorithm/contracts/detection.py`。
+
+Tracker 使用现有 `objects[].track_id` 字段返回 ByteTrack 编号，不增加新的消息类型，也不
+修改 `schema_version`。编号只在当前 Worker 的 `run_id` 内有效；RTSP 地址变化时应用端
+必须重启或重载 Worker，新进程会重新创建 ByteTrack 状态和编号。`track_id` 不能作为
+数据库中的长期目标 ID。
 
 ## 测试
 

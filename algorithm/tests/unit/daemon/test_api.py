@@ -62,6 +62,7 @@ async def _assert_api_contract() -> None:
         health = await client.get("/healthz")
         worker_types = await client.get("/v1/worker-types")
         schema = await client.get("/v1/worker-types/detector/schema")
+        tracker_schema = await client.get("/v1/worker-types/tracker/schema")
         started = await client.post("/v1/workers/task-1/start")
 
         assert health.json() == {
@@ -70,13 +71,16 @@ async def _assert_api_contract() -> None:
             "active_workers": 1,
             "max_workers": 4,
         }
-        assert worker_types.json()["worker_types"][0]["worker_type"] == "detector"
+        assert [
+            item["worker_type"] for item in worker_types.json()["worker_types"]
+        ] == ["detector", "tracker"]
         assert "task_id" not in schema.json()["properties"]
+        assert "task_id" not in tracker_schema.json()["properties"]
         assert started.status_code == 200
         assert started.json()["config_updated_at"] == "2026-08-21T00:00:00Z"
         assert (await client.get("/v1/worker-types/missing/schema")).status_code == 404
         assert (await client.post("/v1/workers/task-1/restart")).status_code == 404
-        assert (await client.get("/openapi.json")).status_code == 404
+        assert (await client.get("/openapi.json")).status_code == 200
 
         assert (await client.post("/v1/workers/running/start")).status_code == 409
         assert (await client.post("/v1/workers/full/start")).status_code == 429

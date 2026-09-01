@@ -423,6 +423,20 @@ def test_第二路检测结果不会修改第一路状态() -> None:
     app.processEvents()
 
 
+def test_追踪目标标签显示track_id而普通检测保持原样() -> None:
+    tracked = DetectionObject(
+        class_id=0,
+        class_name="person",
+        confidence=0.91,
+        bbox=(0.1, 0.1, 0.2, 0.3),
+        track_id=12,
+    )
+    detected = tracked.model_copy(update={"track_id": None})
+
+    assert preview_module._detection_label(tracked) == "person #12 0.91"
+    assert preview_module._detection_label(detected) == "person 0.91"
+
+
 def test_相同task_id禁止保存和停止worker() -> None:
     app = QApplication.instance() or QApplication([])
     window = ViewerWindow(task_id="same-task", task_id_2="different-task")
