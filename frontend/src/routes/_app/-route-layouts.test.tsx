@@ -24,7 +24,7 @@ test("根路径重定向到摄像头列表并渲染 Shell", async () => {
   const router = renderRoute("/");
 
   expect(
-    await screen.findByRole("heading", { level: 1, name: "摄像头" }),
+    await screen.findByRole("searchbox", { name: "搜索摄像头" }),
   ).toBeInTheDocument();
   expect(router.state.location.pathname).toBe("/cameras");
   expect(
@@ -41,7 +41,7 @@ test.each([
     document.cookie = `sidebar_state=${cookieValue}; path=/`;
     renderRoute("/cameras");
 
-    await screen.findByRole("heading", { level: 1, name: "摄像头" });
+    await screen.findByRole("searchbox", { name: "搜索摄像头" });
 
     expect(
       document.querySelector('[data-slot="sidebar"][data-state]'),
@@ -60,7 +60,7 @@ test.each([
   const user = userEvent.setup();
   renderRoute("/cameras");
 
-  await screen.findByRole("heading", { level: 1, name: "摄像头" });
+  await screen.findByRole("searchbox", { name: "搜索摄像头" });
   await user.keyboard(shortcut);
 
   expect(
@@ -72,9 +72,10 @@ test.each([
 test("767px 渲染移动 Sheet，768px 渲染桌面 Sidebar", async () => {
   const user = userEvent.setup();
   setViewportWidth(767);
+  mockServer.use(...createCamerasMswScenario("success"));
   const mobileRender = renderAppRoute("/cameras");
 
-  await screen.findByRole("heading", { level: 1, name: "摄像头" });
+  await screen.findByRole("searchbox", { name: "搜索摄像头" });
   expect(screen.queryByRole("navigation", { name: "主菜单" })).toBeNull();
 
   await user.click(screen.getByRole("button", { name: "打开主导航" }));
@@ -97,7 +98,6 @@ test("767px 渲染移动 Sheet，768px 渲染桌面 Sidebar", async () => {
 });
 
 test.each([
-  ["/cameras", "摄像头"],
   [CAMERA_DETAIL_PATH, "洗手区 01"],
   ["/tasks", "检测任务"],
   ["/tasks/task-42", "task-42"],
@@ -127,6 +127,22 @@ test.each([
   }
 });
 
+test("可直接进入 /cameras，并使用无页面标题的紧凑工具栏", async () => {
+  renderRoute("/cameras");
+
+  expect(
+    await screen.findByRole("group", { name: "摄像头列表工具栏" }),
+  ).toBeInTheDocument();
+  expect(screen.queryByRole("heading", { level: 1 })).toBeNull();
+  expect(
+    screen.getByRole("heading", { level: 2, name: "洗手区 01" }),
+  ).toBeInTheDocument();
+
+  const mainContent = document.getElementById("main-content");
+  expect(mainContent).toHaveAttribute("id", "main-content");
+  expect(mainContent).toHaveAttribute("tabindex", "-1");
+});
+
 test("pathname 改变后将焦点移到新页面标题", async () => {
   const user = userEvent.setup();
 
@@ -146,6 +162,23 @@ test("pathname 改变后将焦点移到新页面标题", async () => {
   await waitFor(() => expect(pageHeading).toHaveFocus());
 });
 
+test("进入无页面标题的 Cameras 列表时将焦点回退到主内容", async () => {
+  const user = userEvent.setup();
+
+  renderRoute("/tasks");
+  const mainNavigation = await screen.findByRole("navigation", {
+    name: "主菜单",
+  });
+  await user.click(
+    within(mainNavigation).getByRole("link", { name: "摄像头" }),
+  );
+
+  await screen.findByRole("searchbox", { name: "搜索摄像头" });
+  await waitFor(() =>
+    expect(document.getElementById("main-content")).toHaveFocus(),
+  );
+});
+
 test("仅 search params 改变时保留当前焦点", async () => {
   const router = renderRoute("/cameras");
   const themeToggle = await screen.findByRole("button", {
@@ -157,11 +190,15 @@ test("仅 search params 改变时保留当前焦点", async () => {
   await act(async () => {
     await router.navigate({
       to: "/cameras",
-      search: { filter: "connected" },
+      search: { q: "connected" },
     });
   });
 
-  expect(router.state.location.search).toEqual({ filter: "connected" });
+  expect(router.state.location.search).toEqual({
+    q: "connected",
+    page: 1,
+    page_size: 6,
+  });
   expect(themeToggle).toHaveFocus();
 });
 
@@ -169,7 +206,7 @@ test("Skip Link 首个获得键盘焦点并将焦点交给主内容", async () =
   const user = userEvent.setup();
 
   renderRoute("/cameras");
-  await screen.findByRole("heading", { level: 1, name: "摄像头" });
+  await screen.findByRole("searchbox", { name: "搜索摄像头" });
 
   const skipLink = screen.getByRole("link", { name: "跳到主要内容" });
   const mainContent = document.getElementById("main-content");
@@ -185,11 +222,25 @@ test("Skip Link 首个获得键盘焦点并将焦点交给主内容", async () =
 });
 
 test.each([
-  [CAMERA_DETAIL_PATH, "摄像头", "洗手区 01", "返回摄像头列表", "/cameras"],
-  ["/tasks/task-42", "检测任务", "task-42", "返回检测任务列表", "/tasks"],
+  [
+    CAMERA_DETAIL_PATH,
+    "摄像头",
+    "洗手区 01",
+    "返回摄像头列表",
+    "/cameras",
+    "/cameras?page=1&page_size=6",
+  ],
+  [
+    "/tasks/task-42",
+    "检测任务",
+    "task-42",
+    "返回检测任务列表",
+    "/tasks",
+    "/tasks",
+  ],
 ])(
   "%s 显示父级与动态 Breadcrumb，并返回固定父列表",
-  async (path, parentLabel, detailLabel, backLabel, parentPath) => {
+  async (path, parentLabel, detailLabel, backLabel, parentPath, parentHref) => {
     const user = userEvent.setup();
     const router = renderRoute(path);
     const breadcrumb = await screen.findByRole("navigation", {
@@ -198,14 +249,14 @@ test.each([
 
     expect(
       within(breadcrumb).getByRole("link", { name: parentLabel }),
-    ).toHaveAttribute("href", parentPath);
+    ).toHaveAttribute("href", parentHref);
     expect(within(breadcrumb).getByText(detailLabel)).toHaveAttribute(
       "aria-current",
       "page",
     );
 
     const backLink = screen.getByRole("link", { name: backLabel });
-    expect(backLink).toHaveAttribute("href", parentPath);
+    expect(backLink).toHaveAttribute("href", parentHref);
     await user.click(backLink);
 
     expect(router.state.location.pathname).toBe(parentPath);
@@ -232,25 +283,29 @@ test.each([
     path: "/cameras",
     routeId: "/_app/cameras/",
     pendingLabel: "正在加载摄像头列表",
-    heading: "摄像头",
+    readyRole: "searchbox",
+    readyName: "搜索摄像头",
   },
   {
     path: CAMERA_DETAIL_PATH,
     routeId: "/_app/cameras/$cameraId",
     pendingLabel: "正在加载摄像头详情",
-    heading: "洗手区 01",
+    readyRole: "heading",
+    readyName: "洗手区 01",
   },
   {
     path: "/tasks",
     routeId: "/_app/tasks/",
     pendingLabel: "正在加载检测任务列表",
-    heading: "检测任务",
+    readyRole: "heading",
+    readyName: "检测任务",
   },
   {
     path: "/tasks/task-42",
     routeId: "/_app/tasks/$taskId",
     pendingLabel: "正在加载检测任务详情",
-    heading: "task-42",
+    readyRole: "heading",
+    readyName: "task-42",
   },
 ] as const)("$path Pending 保留 Shell 并提供可访问状态", async (testCase) => {
   let finishLoading = () => {};
@@ -300,9 +355,8 @@ test.each([
 
     act(() => finishLoading());
     expect(
-      await screen.findByRole("heading", {
-        level: 1,
-        name: testCase.heading,
+      await screen.findByRole(testCase.readyRole, {
+        name: testCase.readyName,
       }),
     ).toBeInTheDocument();
   } finally {
@@ -353,7 +407,9 @@ test("Cameras 子路由失败时保留 Shell，并可通过 invalidate 重试", 
     expect(
       screen
         .getAllByRole("link", { name: "返回摄像头列表" })
-        .some((link) => link.getAttribute("href") === "/cameras"),
+        .some(
+          (link) => link.getAttribute("href") === "/cameras?page=1&page_size=6",
+        ),
     ).toBe(true);
 
     shouldFail = false;

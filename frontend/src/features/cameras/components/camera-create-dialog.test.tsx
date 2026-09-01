@@ -14,6 +14,7 @@ import { expect, test, vi } from "vitest";
 import { apiBaseUrl } from "@/lib/api-client";
 import { queryClient } from "@/lib/query-client";
 import {
+  buildCameraPage,
   CAMERA_FIXTURE_IDS,
   CAMERA_FIXTURE_SECRET,
 } from "@/mocks/cameras/fixtures";
@@ -27,16 +28,24 @@ function useScenario(name: Parameters<typeof createCamerasMswScenario>[0]) {
   mockServer.use(...createCamerasMswScenario(name));
 }
 
+function registerSuccessfulList() {
+  // Dialog 用例只关心写请求；真实列表路由仍需要一个明确、非敏感的 loader 响应。
+  mockServer.use(
+    http.get(camerasUrl, () => HttpResponse.json(buildCameraPage())),
+  );
+}
+
 async function openDialog() {
   const user = userEvent.setup();
+  registerSuccessfulList();
   renderAppRoute("/cameras");
-  await user.click(await screen.findByRole("button", { name: "添加 Camera" }));
-  const dialog = await screen.findByRole("dialog", { name: "添加 Camera" });
+  await user.click(await screen.findByRole("button", { name: "添加摄像头" }));
+  const dialog = await screen.findByRole("dialog", { name: "添加摄像头" });
   return { user, dialog };
 }
 
 async function fillValidCamera(user: ReturnType<typeof userEvent.setup>) {
-  await user.type(screen.getByLabelText("Camera 名称"), "洗手区 01");
+  await user.type(screen.getByLabelText("摄像头名称"), "洗手区 01");
   await user.type(screen.getByLabelText("IP 地址"), "192.0.2.64");
   await user.type(screen.getByLabelText("用户名"), "camera-user");
   await user.type(screen.getByLabelText("密码"), "camera-password");
@@ -47,11 +56,11 @@ async function fillValidCamera(user: ReturnType<typeof userEvent.setup>) {
   );
 }
 
-test("页面保留列表占位，并由唯一主操作打开 shadcn Dialog", async () => {
+test("页面保留已加载列表，并由唯一主操作打开 shadcn Dialog", async () => {
   const { dialog } = await openDialog();
 
-  // Modal 打开后页面会被 Base UI 正确标记为 inert，因此这里只确认占位内容仍存在于 DOM。
-  expect(screen.getByText("路由骨架")).toBeInTheDocument();
+  // Modal 打开后页面会被 Base UI 正确标记为 inert，因此这里只确认列表内容仍存在于 DOM。
+  expect(screen.getByText("洗手区 01")).toBeInTheDocument();
   expect(within(dialog).getByLabelText("RTSP 端口")).toHaveValue(554);
   expect(within(dialog).getByLabelText("IP 地址")).not.toHaveAttribute(
     "placeholder",
@@ -61,7 +70,7 @@ test("页面保留列表占位，并由唯一主操作打开 shadcn Dialog", asy
   );
   expect(within(dialog).getAllByLabelText("名称")[0]).toHaveAttribute(
     "placeholder",
-    "例如：主码流",
+    "例如：通道 1 主码流",
   );
   expect(within(dialog).getAllByLabelText("URL 后缀")[0]).toHaveAttribute(
     "placeholder",
@@ -77,7 +86,7 @@ test("页面保留列表占位，并由唯一主操作打开 shadcn Dialog", asy
   ).toBeInTheDocument();
   expect(within(dialog).queryByText("连接信息", { exact: true })).toBeNull();
   expect(
-    within(dialog).queryByText(/Camera 名称和 IP 地址不要求唯一/),
+    within(dialog).queryByText(/摄像头名称和 IP 地址不要求唯一/),
   ).toBeNull();
   expect(within(dialog).queryByText(/密码不会出现在/)).toBeNull();
   expect(within(dialog).queryByText(/预览地址/)).toBeNull();
@@ -85,15 +94,16 @@ test("页面保留列表占位，并由唯一主操作打开 shadcn Dialog", asy
 
 test("Dialog 打开聚焦首个字段，取消后把焦点还给触发按钮", async () => {
   const user = userEvent.setup();
+  registerSuccessfulList();
   renderAppRoute("/cameras");
-  const trigger = await screen.findByRole("button", { name: "添加 Camera" });
+  const trigger = await screen.findByRole("button", { name: "添加摄像头" });
 
   await user.click(trigger);
-  expect(await screen.findByLabelText("Camera 名称")).toHaveFocus();
+  expect(await screen.findByLabelText("摄像头名称")).toHaveFocus();
   await user.click(screen.getByRole("button", { name: "取消" }));
 
   await waitFor(() =>
-    expect(screen.queryByRole("dialog", { name: "添加 Camera" })).toBeNull(),
+    expect(screen.queryByRole("dialog", { name: "添加摄像头" })).toBeNull(),
   );
   expect(trigger).toHaveFocus();
 });
@@ -169,17 +179,17 @@ test("提交期间锁定 Dialog、字段和全部写操作，且请求只发送�
   const { user, dialog } = await openDialog();
   await fillValidCamera(user);
 
-  await user.click(within(dialog).getByRole("button", { name: "保存 Camera" }));
+  await user.click(within(dialog).getByRole("button", { name: "保存摄像头" }));
   expect(
     await within(dialog).findByRole("button", { name: /正在保存/ }),
   ).toBeDisabled();
-  expect(within(dialog).getByLabelText("Camera 名称")).toBeDisabled();
+  expect(within(dialog).getByLabelText("摄像头名称")).toBeDisabled();
   expect(within(dialog).getByRole("button", { name: "取消" })).toBeDisabled();
   expect(within(dialog).queryByRole("button", { name: "关闭" })).toBeNull();
 
   await user.keyboard("{Escape}");
   expect(
-    screen.getByRole("dialog", { name: "添加 Camera" }),
+    screen.getByRole("dialog", { name: "添加摄像头" }),
   ).toBeInTheDocument();
   const overlay = document.querySelector('[data-slot="dialog-overlay"]');
   if (overlay !== null) {
@@ -187,7 +197,7 @@ test("提交期间锁定 Dialog、字段和全部写操作，且请求只发送�
     fireEvent.click(overlay);
   }
   expect(
-    screen.getByRole("dialog", { name: "添加 Camera" }),
+    screen.getByRole("dialog", { name: "添加摄像头" }),
   ).toBeInTheDocument();
   expect(requestCount).toBe(1);
 
@@ -203,20 +213,18 @@ test("创建成功后关闭并重置、失效 Cameras 前缀且不改变路由",
   const { user, dialog, router } = await (async () => {
     const user = userEvent.setup();
     const rendered = renderAppRoute("/cameras");
-    await user.click(
-      await screen.findByRole("button", { name: "添加 Camera" }),
-    );
+    await user.click(await screen.findByRole("button", { name: "添加摄像头" }));
     return {
       user,
-      dialog: await screen.findByRole("dialog", { name: "添加 Camera" }),
+      dialog: await screen.findByRole("dialog", { name: "添加摄像头" }),
       router: rendered.router,
     };
   })();
   await fillValidCamera(user);
-  await user.click(within(dialog).getByRole("button", { name: "保存 Camera" }));
+  await user.click(within(dialog).getByRole("button", { name: "保存摄像头" }));
 
   await waitFor(() =>
-    expect(screen.queryByRole("dialog", { name: "添加 Camera" })).toBeNull(),
+    expect(screen.queryByRole("dialog", { name: "添加摄像头" })).toBeNull(),
   );
   expect(await screen.findByText("摄像头已创建")).toBeInTheDocument();
   expect(invalidate).toHaveBeenCalledWith({ queryKey: ["cameras"] });
@@ -231,8 +239,8 @@ test("创建成功后关闭并重置、失效 Cameras 前缀且不改变路由",
   expect(localStorage).toHaveLength(0);
   expect(sessionStorage).toHaveLength(0);
 
-  await user.click(screen.getByRole("button", { name: "添加 Camera" }));
-  expect(await screen.findByLabelText("Camera 名称")).toHaveValue("");
+  await user.click(screen.getByRole("button", { name: "添加摄像头" }));
+  expect(await screen.findByLabelText("摄像头名称")).toHaveValue("");
   expect(screen.getByLabelText("RTSP 端口")).toHaveValue(554);
 });
 
@@ -246,18 +254,18 @@ test("嵌套 422 按服务端顺序设置字段错误并聚焦第一个现有控
     within(dialog).getAllByLabelText("URL 后缀")[1]!,
     "Streaming/Channels/102",
   );
-  await user.click(within(dialog).getByRole("button", { name: "保存 Camera" }));
+  await user.click(within(dialog).getByRole("button", { name: "保存摄像头" }));
 
   expect(
     await within(dialog).findByText("该字段为必填项。"),
   ).toBeInTheDocument();
   expect(
-    within(dialog).getByText("规范化后的 Source 后缀不能重复。"),
+    within(dialog).getByText("规范化后的视频源后缀不能重复。"),
   ).toBeInTheDocument();
   await waitFor(() =>
     expect(within(dialog).getAllByLabelText("名称")[1]).toHaveFocus(),
   );
-  expect(within(dialog).getByLabelText("Camera 名称")).toHaveValue("洗手区 01");
+  expect(within(dialog).getByLabelText("摄像头名称")).toHaveValue("洗手区 01");
 });
 
 test.each(["transport", "unexpected", "503"] as const)(
@@ -283,14 +291,14 @@ test.each(["transport", "unexpected", "503"] as const)(
     const { user, dialog } = await openDialog();
     await fillValidCamera(user);
     await user.click(
-      within(dialog).getByRole("button", { name: "保存 Camera" }),
+      within(dialog).getByRole("button", { name: "保存摄像头" }),
     );
 
     expect(await within(dialog).findByText("创建结果未知")).toBeInTheDocument();
     expect(
       within(dialog).getByText(/再次保存会发送一条新的创建请求/),
     ).toBeInTheDocument();
-    expect(within(dialog).getByLabelText("Camera 名称")).toHaveValue(
+    expect(within(dialog).getByLabelText("摄像头名称")).toHaveValue(
       "洗手区 01",
     );
     if (kind !== "503") {
@@ -300,7 +308,7 @@ test.each(["transport", "unexpected", "503"] as const)(
 
     if (kind === "transport") {
       await user.click(
-        within(dialog).getByRole("button", { name: "保存 Camera" }),
+        within(dialog).getByRole("button", { name: "保存摄像头" }),
       );
       await waitFor(() => expect(requestCount).toBe(2));
       expect(within(dialog).getByText("创建结果未知")).toBeInTheDocument();
@@ -342,7 +350,7 @@ test("无法定位的服务端字段错误进入表单级 Alert", async () => {
   );
   const { user, dialog } = await openDialog();
   await fillValidCamera(user);
-  await user.click(within(dialog).getByRole("button", { name: "保存 Camera" }));
+  await user.click(within(dialog).getByRole("button", { name: "保存摄像头" }));
 
   expect(
     await within(dialog).findByText("无法定位的视频源字段错误。"),

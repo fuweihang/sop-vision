@@ -136,7 +136,7 @@ export function CameraCreateSourceFields({
                 </FieldLabel>
                 <Input
                   id={`${formId}-source-${sourceField.id}-name`}
-                  placeholder="例如：主码流"
+                  placeholder="例如：通道 1 主码流"
                   autoComplete="off"
                   aria-invalid={sourceErrors?.name !== undefined}
                   data-camera-create-field={`sources.${index}.name`}

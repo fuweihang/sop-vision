@@ -101,6 +101,25 @@ test("空列表与搜索无结果是可独立选择的确定场景", async () =>
   });
 });
 
+test("多页与越界场景保留请求页码、page_size 和真实 total", async () => {
+  useScenario("multi-page");
+  await expect(listCameras({ page: 2, page_size: 1 })).resolves.toMatchObject({
+    page: 2,
+    page_size: 1,
+    total: 2,
+    items: [expect.objectContaining({ name: "包装区 02" })],
+  });
+
+  mockServer.resetHandlers();
+  useScenario("out-of-range");
+  await expect(listCameras({ page: 3, page_size: 1 })).resolves.toMatchObject({
+    page: 3,
+    page_size: 1,
+    total: 2,
+    items: [],
+  });
+});
+
 test("whep-player 场景为两路 Source 提供固定且不同的浏览器播放入口", async () => {
   useScenario("whep-player");
   const detail = await getCamera(CAMERA_FIXTURE_IDS.primaryCamera);

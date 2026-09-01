@@ -8,8 +8,7 @@
 
 ## 当前上下文与前置条件
 
-- [Camera 列表 API](../../../../modules/cameras/camera-list.md)和
-  [02｜Camera 列表页面](../02-camera-list-page/README.md)必须已经实施完成并通过验证。
+- [Camera 列表](../../../../modules/cameras/camera-list.md)API 和页面能力必须已经实施完成并通过验证。
 - 开始实施前以当前 Camera Card、列表 Query、Route 测试和生成类型为准，不重新实现 01、02 的数据
   获取、搜索分页或页面状态。
 - 先阅读 [WHEP 浏览器播放](../../../../modules/cameras/whep-player.md)和现有

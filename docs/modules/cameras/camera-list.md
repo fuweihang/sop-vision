@@ -6,19 +6,19 @@
 ## 职责与边界
 
 `GET /api/v1/cameras` 返回可供列表页面使用的非敏感 Camera 摘要。接口支持名称或 IPv4 字面包含
-搜索，并按 `created_at ASC, camera_id ASC` 稳定分页。当前只完成 Backend API、OpenAPI、Frontend
-生成类型和 MSW 场景；列表页面和 Camera Card 播放仍未实现。
+搜索，并按 `created_at ASC, camera_id ASC` 稳定分页。当前已完成 Backend API、OpenAPI、Frontend
+生成类型、MSW 场景，以及 `/cameras` 搜索分页页面。Camera Card 实时播放仍未实现。
 
 列表响应只包含 Camera ID、名称、IPv4、RTSP 端口、聚合状态、Source 计数、默认 Source 摘要和创建/
 更新时间。不会返回用户名、密码、Source 后缀、完整 RTSP URL或完整 Source 数组。
 
 ## 查询参数
 
-| 参数        | 默认值 | 规则                                      |
-| ----------- | ------ | ----------------------------------------- |
-| `q`         | 无     | trim 后最长 100 字符；空白等同未提供      |
-| `page`      | `1`    | 大于等于 1                               |
-| `page_size` | `20`   | 1–100                                    |
+| 参数        | 默认值 | 规则                                 |
+| ----------- | ------ | ------------------------------------ |
+| `q`         | 无     | trim 后最长 100 字符；空白等同未提供 |
+| `page`      | `1`    | 大于等于 1                           |
+| `page_size` | `20`   | 1–100                                |
 
 搜索对 Camera 名称和 IPv4 不区分大小写。`%`、`_` 和 `\` 按普通字符匹配，不作为 SQL 通配符；额外
 查询参数会被忽略。越界页返回空 `items` 和真实 `total`。
@@ -39,6 +39,30 @@ rollback 结束只读事务，之后才访问 MediaMTX，避免等待外部网�
 
 成功响应不设置 `Cache-Control: no-store`，但 Frontend 只能把结果保存在当前会话的内存 Query
 cache 中，不得写入持久化浏览器存储。
+
+## Frontend 页面
+
+`/cameras` 的 `q/page/page_size` 由 Cameras 父路由使用 Zod 4 校验，列表和详情共同继承。搜索输入
+防抖 300ms 后用 replace 更新 URL 并返回第一页；分页使用正常历史记录。Card 详情 Link、详情返回和
+Cameras Breadcrumb 都携带完整查询参数，因此直接访问详情或使用浏览器前进/后退也能恢复列表位置。
+
+列表 route loader 使用 `ensureQueryData` 等待首屏数据，页面使用相同 Query Options 的
+`useSuspenseQuery` 订阅。页面可见时每 15 秒刷新，后台刷新期间保留已有 Cards 且不显示临时状态行，
+避免 Grid 周期性位移；后台失败时保留 Cards 并显示非阻塞错误提示。初始网络错误和可信数据库 503
+最多自动重试一次，仍失败时可由页面错误状态重新执行 loader。
+
+页面分别显示无 Camera、搜索无结果和页码越界。越界页保留 API 的真实 `page/total`，只提供显式返回
+第一页或上一页的 Link，不自动跳转。分页仅包含上一页、当前页/总页数和下一页。静态 Card 只展示
+Camera 名称、IPv4/端口、Camera 状态、默认 Source 名称和在线计数，不读取敏感详情，不创建 video 或
+WHEP Session。Card 整体是详情 Link，布局使用 16:9 静态媒体区和默认 Source 名称 overlay，不在媒体
+区重复显示 Source 状态 Badge；下方依次展示 Camera 名称/Camera 状态、等宽地址和在线 Source 统计；
+实时画面由后续 Card 预览任务替换静态媒体区。
+
+列表页沿用原型的紧凑工具栏，不显示额外页面标题和说明。搜索框与“添加摄像头”按钮保持同一行，
+搜索框保留无障碍名称但不显示视觉标签。URL 缺少 `page_size` 时，Frontend 在首个 loader 请求前按
+首次视口的 4/2/1 列布局选择 `12/6/4`，并把结果写入 URL；URL 已提供该参数时保持原值，窗口变化也
+不会自动改页，避免分页内容、详情返回位置和浏览器历史随 resize 变化。显式非法值仍恢复为 Backend
+默认的 `20`。
 
 ## 日志与排查
 
@@ -66,4 +90,3 @@ pnpm build
 ```
 
 PostgreSQL 集成测试需要独立 `TEST_DATABASE_URL`；相关测试被跳过时不能算作完整持久化验收。
-

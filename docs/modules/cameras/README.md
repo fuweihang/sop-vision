@@ -2,7 +2,8 @@
 
 Cameras 模块维护 Camera 与 CameraSource 配置，并把 PostgreSQL 中的配置投影到 MediaMTX。当前已经
 支持创建、搜索分页列表和只读查看 Camera、MediaMTX Path 读写、运行态投影、后台媒体恢复，以及可
-临时切源的详情 WHEP 播放；列表页面、编辑和删除仍在
+临时切源的详情 WHEP 播放。`/cameras` 已支持 URL 搜索分页和静态摘要 Card；Card 实时预览、编辑和
+删除仍在
 [Cameras MVP 剩余计划](../../plans/cameras-mvp/README.md)中。
 
 ## 当前能力
@@ -17,7 +18,8 @@ Cameras 模块维护 Camera 与 CameraSource 配置，并把 PostgreSQL 中的�
 | Camera 完整详情 API 与前端只读详情页    | 已实现 | [Camera 详情](camera-detail.md)               |
 | 共享 WHEP Session、临时切源与详情播放器 | 已实现 | [WHEP 浏览器播放](whep-player.md)             |
 | Camera 搜索分页列表 API                 | 已实现 | [Camera 列表 API](camera-list.md)             |
-| 列表页面、Card 播放、更新和删除         | 未实现 | [剩余计划](../../plans/cameras-mvp/README.md) |
+| Camera 搜索分页列表页与静态摘要 Card    | 已实现 | [Camera 列表](camera-list.md)                 |
+| Card 播放、更新和删除                   | 未实现 | [剩余计划](../../plans/cameras-mvp/README.md) |
 
 “路由已出现在 OpenAPI”只表示占位契约可用于生成跨端类型，不表示 handler 已经可用。当前
 `GET /api/v1/cameras`、`POST /api/v1/cameras` 和 `GET /api/v1/cameras/{camera_id}` 是可用的
@@ -42,8 +44,8 @@ Frontend → FastAPI Cameras API → Cameras Application → PostgreSQL
 
 ## 当前不支持
 
-- Camera 列表页面、编辑、切换默认预览源和删除。
-- Camera Cards 播放、Detection Canvas 和 WebRTC 质量统计。
+- Camera 编辑、切换默认预览源和删除。
+- Camera Cards 实时播放、Detection Canvas 和 WebRTC 质量统计。
 - 鉴权、RBAC、多租户、录像、截图、回放和 WebSocket 状态推送。
 - 软删除以及事务级 Outbox/Saga 媒体投递。
 

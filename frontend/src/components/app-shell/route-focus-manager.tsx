@@ -67,7 +67,11 @@ export function RouteFocusManager() {
 
       // Router 会在 onRendered 阶段恢复滚动；preventScroll 可避免焦点交接
       // 再次触发滚动并与其竞争。
-      (routeTarget ?? pageHeading)?.focus({ preventScroll: true });
+      // 部分紧凑资源页按产品布局不显示 h1；此时仍把焦点交给主内容，不能让键盘用户
+      // 在路由切换后停留于已经离开的导航控件。
+      (routeTarget ?? pageHeading ?? mainContent).focus({
+        preventScroll: true,
+      });
     });
 
     return () => window.cancelAnimationFrame(animationFrame);

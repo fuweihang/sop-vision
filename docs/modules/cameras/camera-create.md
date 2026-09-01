@@ -12,9 +12,9 @@
 [Camera 详情](camera-detail.md)复用。创建本身不包含 `GET /cameras`、播放器、编辑、删除或媒体事务
 补偿，也没有幂等键、Outbox 或通用 CRUD Service。
 
-新增表单位于现有 `/cameras` 页面。当前只增加“添加 Camera”入口和 Dialog，保留列表占位内容；
-成功后停留在该页面，不自动跳转详情。正式列表、搜索和 Cards 见
-[Cameras MVP 剩余计划](../../plans/cameras-mvp/README.md)。
+新增表单位于 `/cameras` 页面。列表工具栏和无数据状态都提供“添加摄像头”入口；成功后停留在当前
+搜索分页列表，不自动跳转详情。列表规则见 [Camera 列表](camera-list.md)，Card 实时预览仍由
+[Cameras MVP 剩余计划](../../plans/cameras-mvp/README.md)跟踪。
 
 ## 请求与响应
 

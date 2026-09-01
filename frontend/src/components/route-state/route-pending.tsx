@@ -54,15 +54,15 @@ function PageHeadingSkeleton() {
 
 function ToolbarSkeleton() {
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3">
-      <RouteSkeleton className="h-8 w-full min-[521px]:max-w-sm" />
-      <RouteSkeleton className="h-8 w-full min-[521px]:w-24" />
+    <div className="flex min-w-0 items-center gap-3">
+      <RouteSkeleton className="h-8 min-w-0 flex-1" />
+      <RouteSkeleton className="h-8 w-24 shrink-0" />
     </div>
   );
 }
 
 /**
- * 卡片骨架保留原型的 16:9 预览、名称/状态、地址和双侧统计层级。
+ * 卡片骨架保留原型的 16:9 预览、名称/状态、地址和在线统计层级。
  *
  * 520px/1200px 是原型冻结的 Card Grid 重排点；使用完整静态类名，确保 Tailwind v4 能在
  * 构建时发现任意断点，并避免通过 JavaScript 猜测视口。
@@ -70,9 +70,8 @@ function ToolbarSkeleton() {
 function CardListSkeleton() {
   return (
     <>
-      <PageHeadingSkeleton />
       <ToolbarSkeleton />
-      <div className="grid grid-cols-1 gap-4 min-[521px]:grid-cols-2 min-[1200px]:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 min-[520px]:grid-cols-2 min-[1200px]:grid-cols-4">
         {Array.from({ length: 4 }, (_, index) => (
           <Card key={index} className="gap-0 py-0">
             <CardContent className="p-0">
@@ -85,9 +84,8 @@ function CardListSkeleton() {
               </CardAction>
               <RouteSkeleton className="h-3 w-1/2 max-w-32" />
             </CardHeader>
-            <CardContent className="flex justify-between gap-3 pb-4">
+            <CardContent className="pb-4">
               <RouteSkeleton className="h-3 w-20" />
-              <RouteSkeleton className="h-3 w-16" />
             </CardContent>
           </Card>
         ))}

@@ -62,7 +62,7 @@ test("深色主题与 Reduced Motion 使用现有主题和无动画状态类", a
 test("站内进入详情后聚焦实体标题，返回列表仍是语义链接", async () => {
   mockServer.use(...createCamerasMswScenario("success"));
   const { router } = renderAppRoute("/cameras");
-  await screen.findByRole("heading", { level: 1, name: "摄像头" });
+  await screen.findByRole("searchbox", { name: "搜索摄像头" });
 
   await act(async () => {
     await router.navigate({
@@ -79,7 +79,9 @@ test("站内进入详情后聚焦实体标题，返回列表仍是语义链接",
   expect(
     screen
       .getAllByRole("link", { name: "返回摄像头列表" })
-      .some((link) => link.getAttribute("href") === "/cameras"),
+      .some(
+        (link) => link.getAttribute("href") === "/cameras?page=1&page_size=6",
+      ),
   ).toBe(true);
 });
 
@@ -113,7 +115,9 @@ test("可信 CAMERA_NOT_FOUND 进入 Camera Not Found", async () => {
   expect(
     screen
       .getAllByRole("link", { name: "返回摄像头列表" })
-      .some((link) => link.getAttribute("href") === "/cameras"),
+      .some(
+        (link) => link.getAttribute("href") === "/cameras?page=1&page_size=6",
+      ),
   ).toBe(true);
 });
 

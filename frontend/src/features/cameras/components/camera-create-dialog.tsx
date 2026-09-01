@@ -196,14 +196,14 @@ export function CameraCreateDialog({ apiClient }: CameraCreateDialogProps) {
           strokeWidth={2}
           data-icon="inline-start"
         />
-        添加 Camera
+        添加摄像头
       </DialogTrigger>
       <DialogContent
         className="max-h-[calc(100svh-2rem)] grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden sm:max-w-2xl"
         showCloseButton={!isSubmitting}
       >
         <DialogHeader className="pr-8">
-          <DialogTitle>添加 Camera</DialogTitle>
+          <DialogTitle>添加摄像头</DialogTitle>
           <DialogDescription>
             保存设备连接信息和至少一路视频源。
           </DialogDescription>
@@ -268,9 +268,9 @@ export function CameraCreateDialog({ apiClient }: CameraCreateDialogProps) {
           </DialogClose>
           <Button type="submit" form={formId} disabled={isSubmitting}>
             {isSubmitting ? (
-              <Spinner data-icon="inline-start" aria-label="正在保存 Camera" />
+              <Spinner data-icon="inline-start" aria-label="正在保存摄像头" />
             ) : null}
-            {isSubmitting ? "正在保存…" : "保存 Camera"}
+            {isSubmitting ? "正在保存…" : "保存摄像头"}
           </Button>
         </DialogFooter>
       </DialogContent>

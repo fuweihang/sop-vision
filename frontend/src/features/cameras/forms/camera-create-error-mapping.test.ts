@@ -40,7 +40,7 @@ describe("Camera 创建错误映射", () => {
             {
               field: "name",
               code: "REQUIRED",
-              detail: "Camera 名称不能为空。",
+              detail: "摄像头名称不能为空。",
             },
             {
               field: "sources[1].url_suffix",
@@ -61,7 +61,7 @@ describe("Camera 创建错误映射", () => {
     expect(failure).toEqual({
       kind: "validation",
       fieldErrors: [
-        { fieldName: "name", message: "Camera 名称不能为空。" },
+        { fieldName: "name", message: "摄像头名称不能为空。" },
         {
           fieldName: "sources.1.url_suffix",
           message: "URL 后缀重复。",

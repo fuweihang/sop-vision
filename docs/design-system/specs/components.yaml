@@ -130,6 +130,14 @@ components:
       - Content is a floating surface whose focus and dismissal remain Base UI managed.
       - Use the optional Portal container when content must stay inside a fullscreen or scoped overlay root.
 
+  pagination:
+    use_for: [paged_resource_navigation]
+    project_usage: previous_current_total_next
+    rules:
+      - Navigation actions render as application Router links, never plain reload anchors.
+      - Current page text includes the total page count.
+      - Do not add page windows, ellipsis, jump inputs, or page-size selection without a feature requirement.
+
   radio_group:
     use_for: [single_selection_with_visible_options]
     rules:

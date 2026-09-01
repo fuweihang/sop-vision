@@ -213,10 +213,14 @@ function renderHeaderAt(initialPath: string) {
 }
 
 test.each([
-  [CamerasRoute, "摄像头"],
-  [TasksRoute, "检测任务"],
-])("列表路由声明 %s Breadcrumb", (route, label) => {
-  expect(route.options.staticData?.breadcrumb).toBe(label);
+  { route: CamerasRoute, label: "摄像头" },
+  { route: TasksRoute, label: "检测任务" },
+])("$label 列表路由声明 Breadcrumb", ({ route, label }) => {
+  const breadcrumb = route.options.staticData?.breadcrumb;
+  const actualLabel =
+    typeof breadcrumb === "string" ? breadcrumb : breadcrumb?.label;
+
+  expect(actualLabel).toBe(label);
 });
 
 test.each([

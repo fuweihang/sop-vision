@@ -9,6 +9,7 @@ import { apiBaseUrl } from "@/lib/api-client";
 import {
   buildCameraDetail,
   buildCameraPage,
+  buildCameraSummary,
   buildDefaultPreviewSourceResponse,
   buildProblem,
   CAMERA_FIXTURE_IDS,
@@ -19,11 +20,14 @@ export const CAMERAS_MSW_SCENARIO_NAMES = [
   "success",
   "empty-list",
   "search-no-results",
+  "multi-page",
+  "out-of-range",
   "nested-validation-error",
   "camera-not-found",
   "aggregate-invalid",
   "dependency-unavailable",
   "initial-failure",
+  "page-error-recovery",
   "background-refresh-failure",
   "whep-player",
 ] as const;
@@ -128,6 +132,20 @@ export function createCamerasMswScenario(
         })
       : buildCameraDetail();
   const page = buildCameraPage();
+  const secondarySummary = buildCameraSummary(
+    buildCameraDetail({
+      cameraId: CAMERA_FIXTURE_IDS.secondaryCamera,
+      name: "包装区 02",
+      ipAddress: "192.0.2.65",
+      sources: [
+        {
+          source_id: CAMERA_FIXTURE_IDS.tertiarySource,
+          name: "包装区主码流",
+          status: "ONLINE",
+        },
+      ],
+    }),
+  );
 
   return [
     http.get(camerasUrl, ({ request }) => {
@@ -150,6 +168,9 @@ export function createCamerasMswScenario(
       if (scenario === "initial-failure" && listRequestCount === 1) {
         return unavailableProblem(instance);
       }
+      if (scenario === "page-error-recovery" && listRequestCount <= 2) {
+        return unavailableProblem(instance);
+      }
       if (scenario === "background-refresh-failure" && listRequestCount > 1) {
         return unavailableProblem(instance);
       }
@@ -159,6 +180,37 @@ export function createCamerasMswScenario(
             items: [],
             page: Number(new URL(request.url).searchParams.get("page") ?? 1),
             total: 0,
+          }),
+        );
+      }
+      if (scenario === "multi-page") {
+        const url = new URL(request.url);
+        const requestedPage = Number(url.searchParams.get("page") ?? 1);
+        const requestedPageSize = Number(
+          url.searchParams.get("page_size") ?? 20,
+        );
+        return jsonResponse(
+          buildCameraPage({
+            items:
+              requestedPage === 1
+                ? page.items
+                : requestedPage === 2
+                  ? [secondarySummary]
+                  : [],
+            page: requestedPage,
+            pageSize: requestedPageSize,
+            total: 2,
+          }),
+        );
+      }
+      if (scenario === "out-of-range") {
+        const url = new URL(request.url);
+        return jsonResponse(
+          buildCameraPage({
+            items: [],
+            page: Number(url.searchParams.get("page") ?? 3),
+            pageSize: Number(url.searchParams.get("page_size") ?? 1),
+            total: 2,
           }),
         );
       }
@@ -186,7 +238,7 @@ export function createCamerasMswScenario(
               {
                 field: "sources[1].url_suffix",
                 code: "DUPLICATE_SOURCE_SUFFIX",
-                detail: "规范化后的 Source 后缀不能重复。",
+                detail: "规范化后的视频源后缀不能重复。",
               },
             ],
           }),
@@ -250,7 +302,7 @@ export function createCamerasMswScenario(
               {
                 field: "sources[1].source_id",
                 code: "SOURCE_NOT_OWNED_BY_CAMERA",
-                detail: "该 Source 不属于当前 Camera。",
+                detail: "该视频源不属于当前摄像头。",
               },
             ],
           }),

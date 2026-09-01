@@ -189,7 +189,12 @@
   }
 
   html {
-    @apply font-sans;
+    /*
+     * 始终为根滚动条保留相同宽度，避免滚动条出现后压缩摄像头 Grid。
+     * 使用浏览器标准细滚动条和透明轨道，减小预留区域对页面右侧观感的影响；
+     * 滑块仍保留适度对比度，保证用户可以识别和拖动滚动条。
+     */
+    @apply font-sans scrollbar-gutter-stable scrollbar-thin scrollbar-thumb-muted-foreground/40 scrollbar-track-transparent;
   }
 
   button:not(:disabled),

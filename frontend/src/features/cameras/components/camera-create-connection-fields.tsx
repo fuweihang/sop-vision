@@ -36,7 +36,7 @@ export function CameraCreateConnectionFields({
         data-invalid={errors.name !== undefined}
         data-disabled={disabled}
       >
-        <FieldLabel htmlFor={`${formId}-name`}>Camera 名称</FieldLabel>
+        <FieldLabel htmlFor={`${formId}-name`}>摄像头名称</FieldLabel>
         <Input
           id={`${formId}-name`}
           placeholder="例如：洗手区 01"

@@ -13,6 +13,7 @@ export type NormalizedCameraListQuery = Readonly<{
   page: number;
   page_size: number;
 }>;
+export type CameraListQueryInput = CameraListQuery | NormalizedCameraListQuery;
 
 export type CameraPage =
   operations["listCameras"]["responses"][200]["content"]["application/json"];
@@ -37,7 +38,7 @@ const DEFAULT_PAGE_SIZE = 20;
  * `{ q, page, page_size }`，TanStack Query 的稳定哈希也会把它与缺省 q 视为同一查询。
  */
 export function normalizeCameraListQuery(
-  query: CameraListQuery = {},
+  query: CameraListQueryInput = {},
 ): NormalizedCameraListQuery {
   const trimmedQuery = query.q?.trim();
   return {
@@ -52,7 +53,7 @@ export function normalizeCameraListQuery(
 
 /** Cameras operation 调用全部复用唯一生产 Axios Client，并允许测试注入隔离实例。 */
 export async function listCameras(
-  query: CameraListQuery = {},
+  query: CameraListQueryInput = {},
   client: AxiosInstance = apiClient,
 ): Promise<CameraPage> {
   const response = await client.get<CameraPage>("/cameras", {

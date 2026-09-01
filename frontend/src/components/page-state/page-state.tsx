@@ -16,8 +16,8 @@ import { Spinner } from "@/components/ui/spinner";
 import { cn } from "@/lib/utils";
 
 export interface PageEmptyStateProps {
-  /** 区分系统确实无数据与当前筛选无匹配，便于页面测试和可观测性稳定识别。 */
-  kind: "empty" | "no-results";
+  /** 区分系统无数据、筛选无匹配和分页越界，便于页面测试稳定识别。 */
+  kind: "empty" | "no-results" | "out-of-range";
   title: string;
   description: string;
   media: ReactNode;
@@ -29,7 +29,7 @@ export interface PageEmptyStateProps {
  * 数据为空和搜索无结果共用同一视觉 primitive，但由调用方提供不同文案与恢复动作。
  *
  * 组件不推断查询条件，也不内置“创建”“清除搜索”等 CRUD 行为，避免 Foundation 公共层知道
- * 具体资源；`kind` 只保留两个页面状态的稳定语义。
+ * 具体资源；`kind` 只保留三个页面状态的稳定语义，不扩展成通用状态机。
  */
 export function PageEmptyState({
   kind,

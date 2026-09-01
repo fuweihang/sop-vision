@@ -1,6 +1,6 @@
 import {
   normalizeCameraListQuery,
-  type CameraListQuery,
+  type CameraListQueryInput,
 } from "@/features/cameras/api/cameras-api";
 
 /**
@@ -10,7 +10,7 @@ import {
  * 前缀失效，可直接使用第一段常量，不必为失效便利扩展公共 Key 契约。
  */
 export const cameraQueryKeys = {
-  cameras: (query: CameraListQuery = {}) =>
+  cameras: (query: CameraListQueryInput = {}) =>
     ["cameras", normalizeCameraListQuery(query)] as const,
   camera: (cameraId: string) => ["camera", cameraId] as const,
 };
