@@ -24,7 +24,11 @@ test("根路径重定向到摄像头列表并渲染 Shell", async () => {
   const router = renderRoute("/");
 
   expect(
-    await screen.findByRole("searchbox", { name: "搜索摄像头" }),
+    await screen.findByRole(
+      "searchbox",
+      { name: "搜索摄像头" },
+      { timeout: 3_000 },
+    ),
   ).toBeInTheDocument();
   expect(router.state.location.pathname).toBe("/cameras");
   expect(

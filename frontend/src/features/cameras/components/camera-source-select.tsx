@@ -8,12 +8,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { CameraDetail } from "@/features/cameras/api/cameras-api";
+import type { CameraSourceDetail } from "@/features/cameras/api/cameras-api";
 import { isCameraSourcePlayable } from "@/features/cameras/components/camera-preview-selection";
 import { useVideoControlsVisibility } from "@/features/video/components/video-controls";
 import { useVideoSurface } from "@/features/video/components/video-surface";
-
-type CameraSourceDetail = CameraDetail["sources"][number];
 
 interface CameraSourceSelectProps {
   sources: CameraSourceDetail[];

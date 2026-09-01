@@ -1,6 +1,5 @@
 import { type PropsWithChildren, useState } from "react";
 
-import { Badge } from "@/components/ui/badge";
 import {
   FullscreenButton,
   PageFullscreenButton,
@@ -12,26 +11,26 @@ import {
   VideoControlsGroup,
   VideoControlsRoot,
 } from "@/features/video/components/video-controls/controls-visibility";
-import { PlaybackFeedback } from "@/features/video/components/video-controls/playback-feedback";
+import {
+  PlaybackFeedback,
+  type PlaybackFeedbackRecoveryAction,
+} from "@/features/video/components/video-controls/playback-feedback";
+import { VideoDisplayStatusBadge } from "@/features/video/components/video-display-status-badge";
+import { useVideoSurface } from "@/features/video/components/video-surface";
 import {
   DisabledVolumeControl,
   VolumeControl,
 } from "@/features/video/components/video-controls/volume-control";
 import type { StreamSessionStatus } from "@/features/video/stream-session/stream-session";
+import { useVideoDisplayState } from "@/features/video/display-state";
 
-const STATUS_LABELS = {
-  idle: "等待连接",
-  connecting: "正在连接",
-  playing: "LIVE",
-  reconnecting: "正在重连",
-  failed: "连接失败",
-  closed: "已关闭",
-} as const satisfies Record<StreamSessionStatus, string>;
+export type VideoControlsMode = "interactive" | "read-only" | "stopped";
 
 interface VideoControlsProps extends PropsWithChildren {
   status: StreamSessionStatus;
   onReconnect: () => void;
-  mediaControlsDisabled?: boolean;
+  /** 明确区分可操作、只读和停止状态，避免两个布尔参数产生无效组合。 */
+  mode: VideoControlsMode;
 }
 
 /**
@@ -41,18 +40,33 @@ interface VideoControlsProps extends PropsWithChildren {
 export function VideoControls({
   status,
   onReconnect,
-  mediaControlsDisabled = false,
+  mode,
   children,
 }: VideoControlsProps) {
   const [controlError, setControlError] = useState<string | null>(null);
+  const { actions } = useVideoSurface();
+  const displayState = useVideoDisplayState({
+    previewActive: mode !== "stopped",
+    sessionStatus: status,
+  });
+  const mediaControlsDisabled = mode !== "interactive";
+
+  let recoveryAction: PlaybackFeedbackRecoveryAction | null = null;
+  if (mode === "interactive" && displayState.error?.recovery === "play") {
+    recoveryAction = { kind: "play", run: () => void actions.play() };
+  } else if (
+    mode === "interactive" &&
+    displayState.error?.recovery === "reconnect"
+  ) {
+    recoveryAction = { kind: "reconnect", run: onReconnect };
+  }
 
   return (
     <VideoControlsRoot>
       <PlaybackFeedback
-        status={status}
-        onReconnect={onReconnect}
+        displayState={displayState}
+        recoveryAction={recoveryAction}
         controlError={controlError}
-        mediaControlsDisabled={mediaControlsDisabled}
       />
       <VideoControlsBar>
         <VideoControlsGroup>
@@ -66,7 +80,10 @@ export function VideoControls({
           ) : (
             <VolumeControl />
           )}
-          <Badge variant="overlay">{STATUS_LABELS[status]}</Badge>
+          <VideoDisplayStatusBadge
+            sessionStatus={status}
+            displayState={displayState}
+          />
         </VideoControlsGroup>
         <VideoControlsGroup>
           {children}

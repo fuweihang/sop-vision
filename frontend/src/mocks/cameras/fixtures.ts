@@ -2,13 +2,17 @@ import type {
   CameraCreateRequest,
   CameraDetail,
   CameraPage,
+  CameraSourceDetail,
+  CameraSummary,
   CameraUpdateRequest,
   DefaultPreviewSourceResponse,
 } from "@/features/cameras/api/cameras-api";
 import type { ProblemDetails } from "@/lib/api-errors";
 
-export type CameraSummary = CameraPage["items"][number];
-export type CameraSourceDetail = CameraDetail["sources"][number];
+export type {
+  CameraSourceDetail,
+  CameraSummary,
+} from "@/features/cameras/api/cameras-api";
 
 /**
  * 所有 ID 和时间均为固定测试值，保证快照、MSW 场景与后续切片在任意机器上可重复。

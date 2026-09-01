@@ -2,14 +2,12 @@ import { useEffect, useRef } from "react";
 
 import { AspectRatio } from "@/components/ui/aspect-ratio";
 import { Card, CardContent } from "@/components/ui/card";
-import type { CameraDetail } from "@/features/cameras/api/cameras-api";
+import type { CameraSourceDetail } from "@/features/cameras/api/cameras-api";
 import { CameraSourceSelect } from "@/features/cameras/components/camera-source-select";
 import { VideoControls } from "@/features/video/components/video-controls";
 import { VideoSurface } from "@/features/video/components/video-surface";
 import { useVideoSurface } from "@/features/video/components/video-surface";
 import { useStreamSession } from "@/features/video/stream-session";
-
-type CameraSourceDetail = CameraDetail["sources"][number];
 
 interface CameraDetailPlayerProps {
   source: CameraSourceDetail | null;
@@ -100,7 +98,7 @@ export function CameraDetailPlayer({
               <VideoControls
                 status={session.status}
                 onReconnect={session.reconnect}
-                mediaControlsDisabled={!previewRequested}
+                mode={previewRequested ? "interactive" : "stopped"}
               >
                 <CameraSourceSelect
                   sources={sources}

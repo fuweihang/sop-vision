@@ -1,6 +1,7 @@
-import type { CameraDetail } from "@/features/cameras/api/cameras-api";
-
-export type CameraSourceDetail = CameraDetail["sources"][number];
+import type {
+  CameraDetail,
+  CameraSourceDetail,
+} from "@/features/cameras/api/cameras-api";
 
 export type CameraPreviewSelection =
   { kind: "default" } | { kind: "temporary"; sourceId: string };

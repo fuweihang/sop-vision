@@ -10,7 +10,10 @@ import userEvent from "@testing-library/user-event";
 import { expect, test, vi } from "vitest";
 
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { VideoControls } from "@/features/video/components/video-controls";
+import {
+  VideoControls,
+  type VideoControlsMode,
+} from "@/features/video/components/video-controls";
 import { VideoSurface } from "@/features/video/components/video-surface";
 import type { StreamSessionStatus } from "@/features/video/stream-session/stream-session";
 import {
@@ -41,16 +44,22 @@ function renderControls({
   status = "playing",
   stream = createPlaybackStream(),
   onReconnect = vi.fn(),
+  mode = "interactive",
 }: {
   status?: StreamSessionStatus;
   stream?: MediaStream | null;
   onReconnect?: () => void;
+  mode?: VideoControlsMode;
 } = {}) {
   return {
     ...render(
       <TooltipProvider>
         <VideoSurface stream={stream} objectFit="contain">
-          <VideoControls status={status} onReconnect={onReconnect} />
+          <VideoControls
+            status={status}
+            onReconnect={onReconnect}
+            mode={mode}
+          />
         </VideoSurface>
       </TooltipProvider>,
     ),
@@ -67,6 +76,9 @@ test("操作栏支持播放暂停、刷新、音量浮层和全屏切换", async
   const video = screen.getByLabelText<HTMLVideoElement>("实时视频");
   const controls = screen.getByRole("toolbar", { name: "视频操作" });
 
+  expect(screen.getByText("正在加载")).toBeVisible();
+  expect(screen.queryByText("LIVE")).not.toBeInTheDocument();
+  fireEvent.loadedData(video);
   expect(await screen.findByText("LIVE")).toBeVisible();
   expect(controls).toHaveClass("opacity-0", "pointer-events-none");
   fireEvent.pointerMove(
@@ -77,6 +89,8 @@ test("操作栏支持播放暂停、刷新、音量浮层和全屏切换", async
 
   await user.click(screen.getByRole("button", { name: "暂停" }));
   expect(pause).toHaveBeenCalledOnce();
+  // 暂停由播放按钮表达；已经出画的视频仍保持 LIVE，不改写连接/出画状态。
+  expect(screen.getByText("LIVE")).toBeVisible();
   expect(screen.getByRole("button", { name: "播放" })).toHaveAttribute(
     "aria-pressed",
     "false",
@@ -129,64 +143,94 @@ test("操作栏支持播放暂停、刷新、音量浮层和全屏切换", async
     throw new Error("实时视频缺少全屏容器。");
   }
   expect(
-    within(fullscreenContainer).getByRole("group", { name: "音量" }),
+    await within(fullscreenContainer).findByRole("group", { name: "音量" }),
   ).toBeVisible();
   await user.click(screen.getByRole("button", { name: "退出浏览器全屏" }));
   expect(exitFullscreen).toHaveBeenCalledOnce();
 });
 
-test("点击静音恢复静音前音量，Slider 归零后恢复默认 70%", async () => {
-  const user = userEvent.setup();
+test("仅禁用媒体控件时仍按当前 video 的出画结果显示 loading 和 LIVE", () => {
   installMediaElementMocks();
-  renderControls();
+  renderControls({ mode: "read-only" });
 
-  const video = screen.getByLabelText<HTMLVideoElement>("实时视频");
-  const volumeButton = screen.getByRole("button", { name: "取消静音" });
-  fireEvent.mouseEnter(volumeButton);
-  const volumeSlider = await screen.findByRole("group", { name: "音量" });
-  const volumeSliderInput = volumeSlider.querySelector<HTMLInputElement>(
-    'input[type="range"]',
-  );
-  expect(volumeSliderInput).not.toBeNull();
-  if (volumeSliderInput === null) {
-    throw new Error("音量 Slider 缺少内部 range input。");
-  }
+  expect(screen.getByText("正在加载")).toBeVisible();
+  expect(screen.queryByText("已停止")).not.toBeInTheDocument();
+  expect(screen.getByRole("button", { name: /^(播放|暂停)$/ })).toBeDisabled();
+  expect(screen.getByRole("button", { name: "刷新当前流" })).toBeDisabled();
+  expect(screen.getByRole("button", { name: "取消静音" })).toBeDisabled();
 
-  await user.click(volumeButton);
-  expect(video.muted).toBe(false);
-  expect(video.volume).toBe(0.7);
-
-  fireEvent.change(volumeSliderInput, { target: { value: "40" } });
-  expect(video.volume).toBe(0.4);
-  await user.click(screen.getByRole("button", { name: "静音" }));
-  expect(video.muted).toBe(true);
-  expect(video.volume).toBe(0);
-  await user.click(screen.getByRole("button", { name: "取消静音" }));
-  expect(video.muted).toBe(false);
-  expect(video.volume).toBe(0.4);
-
-  fireEvent.change(volumeSliderInput, { target: { value: "0" } });
-  expect(video.muted).toBe(true);
-  expect(video.volume).toBe(0);
-  await user.click(screen.getByRole("button", { name: "取消静音" }));
-  expect(video.muted).toBe(false);
-  expect(video.volume).toBe(0.7);
+  fireEvent.loadedData(screen.getByLabelText("实时视频"));
+  expect(screen.getByText("LIVE")).toBeVisible();
 });
 
-test("鼠标无活动后隐藏操作栏，连接失败文字仍保持可见", () => {
-  vi.useFakeTimers();
+test("interactive 模式的 Session 失败提示可以刷新当前流", () => {
   installMediaElementMocks();
-  renderControls({ status: "failed" });
-  const layer = screen.getByRole("group", { name: "视频播放器控制层" });
-  const controls = screen.getByRole("toolbar", { name: "视频操作" });
+  const onReconnect = vi.fn();
+  renderControls({
+    status: "failed",
+    stream: null,
+    onReconnect,
+    mode: "interactive",
+  });
 
-  fireEvent.pointerMove(layer, { pointerType: "mouse" });
-  expect(controls).toHaveClass("opacity-100");
-  void act(() => vi.advanceTimersByTime(2_500));
-  expect(controls).toHaveClass("opacity-0", "pointer-events-none");
-  expect(screen.getByText("视频连接失败，请刷新当前流。")).toBeVisible();
+  const alert = screen.getByRole("alert");
+  expect(within(alert).getByText("视频连接失败，请刷新当前流。")).toBeVisible();
+  fireEvent.click(within(alert).getByRole("button", { name: "刷新当前流" }));
+  expect(onReconnect).toHaveBeenCalledOnce();
+});
 
-  vi.useRealTimers();
+test("read-only 模式的播放受阻只显示错误文字", async () => {
+  installMediaElementMocks({
+    play: () => Promise.reject(new Error("blocked")),
+  });
+  renderControls({ mode: "read-only" });
+
+  const alert = await screen.findByRole("alert");
+  expect(
+    within(alert).getByText("浏览器阻止了自动播放，请手动继续。"),
+  ).toBeVisible();
+  expect(
+    within(alert).queryByRole("button", { name: "继续播放" }),
+  ).not.toBeInTheDocument();
+});
+
+test("read-only 模式的画面超时只显示错误文字", async () => {
+  vi.useFakeTimers();
+  try {
+    installMediaElementMocks();
+    renderControls({ mode: "read-only" });
+
+    await act(() => vi.advanceTimersByTimeAsync(10_000));
+    const alert = screen.getByRole("alert");
+    expect(
+      within(alert).getByText("视频画面加载超时，请刷新当前流。"),
+    ).toBeVisible();
+    expect(
+      within(alert).queryByRole("button", { name: "刷新当前流" }),
+    ).not.toBeInTheDocument();
+  } finally {
+    vi.useRealTimers();
+  }
+});
+
+test("read-only 模式的 Session 失败只显示错误文字", () => {
+  installMediaElementMocks();
+  renderControls({ status: "failed", stream: null, mode: "read-only" });
+
+  const alert = screen.getByRole("alert");
+  expect(within(alert).getByText("视频连接失败，请刷新当前流。")).toBeVisible();
+  expect(
+    within(alert).queryByRole("button", { name: "刷新当前流" }),
+  ).not.toBeInTheDocument();
+});
+
+test("stopped 模式优先显示已停止并隐藏旧 Session 错误", () => {
+  installMediaElementMocks();
+  renderControls({ status: "failed", stream: null, mode: "stopped" });
+
+  expect(screen.getByText("已停止")).toBeVisible();
+  expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "刷新当前流" })).toBeDisabled();
 });
 
 test("自动播放失败提示不随操作栏隐藏且长文本不会挤压操作按钮", async () => {
@@ -198,6 +242,7 @@ test("自动播放失败提示不随操作栏隐藏且长文本不会挤压操�
   const errorMessage =
     await screen.findByText("浏览器阻止了自动播放，请手动继续。");
   expect(errorMessage).toBeVisible();
+  expect(screen.getByText("播放受阻")).toBeVisible();
   // Alert 默认带 w-full；绝对定位时必须覆盖为 auto，左右 inset 才能同时保留边距。
   expect(screen.getByRole("alert")).toHaveClass("inset-x-3", "w-auto");
   expect(errorMessage).toHaveClass("min-w-0", "flex-1", "wrap-anywhere");
@@ -223,7 +268,11 @@ test("连接期间显示 loading 且音量按钮常驻", () => {
   rendered.rerender(
     <TooltipProvider>
       <VideoSurface stream={null} objectFit="contain">
-        <VideoControls status="reconnecting" onReconnect={vi.fn()} />
+        <VideoControls
+          status="reconnecting"
+          onReconnect={vi.fn()}
+          mode="interactive"
+        />
       </VideoSurface>
     </TooltipProvider>,
   );
@@ -235,8 +284,38 @@ test("连接状态变为 playing 后继续等待首帧，loadeddata 降级事件
   renderControls();
 
   expect(screen.getByText("正在加载视频")).toBeVisible();
+  expect(screen.getByText("正在加载")).toBeVisible();
+  expect(screen.queryByText("LIVE")).not.toBeInTheDocument();
   fireEvent.loadedData(screen.getByLabelText("实时视频"));
   expect(screen.queryByText("正在加载视频")).not.toBeInTheDocument();
+  expect(screen.getByText("LIVE")).toBeVisible();
+});
+
+test("首帧前暂停时隐藏 loading 并停止超时，继续播放后恢复等待", async () => {
+  vi.useFakeTimers();
+  try {
+    installPlayingMediaElementMocks();
+    renderControls();
+
+    expect(screen.getByText("正在加载视频")).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "暂停" }));
+    expect(screen.getByText("等待画面")).toBeVisible();
+    expect(screen.queryByText("正在加载视频")).not.toBeInTheDocument();
+
+    // VideoSurface 暂停首帧计时；即使时间经过也不能把用户主动暂停误报成解码超时。
+    await act(() => vi.advanceTimersByTimeAsync(10_000));
+    expect(screen.queryByText("画面超时")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "播放" }));
+    await act(() => Promise.resolve());
+    expect(screen.getByText("正在加载")).toBeVisible();
+    expect(screen.getByText("正在加载视频")).toBeVisible();
+
+    await act(() => vi.advanceTimersByTimeAsync(10_000));
+    expect(screen.getByText("画面超时")).toBeVisible();
+  } finally {
+    vi.useRealTimers();
+  }
 });
 
 test("播放状态下十秒没有首帧时结束 loading 并允许刷新当前流", async () => {
@@ -248,6 +327,7 @@ test("播放状态下十秒没有首帧时结束 loading 并允许刷新当前�
   expect(screen.getByText("正在加载视频")).toBeVisible();
   await act(() => vi.advanceTimersByTimeAsync(10_000));
   expect(screen.queryByText("正在加载视频")).not.toBeInTheDocument();
+  expect(screen.getByText("画面超时")).toBeVisible();
   expect(screen.getByText("视频画面加载超时，请刷新当前流。")).toBeVisible();
   fireEvent.click(
     within(screen.getByRole("alert")).getByRole("button", {

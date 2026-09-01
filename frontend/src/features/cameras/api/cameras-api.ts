@@ -19,6 +19,11 @@ export type CameraPage =
   operations["listCameras"]["responses"][200]["content"]["application/json"];
 export type CameraDetail =
   operations["getCamera"]["responses"][200]["content"]["application/json"];
+/** 列表、详情和测试统一从 API 边界读取派生类型，避免各组件重复索引 OpenAPI 响应。 */
+export type CameraSummary = CameraPage["items"][number];
+export type CameraDefaultPreviewSource =
+  CameraSummary["default_preview_source"];
+export type CameraSourceDetail = CameraDetail["sources"][number];
 export type CameraCreateRequest =
   operations["createCamera"]["requestBody"]["content"]["application/json"];
 export type CameraUpdateRequest =

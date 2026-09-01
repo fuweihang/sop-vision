@@ -13,8 +13,7 @@
 补偿，也没有幂等键、Outbox 或通用 CRUD Service。
 
 新增表单位于 `/cameras` 页面。列表工具栏和无数据状态都提供“添加摄像头”入口；成功后停留在当前
-搜索分页列表，不自动跳转详情。列表规则见 [Camera 列表](camera-list.md)，Card 实时预览仍由
-[Cameras MVP 剩余计划](../../plans/cameras-mvp/README.md)跟踪。
+搜索分页列表，不自动跳转详情。列表和 Card 实时预览规则见 [Camera 列表](camera-list.md)。
 
 ## 请求与响应
 

@@ -4,50 +4,26 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
-import { useVideoSurface } from "@/features/video/components/video-surface";
-import type { StreamSessionStatus } from "@/features/video/stream-session/stream-session";
+import type { VideoDisplayState } from "@/features/video/display-state";
 
-function getLoadingMessage(
-  status: StreamSessionStatus,
-  hasPresentedFrame: boolean,
-  paused: boolean,
-) {
-  if (status === "reconnecting") {
-    return "正在重新连接视频";
-  }
-  if (status === "idle" || status === "connecting") {
-    return "正在加载视频";
-  }
-  if (status === "playing" && !hasPresentedFrame && !paused) {
-    return "正在加载视频";
-  }
-  return null;
-}
+export type PlaybackFeedbackRecoveryAction =
+  { kind: "play"; run: () => void } | { kind: "reconnect"; run: () => void };
 
 interface PlaybackFeedbackProps {
-  status: StreamSessionStatus;
-  onReconnect: () => void;
+  displayState: VideoDisplayState;
+  recoveryAction: PlaybackFeedbackRecoveryAction | null;
   controlError: string | null;
-  mediaControlsDisabled: boolean;
 }
 
 /** 加载、媒体错误和操作错误不随底部操作栏隐藏，避免用户错过恢复入口。 */
 export function PlaybackFeedback({
-  status,
-  onReconnect,
+  displayState,
+  recoveryAction,
   controlError,
-  mediaControlsDisabled,
 }: PlaybackFeedbackProps) {
-  const { state, actions } = useVideoSurface();
-  const loadingMessage =
-    !mediaControlsDisabled && state.presentationError === null
-      ? getLoadingMessage(status, state.hasPresentedFrame, state.paused)
-      : null;
-  const mediaError = mediaControlsDisabled
-    ? null
-    : (state.playbackError ??
-      state.presentationError ??
-      (status === "failed" ? "视频连接失败，请刷新当前流。" : null));
+  // 父组件已经根据操作栏模式决定动作是否可用；这里不读取 VideoSurface，也不重新判断权限。
+  const loadingMessage = displayState.loading?.message ?? null;
+  const mediaError = displayState.error?.message ?? null;
   const hasError = mediaError !== null || controlError !== null;
 
   return (
@@ -69,12 +45,12 @@ export function PlaybackFeedback({
             <span className="min-w-0 flex-1 wrap-anywhere">
               {mediaError ?? controlError}
             </span>
-            {!mediaControlsDisabled && state.playbackError !== null && (
+            {recoveryAction?.kind === "play" && (
               <Button
                 type="button"
                 size="sm"
                 className="self-start @md:self-auto"
-                onClick={() => void actions.play()}
+                onClick={recoveryAction.run}
               >
                 <HugeiconsIcon
                   icon={PlayIcon}
@@ -84,18 +60,16 @@ export function PlaybackFeedback({
                 继续播放
               </Button>
             )}
-            {!mediaControlsDisabled &&
-              state.presentationError !== null &&
-              state.playbackError === null && (
-                <Button type="button" size="sm" onClick={onReconnect}>
-                  <HugeiconsIcon
-                    icon={RefreshIcon}
-                    strokeWidth={2}
-                    data-icon="inline-start"
-                  />
-                  刷新当前流
-                </Button>
-              )}
+            {recoveryAction?.kind === "reconnect" && (
+              <Button type="button" size="sm" onClick={recoveryAction.run}>
+                <HugeiconsIcon
+                  icon={RefreshIcon}
+                  strokeWidth={2}
+                  data-icon="inline-start"
+                />
+                刷新当前流
+              </Button>
+            )}
           </AlertDescription>
         </Alert>
       )}

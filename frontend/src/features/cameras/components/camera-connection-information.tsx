@@ -11,11 +11,12 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import type { CameraDetail } from "@/features/cameras/api/cameras-api";
+import type {
+  CameraDetail,
+  CameraSourceDetail,
+} from "@/features/cameras/api/cameras-api";
 import { CameraStatusBadge } from "@/features/cameras/components/camera-status-badge";
 import { cn } from "@/lib/utils";
-
-type CameraSourceDetail = CameraDetail["sources"][number];
 
 const timestampFormatter = new Intl.DateTimeFormat("zh-CN", {
   dateStyle: "medium",

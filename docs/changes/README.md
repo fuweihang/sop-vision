@@ -23,3 +23,5 @@
 - [2026-08-31｜Camera 临时切源与播放器显示模式](2026-08-31-camera-source-display-modes.md)
 - [2026-09-01｜Camera 列表 API](2026-09-01-camera-list-api.md)
 - [2026-09-01｜Camera 列表页面](2026-09-01-camera-list-page.md)
+- [2026-09-01｜Camera Card 实时预览](2026-09-01-camera-card-preview.md)
+- [2026-09-01｜视频展示状态与恢复入口](2026-09-01-video-display-structure.md)

@@ -1,8 +1,9 @@
 import { Badge } from "@/components/ui/badge";
-import type { CameraDetail } from "@/features/cameras/api/cameras-api";
+import type {
+  CameraDetail,
+  CameraSourceDetail,
+} from "@/features/cameras/api/cameras-api";
 import { cn } from "@/lib/utils";
-
-type CameraSourceDetail = CameraDetail["sources"][number];
 
 // 状态颜色只引用 Design System 的业务 Token；文字标签同时表达状态，避免只依赖红绿黄。
 const STATUS_BADGE_PRESENTATION = {

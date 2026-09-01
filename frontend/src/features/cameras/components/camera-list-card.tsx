@@ -1,5 +1,3 @@
-import { Camera01Icon } from "@hugeicons/core-free-icons";
-import { HugeiconsIcon } from "@hugeicons/react";
 import { Link } from "@tanstack/react-router";
 
 import { AspectRatio } from "@/components/ui/aspect-ratio";
@@ -12,12 +10,11 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import type {
-  CameraPage,
+  CameraSummary,
   NormalizedCameraListQuery,
 } from "@/features/cameras/api/cameras-api";
+import { CameraCardPreview } from "@/features/cameras/components/camera-card-preview";
 import { CameraStatusBadge } from "@/features/cameras/components/camera-status-badge";
-
-type CameraSummary = CameraPage["items"][number];
 
 interface CameraListCardProps {
   camera: CameraSummary;
@@ -27,8 +24,8 @@ interface CameraListCardProps {
 /**
  * 列表 Card 只读取 CameraSummary 的非敏感字段。
  *
- * 详情 Link 显式携带当前搜索和分页参数，保证用户查看详情后可恢复原列表位置；这里不读取
- * `whep_url`，也不创建 video 或 Stream Session，实时预览由后续任务负责。
+ * 详情 Link 显式携带当前搜索和分页参数，保证用户查看详情后可恢复原列表位置。媒体区域只把列表
+ * 返回的默认 Source 交给预览组件，不读取 CameraDetail 或任何敏感连接字段。
  */
 export function CameraListCard({ camera, search }: CameraListCardProps) {
   return (
@@ -47,20 +44,7 @@ export function CameraListCard({ camera, search }: CameraListCardProps) {
             data-camera-preview
             className="isolate grid place-items-center overflow-hidden bg-overlay-control-surface text-overlay-control-foreground"
           >
-            {/* 03 会在这个固定比例区域装配 VideoSurface；当前静态图标明确表示尚未建立媒体会话。 */}
-            <HugeiconsIcon
-              icon={Camera01Icon}
-              strokeWidth={1.5}
-              aria-hidden="true"
-              className="size-10 opacity-20"
-            />
-            <div
-              aria-hidden="true"
-              className="pointer-events-none absolute inset-x-0 bottom-0 h-1/2 bg-linear-to-t from-overlay-control-surface/90 to-transparent"
-            />
-            <span className="absolute right-3 bottom-3 left-3 truncate text-xs font-medium">
-              {camera.default_preview_source.name}
-            </span>
+            <CameraCardPreview source={camera.default_preview_source} />
           </AspectRatio>
         </CardContent>
         <CardHeader className="gap-1 py-4">

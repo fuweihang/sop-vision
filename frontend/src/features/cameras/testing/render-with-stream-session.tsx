@@ -1,5 +1,5 @@
 import { render, type RenderOptions } from "@testing-library/react";
-import type { ReactNode } from "react";
+import { type ReactNode, StrictMode } from "react";
 
 import { TooltipProvider } from "@/components/ui/tooltip";
 import {
@@ -14,8 +14,9 @@ import { FakeStreamSession } from "@/features/video/testing/fakes";
  */
 export function renderWithStreamSession(
   ui: ReactNode,
-  options?: Omit<RenderOptions, "wrapper">,
+  options?: Omit<RenderOptions, "wrapper"> & { strict?: boolean },
 ) {
+  const { strict = false, ...renderOptions } = options ?? {};
   const fakeStreamSessions: FakeStreamSession[] = [];
   const acquiredWhepUrls: string[] = [];
   const streamSessionManager = new StreamSessionManager((whepUrl) => {
@@ -25,14 +26,18 @@ export function renderWithStreamSession(
     return session;
   });
   function StreamSessionTestWrapper({ children }: { children: ReactNode }) {
-    return (
+    const content = (
       <StreamSessionProvider manager={streamSessionManager}>
         <TooltipProvider>{children}</TooltipProvider>
       </StreamSessionProvider>
     );
+    return strict ? <StrictMode>{content}</StrictMode> : content;
   }
 
-  const result = render(ui, { ...options, wrapper: StreamSessionTestWrapper });
+  const result = render(ui, {
+    ...renderOptions,
+    wrapper: StreamSessionTestWrapper,
+  });
 
   return {
     ...result,

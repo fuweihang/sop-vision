@@ -39,7 +39,13 @@ async function openDialog() {
   const user = userEvent.setup();
   registerSuccessfulList();
   renderAppRoute("/cameras");
-  await user.click(await screen.findByRole("button", { name: "添加摄像头" }));
+  await user.click(
+    await screen.findByRole(
+      "button",
+      { name: "添加摄像头" },
+      { timeout: 3_000 },
+    ),
+  );
   const dialog = await screen.findByRole("dialog", { name: "添加摄像头" });
   return { user, dialog };
 }

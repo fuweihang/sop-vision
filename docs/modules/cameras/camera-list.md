@@ -7,7 +7,7 @@
 
 `GET /api/v1/cameras` 返回可供列表页面使用的非敏感 Camera 摘要。接口支持名称或 IPv4 字面包含
 搜索，并按 `created_at ASC, camera_id ASC` 稳定分页。当前已完成 Backend API、OpenAPI、Frontend
-生成类型、MSW 场景，以及 `/cameras` 搜索分页页面。Camera Card 实时播放仍未实现。
+生成类型、MSW 场景，以及带实时预览 Card 的 `/cameras` 搜索分页页面。
 
 列表响应只包含 Camera ID、名称、IPv4、RTSP 端口、聚合状态、Source 计数、默认 Source 摘要和创建/
 更新时间。不会返回用户名、密码、Source 后缀、完整 RTSP URL或完整 Source 数组。
@@ -52,11 +52,18 @@ Cameras Breadcrumb 都携带完整查询参数，因此直接访问详情或使�
 最多自动重试一次，仍失败时可由页面错误状态重新执行 loader。
 
 页面分别显示无 Camera、搜索无结果和页码越界。越界页保留 API 的真实 `page/total`，只提供显式返回
-第一页或上一页的 Link，不自动跳转。分页仅包含上一页、当前页/总页数和下一页。静态 Card 只展示
-Camera 名称、IPv4/端口、Camera 状态、默认 Source 名称和在线计数，不读取敏感详情，不创建 video 或
-WHEP Session。Card 整体是详情 Link，布局使用 16:9 静态媒体区和默认 Source 名称 overlay，不在媒体
-区重复显示 Source 状态 Badge；下方依次展示 Camera 名称/Camera 状态、等宽地址和在线 Source 统计；
-实时画面由后续 Card 预览任务替换静态媒体区。
+第一页或上一页的 Link，不自动跳转。分页仅包含上一页、当前页/总页数和下一页。Card 只读取列表摘要，
+展示 Camera 名称、IPv4/端口、Camera 状态、默认 Source 名称和在线计数，不读取敏感详情。
+Card 整体是详情 Link；16:9 媒体区对 `whep_url` 非空的默认 Source 自动创建静音、无 controls 的
+`cover` 实时预览。媒体区中央在连接、重连和等待当前 video 首帧期间显示 loading；左上角显示由
+Session 与当前 video 出画结果组合的状态，只有首帧真正渲染后才显示 `LIVE`，等待首帧超过 `10s`
+显示“画面超时”。`whep_url=null` 时不创建 video 或 WHEP Session，改为显示“不可预览”占位。
+
+有播放地址的 Card 从挂载到卸载始终持有 Stream Lease，不按视口相交比例或页面 hidden 状态暂停。
+搜索或翻页只会释放被新结果替换并卸载的 Card；仍保留相同 `camera_id+source_id+whep_url` 的 Card 不
+重建 Session。离开 Cameras 路由、组件卸载或 `whep_url` 变为空时释放；URL 改变时先释放旧 Lease，
+再连接新地址。同一 `source_id+whep_url` 的多个 Card 或 Card 与 Detail 共享一个 reader 和
+MediaStream，但各自保留独立 video DOM；最后一个消费者释放后才停止 Track 并清理 Session。
 
 列表页沿用原型的紧凑工具栏，不显示额外页面标题和说明。搜索框与“添加摄像头”按钮保持同一行，
 搜索框保留无障碍名称但不显示视觉标签。URL 缺少 `page_size` 时，Frontend 在首个 loader 请求前按

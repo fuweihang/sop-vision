@@ -1,7 +1,7 @@
 # Cameras MVP 剩余计划
 
-> 当前状态：Camera 创建、搜索分页列表页面、只读详情和可临时切源的 WHEP 详情播放器已经完成；本
-> 计划跟踪 Card 预览、更新、删除和发布验收。
+> 当前状态：Camera 创建、带 Card 实时预览的搜索分页列表、只读详情和可临时切源的 WHEP 详情播放器
+> 已经完成；本计划先整理 Frontend 视频展示结构，再跟踪更新、删除和发布验收。
 
 已实现能力和当前约束见 [Cameras 模块文档](../../modules/cameras/README.md)。本目录不得复制这些
 当前事实；计划执行时以模块文档、代码、迁移、OpenAPI 和测试为输入。
@@ -10,7 +10,7 @@
 
 | #   | 任务                                                      | 状态   | 主要交付                         |
 | --- | --------------------------------------------------------- | ------ | -------------------------------- |
-| 08  | [Camera 列表](08-camera-list/README.md)                   | 实施中 | 列表页面、搜索分页交互与卡片预览 |
+| 08  | [视频展示结构整理](08-frontend-video-structure/README.md) | 待实施 | 共享状态入口、恢复动作和测试职责 |
 | 09  | [更新与默认源](09-camera-update-default-source/README.md) | 待实施 | 编辑 Camera 和切换默认预览源     |
 | 10  | [Camera 删除](10-camera-delete/README.md)                 | 待实施 | 删除聚合并尽力释放媒体 Path      |
 | 11  | [发布门禁](11-release-gates/README.md)                    | 待实施 | 故障、安全、容量和端到端验收     |
@@ -21,8 +21,7 @@
 ## MVP 目标范围
 
 完成本计划后，用户可以在详情中分别控制预览 Session 和 video 播放，临时切换当次预览 Source，
-搜索和分页浏览 Camera，完整编辑 Camera/Source 集合，切换默认预览源，在列表复用现有 WHEP
-Session，并删除 Camera。
+搜索和分页浏览 Camera，完整编辑 Camera/Source 集合，切换默认预览源，并删除 Camera。
 
 本计划不包含鉴权、RBAC、多租户、录像、截图、回放、Detection WebSocket、检测 Canvas、视频帧与
 Box 同步、WebRTC 质量统计、软删除和事务级 Outbox/Saga。

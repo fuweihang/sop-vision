@@ -239,8 +239,8 @@ Redis 与 WebSocket 必须位于受控网络；订阅 task 前执行鉴权和资
 
 - 共享 `WhepSession`、`StreamSessionManager`、`VideoSurface` 和 Camera Detail controls 已实现，可作为
   Detection 视频和 Overlay 的前置能力。
-- Camera Card 播放属于独立的 [Cameras 08 计划](plans/cameras-mvp/08-camera-list/README.md)，不由
-  Detection 实现提前承担。
+- Camera Card 播放已经实现并复用上述共享 Session 与 VideoSurface；Detection 仍只负责后续检测数据
+  和 Overlay，不修改 Card 的媒体连接生命周期。
 - Detector、Redis Client、WebSocket、`DetectionResult`、`BoxBuffer` 和 `BoxCanvas` 均未实现。
   Detection 正式开发前应针对上面的 schema、WebSocket、时钟和容量未决项建立新的执行计划。
 - WebRTC Stats 仍是后续能力。实现时应在 `WhepSession` 内提供受控 `getStats()`，按 `1–2s` 采样

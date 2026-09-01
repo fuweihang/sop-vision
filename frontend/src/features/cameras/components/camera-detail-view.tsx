@@ -5,7 +5,10 @@ import { useState } from "react";
 import { PageContainer } from "@/components/layout/page-container";
 import { PageHeader } from "@/components/layout/page-header";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import type { CameraDetail } from "@/features/cameras/api/cameras-api";
+import type {
+  CameraDetail,
+  CameraSourceDetail,
+} from "@/features/cameras/api/cameras-api";
 import { CameraConnectionInformation } from "@/features/cameras/components/camera-connection-information";
 import { CameraDestructiveSection } from "@/features/cameras/components/camera-destructive-section";
 import { CameraDetailActions } from "@/features/cameras/components/camera-detail-actions";
@@ -16,8 +19,6 @@ import {
   type CameraPreviewSelection,
 } from "@/features/cameras/components/camera-preview-selection";
 import { CameraSources } from "@/features/cameras/components/camera-sources";
-
-type CameraSourceDetail = CameraDetail["sources"][number];
 
 /** 当前页独立保存开始/停止意图和临时 Source，详情刷新不会覆盖这两类用户选择。 */
 function CameraDetailContent({

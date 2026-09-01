@@ -122,7 +122,13 @@ test("多页与越界场景保留请求页码、page_size 和真实 total", asyn
 
 test("whep-player 场景为两路 Source 提供固定且不同的浏览器播放入口", async () => {
   useScenario("whep-player");
+  const page = await listCameras();
   const detail = await getCamera(CAMERA_FIXTURE_IDS.primaryCamera);
+
+  expect(page.items[0]?.default_preview_source).toMatchObject({
+    source_id: detail.default_preview_source_id,
+    whep_url: WHEP_TEST_PRIMARY_URL,
+  });
   expect(detail.sources.map((source) => source.whep_url)).toEqual([
     WHEP_TEST_PRIMARY_URL,
     WHEP_TEST_SECONDARY_URL,

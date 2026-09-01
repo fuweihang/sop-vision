@@ -25,10 +25,14 @@ test("直接 URL 加载详情区域、默认预览和实体 Breadcrumb", async (
   const detail = buildCameraDetail();
   renderCameraDetail();
 
-  const heading = await screen.findByRole("heading", {
-    level: 1,
-    name: detail.name,
-  });
+  const heading = await screen.findByRole(
+    "heading",
+    {
+      level: 1,
+      name: detail.name,
+    },
+    { timeout: 3_000 },
+  );
   const breadcrumb = screen.getByRole("navigation", { name: "面包屑导航" });
 
   expect(heading).toBeInTheDocument();

@@ -131,7 +131,9 @@ export function createCamerasMswScenario(
           ],
         })
       : buildCameraDetail();
-  const page = buildCameraPage();
+  // 列表摘要必须由同一份 Detail Fixture 投影。尤其是 whep-player 场景，Card 和 Detail 只有拿到
+  // 相同 source_id+whep_url，浏览器冒烟测试才能真实验证路由切换时复用 Session。
+  const page = buildCameraPage({ items: [buildCameraSummary(detail)] });
   const secondarySummary = buildCameraSummary(
     buildCameraDetail({
       cameraId: CAMERA_FIXTURE_IDS.secondaryCamera,

@@ -64,6 +64,7 @@ test("按预览意图 acquire/release，页面隐藏时保持 Lease", async () =
 
   result.rerender(player(source, false));
   expect(screen.getByText("预览已停止")).toBeVisible();
+  expect(screen.getByText("已停止")).toBeVisible();
   expect(screen.getByRole("toolbar", { name: "视频操作" })).toBeInTheDocument();
   expect(screen.getByRole("button", { name: /^(播放|暂停)$/ })).toBeDisabled();
   expect(screen.getByRole("button", { name: "刷新当前流" })).toBeDisabled();
@@ -115,9 +116,12 @@ test("暂停只影响当前 video，刷新继续保留暂停或播放意图", as
   });
   expect(screen.getByRole("button", { name: "播放" })).toBeEnabled();
   expect(media.play).toHaveBeenCalledOnce();
+  expect(screen.getByText("等待画面")).toBeVisible();
+  expect(screen.queryByText("正在加载视频")).not.toBeInTheDocument();
 
   await user.click(screen.getByRole("button", { name: "播放" }));
   expect(media.play).toHaveBeenCalledTimes(2);
+  expect(screen.getByText("正在加载视频")).toBeVisible();
   await user.click(screen.getByRole("button", { name: "刷新当前流" }));
   expect(session?.reconnectCount).toBe(2);
   act(() => {

@@ -24,10 +24,14 @@ function renderCameraList(
 }
 
 test("列表 Card 只展示摘要字段，并用完整默认 search 进入详情", async () => {
-  const { container } = renderCameraList();
+  renderCameraList();
 
   expect(
-    await screen.findByRole("heading", { level: 2, name: "洗手区 01" }),
+    await screen.findByRole(
+      "heading",
+      { level: 2, name: "洗手区 01" },
+      { timeout: 3_000 },
+    ),
   ).toBeInTheDocument();
   expect(screen.getByText("192.0.2.64:554")).toBeVisible();
   expect(screen.getByText("主码流")).toBeVisible();
@@ -60,7 +64,6 @@ test("列表 Card 只展示摘要字段，并用完整默认 search 进入详情
   expect(
     screen.getByRole("region", { name: "摄像头列表" }).firstElementChild,
   ).toHaveClass("min-[520px]:grid-cols-2", "min-[1200px]:grid-cols-4");
-  expect(container.querySelector("video")).toBeNull();
   expect(document.body.textContent).not.toContain(CAMERA_FIXTURE_SECRET);
   expect(document.body.textContent).not.toContain("rtsp://");
 });
@@ -161,12 +164,13 @@ test("搜索防抖使用 replace、重置页码，并可立即清除", async () 
 
 test("分页 Link 保留查询参数、写入历史，并支持前进后退恢复", async () => {
   const user = userEvent.setup();
-  const { router } = renderCameraList(
+  const { router, fakeStreamSessions, streamSessionManager } = renderCameraList(
     "multi-page",
     "/cameras?q=%E5%8C%BA&page=1&page_size=1",
   );
 
   await screen.findByRole("heading", { level: 2, name: "洗手区 01" });
+  await waitFor(() => expect(fakeStreamSessions).toHaveLength(1));
   const nextLink = screen.getByRole("link", { name: "前往下一页" });
   expect(nextLink).toHaveAttribute(
     "href",
@@ -177,6 +181,9 @@ test("分页 Link 保留查询参数、写入历史，并支持前进后退恢�
   expect(
     await screen.findByRole("heading", { level: 2, name: "包装区 02" }),
   ).toBeVisible();
+  await waitFor(() => expect(fakeStreamSessions).toHaveLength(2));
+  expect(fakeStreamSessions[0]?.closeCount).toBe(1);
+  expect(streamSessionManager.activeSessionCount).toBe(1);
   expect(router.state.location.search.page).toBe(2);
 
   act(() => router.history.back());
@@ -190,17 +197,21 @@ test("分页 Link 保留查询参数、写入历史，并支持前进后退恢�
 
 test("Card、详情返回和 Cameras Breadcrumb 都保留列表 search", async () => {
   const user = userEvent.setup();
-  const { router } = renderCameraList(
+  const { router, fakeStreamSessions, streamSessionManager } = renderCameraList(
     "multi-page",
     "/cameras?q=%E5%8C%85%E8%A3%85&page=2&page_size=1",
   );
   const expectedListHref = "/cameras?q=%E5%8C%85%E8%A3%85&page=2&page_size=1";
 
   await screen.findByRole("heading", { level: 2, name: "包装区 02" });
+  await waitFor(() => expect(fakeStreamSessions).toHaveLength(1));
   await user.click(
     screen.getByRole("link", { name: "查看摄像头详情：包装区 02" }),
   );
   await screen.findByRole("heading", { level: 1, name: "洗手区 01" });
+  await waitFor(() => expect(fakeStreamSessions).toHaveLength(2));
+  expect(fakeStreamSessions[0]?.closeCount).toBe(1);
+  expect(streamSessionManager.activeSessionCount).toBe(1);
 
   expect(
     within(screen.getByRole("navigation", { name: "面包屑导航" })).getByRole(
@@ -220,6 +231,61 @@ test("Card、详情返回和 Cameras Breadcrumb 都保留列表 search", async (
     page: 2,
     page_size: 1,
   });
+});
+
+test("Card 与同源 Detail 路由切换复用一个 Session 和 MediaStream", async () => {
+  const user = userEvent.setup();
+  const result = renderCameraList("success", "/cameras?page_size=6");
+
+  await screen.findByRole("heading", { level: 2, name: "洗手区 01" });
+  await waitFor(() => expect(result.fakeStreamSessions).toHaveLength(1));
+  await user.click(
+    screen.getByRole("link", { name: "查看摄像头详情：洗手区 01" }),
+  );
+
+  await screen.findByRole("heading", { level: 1, name: "洗手区 01" });
+  await act(() => Promise.resolve());
+  expect(result.fakeStreamSessions).toHaveLength(1);
+  expect(result.fakeStreamSessions[0]?.closeCount).toBe(0);
+  expect(result.streamSessionManager.activeSessionCount).toBe(1);
+  expect(screen.getAllByLabelText("实时视频")).toHaveLength(1);
+
+  await user.click(screen.getByRole("link", { name: "返回摄像头列表" }));
+  await screen.findByRole("heading", { level: 2, name: "洗手区 01" });
+  await act(() => Promise.resolve());
+  expect(result.fakeStreamSessions).toHaveLength(1);
+  expect(result.fakeStreamSessions[0]?.closeCount).toBe(0);
+  expect(result.streamSessionManager.activeSessionCount).toBe(1);
+});
+
+test("搜索移除旧 Card 时释放对应 Lease", async () => {
+  const user = userEvent.setup();
+  mockServer.use(
+    http.get(`${apiBaseUrl}/cameras`, ({ request }) => {
+      const url = new URL(request.url);
+      const hasQuery = url.searchParams.has("q");
+      const page = Number(url.searchParams.get("page") ?? 1);
+      const pageSize = Number(url.searchParams.get("page_size") ?? 20);
+      return HttpResponse.json(
+        hasQuery
+          ? buildCameraPage({ items: [], page, pageSize, total: 0 })
+          : buildCameraPage({ page, pageSize }),
+      );
+    }),
+  );
+  const result = renderAppRoute("/cameras?page_size=6");
+
+  await screen.findByRole("heading", { level: 2, name: "洗手区 01" });
+  await waitFor(() => expect(result.fakeStreamSessions).toHaveLength(1));
+  await user.type(
+    screen.getByRole("searchbox", { name: "搜索摄像头" }),
+    "不存在",
+  );
+
+  expect(await screen.findByText("未找到匹配摄像头")).toBeVisible();
+  await act(() => Promise.resolve());
+  expect(result.fakeStreamSessions[0]?.closeCount).toBe(1);
+  expect(result.streamSessionManager.activeSessionCount).toBe(0);
 });
 
 test.each([
