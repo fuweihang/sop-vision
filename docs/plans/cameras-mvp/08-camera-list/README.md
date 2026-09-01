@@ -4,21 +4,22 @@
 > [Stream Gateway](../../../modules/cameras/stream-gateway.md)、
 > [WHEP 浏览器播放](../../../modules/cameras/whep-player.md)
 >
-> 最终交付：`GET /api/v1/cameras`（`listCameras`）、可搜索分页的 `/cameras` 页面和可见 Card 的
+> 最终交付：`GET /api/v1/cameras`（`listCameras`）、可搜索分页的 `/cameras` 页面和已挂载 Card 的
 > 共享 WHEP 预览
 
 Backend 列表 API、Frontend 路由与查询状态已经完成，当前只剩浏览器媒体生命周期：
 
 | #   | 任务                                                 | 交付                                             |
 | --- | ---------------------------------------------------- | ------------------------------------------------ |
-| 03  | [Camera Card 预览](03-camera-card-preview/README.md) | 视口感知、页面可见性和共享 WHEP Session 生命周期 |
+| 03  | [Camera Card 预览](03-camera-card-preview/README.md) | Card 挂载、列表替换与共享 WHEP Session 生命周期 |
 
 后续任务应以已落地代码、OpenAPI、生成类型和测试为准，不能重新实现列表搜索分页或绕过现有接口。
 
 ## 共同范围
 
-完成 08 后，用户可以按名称或 IPv4 搜索、分页浏览 Camera、进入详情，并在可见 Card 中查看 Backend
-默认 Source 的实时预览。列表配置读取不依赖 MediaMTX 成功，媒体故障只产生确定的离线投影。
+完成 08 后，用户可以按名称或 IPv4 搜索、分页浏览 Camera、进入详情，并在已挂载且有 WHEP URL 的
+Card 中查看 Backend 默认 Source 的实时预览。列表配置读取不依赖 MediaMTX 成功，媒体故障只产生
+确定的离线投影。
 
 列表响应固定为 `{items, page, page_size, total}`，每个 `CameraSummary` 只包含：
 

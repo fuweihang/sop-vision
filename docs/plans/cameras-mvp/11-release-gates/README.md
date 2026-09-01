@@ -25,15 +25,16 @@
 
 ## 播放与浏览器
 
-- 在线 Camera Card 直接使用列表 `whep_url`，正常一页只有列表 REST 请求和按可见 Source 去重后的
+- 在线 Camera Card 直接使用列表 `whep_url`，正常一页只有列表 REST 请求和按已挂载 Source 去重后的
   WHEP 媒体请求。
 - 覆盖支持的 Camera Codec、浏览器范围、HTTPS、ICE additional hosts、局域网/NAT 可达性和
   `PUBLIC_WEBRTC_BASE_URL` 带路径前缀的 URL 连接。
 - Card 与 Detail 同时消费一路 Source 时只有一个 reader 和 MediaStream，各自使用独立 video DOM；
   单个消费者 release 不停止共享 Track，最后一个消费者 release 后清空 Session 缓存和全部
   `srcObject`。
-- Detail 按用户的开始/停止预览意图持有 Lease，隐藏页面时保持连接；Card 离开视口或页面隐藏时
-  release。切页、切源、删除和卸载会 release 对应 Lease，React Strict Mode 重挂载不重复建连或产生负引用。
+- Detail 按用户的开始/停止预览意图持有 Lease；已挂载且有 `whep_url` 的 Card 持有 Lease。页面隐藏和
+  Card 离开视口都保持连接；搜索或翻页替换 Card、切源、删除、路由离开和卸载会 release 对应 Lease，
+  React Strict Mode 重挂载不重复建连或产生负引用。
 - 详情页的开始/停止预览与 video 播放/暂停独立；暂停保留当前帧和 Lease，继续直接进入实时
   画面，不影响共享 MediaStream 的其他消费者。
 - 贴底全宽渐变操作栏的鼠标活动/自动隐藏、触摸、音量浮层、刷新、LIVE 和连接状态通过
@@ -47,7 +48,7 @@
   画面变化，以及两个 Path 各自 Session 的 acquire/release。
 - Frontend 的 FFmpeg synthetic RTSP Source 只验证可重复的基础播放与浏览器生命周期；发布验收必须另外
   使用目标 IPC/RTSP 设备覆盖支持的 Codec、厂商实现和长时间连接，不能用合成源代替。
-- 容量基线至少覆盖一页 20 个 Camera、多路 Source 配置和同时可见 Card 会话；资源上限与失败
+- 容量基线至少覆盖一页 20 个 Camera、多路 Source 配置和全部已挂载 Card 会话；资源上限与失败
   文案必须通过真实部署验证，不能只依赖 jsdom。
 
 ## 安全与数据边界

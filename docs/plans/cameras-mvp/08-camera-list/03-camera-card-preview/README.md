@@ -2,9 +2,9 @@
 
 ## 任务目标
 
-为 `/cameras` 的在线 Camera Card 增加实时预览。Card 只有在页面可见、进入视口且列表提供非空
-`whep_url` 时才持有 Stream Lease；离开视口、页面隐藏、切页、搜索变化或卸载时及时释放。同一 Source
-在 Card 和 Detail 中同时出现时复用一个 `WhepSession` 和 `MediaStream`。
+为 `/cameras` 的在线 Camera Card 增加实时预览。Card 挂载且列表提供非空 `whep_url` 时持有 Stream
+Lease；`whep_url` 变为 `null`、搜索或翻页替换 Card、离开路由或卸载时及时释放。同一 Source 在 Card
+和 Detail 中同时出现时复用一个 `WhepSession` 和 `MediaStream`。
 
 ## 当前上下文与前置条件
 
@@ -20,17 +20,15 @@
 
 ## 实施范围
 
-### 视口与页面可见性
+### Card 挂载与输入生命周期
 
-- 每张 Card 使用 IntersectionObserver 观察媒体区域。使用一个共享的非零可见阈值（建议 `0.25`）和
-  `rootMargin: "0px"`；集中为可测试常量，不为滚动抖动增加固定冷却计时器。
-- Card 只有同时满足以下条件才 acquire：文档可见、Card 达到阈值、默认 Source `whep_url` 非空。
+- Card 挂载且默认 Source `whep_url` 非空时 acquire。离开视口或文档变为 hidden 都不改变 Lease，
+  不增加 IntersectionObserver、Page Visibility 监听、可见比例阈值、防抖或冷却计时器。
 - `whep_url=null` 时不 acquire，也不渲染一个没有媒体来源的 video；展示现有状态和明确的不可预览
   占位内容。
-- 页面变为 hidden 时释放全部 Card Lease。恢复 visible 时依据 Observer 保存的当前相交状态重新计算，
-  只让仍在视口内的 Card acquire。
-- 切页、搜索变化和路由离开会卸载旧 Card；Observer 必须 disconnect，Lease 必须 release。React Strict
-  Mode 重挂载不得产生重复 Session 或负引用。
+- 搜索或翻页后，不再出现在结果中的旧 Card 会卸载并 release；如果同一个 `camera_id` 仍保留在新结果
+  中，且 `source_id+whep_url` 未变化，则继续使用原 Lease，不因查询参数变化强制重建 Session。
+- 路由离开和组件卸载必须 release。React Strict Mode 重挂载不得产生重复 Session 或负引用。
 
 ### Card 播放与共享
 
@@ -38,8 +36,13 @@
   `objectFit="cover"`，不复制 reader、Session 或 video hooks。
 - Card video 始终静音、音量为 0、自动播放，不显示详情的 Source Select、播放、刷新、音量或全屏
   controls。
-- Card overlay 只增加设备名称、在线状态和带文字的 `LIVE`；状态不能只依赖颜色表达，overlay 不阻断
-  Card 详情 Link 的指针或键盘交互。
+- 保留现有 Card 结构：媒体 overlay 显示默认 Source 名称，Camera 名称和 Camera 状态继续显示在媒体区
+  下方，不在 overlay 重复。媒体 overlay 另外显示列表响应中的默认 Source 状态，以及当前浏览器
+  Session 状态；两类状态都必须有可读文字，不能只依赖颜色表达。
+- Session 状态固定投影为：`idle/closed` 显示“等待预览”，`connecting` 显示“正在连接”，`playing`
+  显示 `LIVE`，`reconnecting` 显示“正在重连”，`failed` 显示“连接失败”。Card 不为失败状态增加刷新
+  或重试控件；reader 的既有重连行为保持不变。
+- overlay 不阻断 Card 详情 Link 的指针或键盘交互。
 - Card 和 Detail 各自保留独立 video DOM、muted/volume 与 overlay；同一 `source_id+whep_url` 通过全局
   `StreamSessionManager` 共享一个 Session 和 MediaStream。
 - 一个消费者 release 不停止其他消费者仍使用的 Track；最后一个消费者 release 后关闭 Session、停止
@@ -58,19 +61,19 @@
 
 ## 实施步骤
 
-1. 实现可复用、可测试的 Card 视口状态 hook，封装 IntersectionObserver 注册、阈值、清理和测试环境
-   适配；业务 hook 不直接创建媒体 Session。
-2. 实现文档可见性状态，组合为单一 `shouldAcquire`。验证 hidden/visible、相交变化和组件卸载时不会
-   留下过期状态或监听器。
-3. 扩展 Camera Card 媒体区域：无 URL 渲染非 video 占位；有 URL 时装配 `useStreamSession`、
-   `VideoSurface cover`、静音播放和非交互 overlay。
-4. 增加 Card 组件测试：在线/离线、进入/离开视口、页面隐藏/恢复、列表刷新 URL 不变与变化、切页、
-   搜索变化、卸载和 Strict Mode。
-5. 扩展 Stream Session 集成测试：Card+Card、Card+Detail 共享一个 reader，逐个释放保持 Track，最后
+1. 扩展 Camera Card 媒体区域：无 URL 渲染非 video 占位；有 URL 时装配
+   `useStreamSession(source_id, whep_url)`、`VideoSurface cover`、静音播放、Source 名称、Backend
+   Source 状态、Session 状态和非交互 overlay。
+2. 增加 Card 组件和 Route 测试：在线/离线、页面隐藏、列表刷新 URL 不变与变化、搜索、切页、路由
+   离开、卸载和 Strict Mode。页面隐藏不得释放已挂载 Card 的 Lease；搜索和翻页只释放被结果替换并
+   卸载的 Card，相同 `camera_id+source_id+whep_url` 保持 Lease。
+3. 扩展 Stream Session 集成测试：Card+Card、Card+Detail 共享一个 reader，逐个释放保持 Track，最后
    释放清空 Session 与 `srcObject`。
-6. 使用现有 synthetic WHEP 双流进行浏览器冒烟测试，确认滚动只连接可见 Card、Card 始终静音、进入
-   详情可共享同一路流且返回列表后没有遗留 Lease。
-7. 完成 08 文档收尾：更新 Cameras 模块当前能力和排障说明，新增最终 Card 预览变更记录，移除已完成
+4. 扩展现有 `whep-player` MSW 场景：列表摘要必须从使用锁定 synthetic WHEP URL 的详情 Fixture 投影，
+   让 Card 与 Detail 返回相同的默认 `source_id+whep_url`；不得让 Card 使用普通 Fixture 的
+   `media.example.invalid` 地址。使用该场景进行浏览器冒烟测试，确认有 URL 的已挂载 Card 建立连接、
+   Card 始终静音、页面隐藏不释放、进入详情可复用同一路流且返回列表后没有遗留 Lease。
+5. 完成 08 文档收尾：更新 Cameras 模块当前能力和排障说明，新增最终 Card 预览变更记录，移除已完成
    的 08 计划入口和目录；不得删除 09–11。
 
 ## 验证方式
@@ -89,16 +92,19 @@ pnpm build
 ```
 
 浏览器冒烟测试使用 [WHEP 浏览器播放](../../../../modules/cameras/whep-player.md)提供的锁定 synthetic
-Source 和开发命令。至少检查可见/不可见 Card、页面隐藏/恢复、Card 与 Detail 同源共享、路由离开和
-最后一个消费者释放。
+Source 和开发命令。至少检查已挂载 Card 自动连接、页面隐藏后保持连接、Card 与 Detail 同源共享、
+搜索或翻页卸载旧 Card、路由离开和最后一个消费者释放。
 
 ## 完成标准
 
-- `whep_url=null` 或未进入视口的 Card 不创建 reader，不渲染无来源 video。
-- 页面隐藏、切页、搜索变化和卸载会释放对应 Lease；恢复时只有仍可见 Card 重新 acquire。
+- `whep_url=null` 的 Card 不创建 reader，也不渲染 video；已挂载且有 URL 的 Card 持有 Lease，不受
+  视口相交比例或页面 hidden 状态影响。
+- 搜索或翻页只释放被替换并卸载的 Card；路由离开和组件卸载释放对应 Lease。仍保留在结果中的相同
+  `camera_id+source_id+whep_url` 不重建 Session。
 - 同一路 Source 的多个 Card 或 Card+Detail 只有一个 reader 和 MediaStream。
 - 释放单个消费者不停止其他消费者；最后释放后 Session cache、Track 和 `srcObject` 全部清理。
-- Card 使用 `cover`、始终静音、没有详情 controls，LIVE 与状态同时有可读文字。
+- Card 使用 `cover`、始终静音、没有详情 controls；保留 Source 名称，Backend Source 状态与 Session
+  状态都有可读文字，只有 `playing` 显示 `LIVE`。
 - 列表非媒体字段刷新不重建 Session；Source ID 或 WHEP URL 改变时正确切换。
 - Frontend 全套检查、敏感数据检查和 synthetic WHEP 浏览器冒烟测试通过。
 - Cameras 当前能力与变更记录已更新，08 已按上级计划要求移除，可以进入 09。
