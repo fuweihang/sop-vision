@@ -10,7 +10,6 @@ import {
 } from "@/components/ui/select";
 import type { CameraDetail } from "@/features/cameras/api/cameras-api";
 import { isCameraSourcePlayable } from "@/features/cameras/components/camera-preview-selection";
-import { CameraSourceStatusBadge } from "@/features/cameras/components/camera-status-badge";
 import { useVideoControlsVisibility } from "@/features/video/components/video-controls";
 import { useVideoSurface } from "@/features/video/components/video-surface";
 
@@ -79,7 +78,6 @@ export function CameraSourceSelect({
               disabled={!isCameraSourcePlayable(source)}
             >
               <span className="min-w-0 flex-1 truncate">{source.name}</span>
-              <CameraSourceStatusBadge status={source.status} />
             </SelectItem>
           ))}
         </SelectGroup>
