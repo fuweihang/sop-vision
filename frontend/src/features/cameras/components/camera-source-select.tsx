@@ -38,6 +38,9 @@ export function CameraSourceSelect({
     label: source.name,
     value: source.source_id,
   }));
+  const selectedSourceName = sources.find(
+    (source) => source.source_id === sourceId,
+  )?.name;
 
   useEffect(
     () => () => setFloatingLayerOpen(layerId, false),
@@ -60,15 +63,22 @@ export function CameraSourceSelect({
         aria-label="切换预览源"
         size="sm"
         variant="overlay"
-        className="max-w-36 sm:max-w-48"
+        className="
+          w-fit max-w-36 overflow-hidden sm:max-w-48
+          **:data-[slot=select-value]:block
+          **:data-[slot=select-value]:min-w-0
+          **:data-[slot=select-value]:truncate
+          [&>svg]:shrink-0
+        "
       >
-        <SelectValue />
+        <SelectValue title={selectedSourceName} />
       </SelectTrigger>
       <SelectContent
         portalContainer={containerElement}
         side="top"
         align="end"
         alignItemWithTrigger={false}
+        className="max-w-(--available-width)"
       >
         <SelectGroup>
           {sources.map((source) => (
@@ -76,8 +86,18 @@ export function CameraSourceSelect({
               key={source.source_id}
               value={source.source_id}
               disabled={!isCameraSourcePlayable(source)}
+              className="
+                min-w-0 overflow-hidden
+                [&>div]:min-w-0
+                [&>div]:shrink
+                [&>div]:overflow-hidden
+              "
             >
-              <span className="min-w-0 flex-1 truncate">{source.name}</span>
+              {/* Base UI 的 ItemText 默认禁止收缩，因此由 SelectItem 局部覆盖直接子 div；
+                  不修改共享 Select，也能让任意长度的中英文名称在当前弹层宽度内单行省略。 */}
+              <span className="min-w-0 flex-1 truncate" title={source.name}>
+                {source.name}
+              </span>
             </SelectItem>
           ))}
         </SelectGroup>

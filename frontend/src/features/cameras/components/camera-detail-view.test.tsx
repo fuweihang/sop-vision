@@ -118,6 +118,61 @@ test("默认 Source 不可播放时连接响应顺序中的第一路可播放 So
   ).toHaveTextContent(camera.sources[1]?.name ?? "");
 });
 
+test("长 Source 名称在控制栏和弹层内保持单行省略", async () => {
+  const user = userEvent.setup();
+  const longChineseName = "视频".repeat(64);
+  const longAsciiName = "A".repeat(128);
+  const camera = buildCameraDetail({
+    sources: [
+      { name: longChineseName, status: "ONLINE" },
+      { name: longAsciiName, status: "ONLINE" },
+    ],
+  });
+  renderWithStreamSession(<CameraDetailView camera={camera} />);
+
+  const trigger = screen.getByRole("combobox", { name: "切换预览源" });
+  const selectedValue = trigger.querySelector("[data-slot='select-value']");
+  expect(trigger).toHaveClass(
+    "w-fit",
+    "max-w-36",
+    "overflow-hidden",
+    "**:data-[slot=select-value]:block",
+    "**:data-[slot=select-value]:min-w-0",
+    "**:data-[slot=select-value]:truncate",
+    "[&>svg]:shrink-0",
+  );
+  expect(selectedValue).toHaveAttribute("title", longChineseName);
+
+  await user.click(trigger);
+
+  const listbox = await screen.findByRole("listbox");
+  const content = listbox.closest("[data-slot='select-content']");
+  const chineseOption = screen.getByRole("option", { name: longChineseName });
+  const asciiOption = screen.getByRole("option", { name: longAsciiName });
+  const chineseName = chineseOption.querySelector(
+    `[title="${longChineseName}"]`,
+  );
+  const asciiName = asciiOption.querySelector(`[title="${longAsciiName}"]`);
+  const itemText = asciiOption.querySelector(":scope > div");
+
+  expect(content).toHaveClass("max-w-(--available-width)");
+  expect(asciiOption).toHaveClass(
+    "min-w-0",
+    "overflow-hidden",
+    "[&>div]:min-w-0",
+    "[&>div]:shrink",
+    "[&>div]:overflow-hidden",
+  );
+  expect(itemText?.tagName).toBe("DIV");
+  expect(itemText).toHaveClass("shrink-0", "whitespace-nowrap");
+  expect(chineseName).toHaveClass("min-w-0", "flex-1", "truncate");
+  expect(asciiName).toHaveClass("min-w-0", "flex-1", "truncate");
+
+  // Base UI 关闭浮层时会执行退出过渡；显式等待清理，避免 Portal 状态影响后续用例。
+  await user.keyboard("{Escape}");
+  await waitFor(() => expect(screen.queryByRole("listbox")).toBeNull());
+});
+
 test("临时切源释放旧 Session，刷新时保留，Source 失效后回到默认源", async () => {
   const user = userEvent.setup();
   const camera = buildCameraDetail({
@@ -190,7 +245,7 @@ test("停止预览时允许选择 Source，但再次开始前不 acquire", async
   expect(result.streamSessionManager.activeSessionCount).toBe(0);
 
   await user.click(screen.getByRole("combobox", { name: "切换预览源" }));
-  await user.click(screen.getByRole("option", { name: /子码流/ }));
+  await user.click(await screen.findByRole("option", { name: /子码流/ }));
   await act(() => Promise.resolve());
   expect(result.fakeStreamSessions).toHaveLength(1);
 
