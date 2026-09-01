@@ -18,7 +18,7 @@ from algorithm.workers.base import (
     install_stop_signal_handlers,
     restore_signal_handlers,
 )
-from algorithm.workers.frame_detection import build_frame_detection
+from algorithm.workers.frame_message import build_frame_message
 
 from .config import TrackerConfig
 
@@ -89,7 +89,7 @@ def run_tracker(
             previous_frame_at = now
 
             height, width = packet.frame.shape[:2]
-            message = build_frame_detection(
+            message = build_frame_message(
                 config,
                 result,
                 roi_state.snapshot(),

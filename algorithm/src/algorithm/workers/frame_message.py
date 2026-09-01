@@ -1,4 +1,4 @@
-"""检测与追踪 Worker 共用的帧消息转换。"""
+"""检测与追踪 Worker 共用的帧消息构建。"""
 
 from __future__ import annotations
 
@@ -15,12 +15,12 @@ from algorithm.contracts.detection import (
 
 
 class FrameWorkerConfig(Protocol):
-    """构建公开消息时真正需要的最小配置接口。"""
+    """构建帧消息时真正需要的最小配置接口。"""
 
     task_id: str
 
 
-def build_frame_detection(
+def build_frame_message(
     config: FrameWorkerConfig,
     result: DetectionBatch,
     roi: RoiConfig | None,
@@ -32,7 +32,7 @@ def build_frame_detection(
     frame_height: int,
     fps: float,
 ) -> FrameDetection:
-    """过滤 ROI，并把检测或追踪结果转换为稳定的 Redis 消息。
+    """过滤 ROI，并把检测或追踪结果转换为 Redis 帧消息。
 
     ROI 只影响发布结果，不会修改传给追踪器的检测集合。因此目标暂时离开 ROI
     时 ByteTrack 仍能维护它的内部状态，重新进入后有机会继续使用原轨迹编号。
@@ -82,10 +82,10 @@ def normalized_bbox(
     frame_width: int,
     frame_height: int,
 ) -> tuple[float, float, float, float]:
-    """把像素坐标框裁剪并归一化到公开消息要求的 ``[0, 1]`` 区间。"""
+    """把像素坐标框裁剪并归一化到帧消息要求的 ``[0, 1]`` 区间。"""
 
     if frame_width <= 0 or frame_height <= 0:
-        raise ValueError("frame dimensions must be positive")
+        raise ValueError("帧宽度和高度必须大于 0")
     x1, y1, x2, y2 = detection.bbox
     return (
         min(max(x1 / frame_width, 0.0), 1.0),

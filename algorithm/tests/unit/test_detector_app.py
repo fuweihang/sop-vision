@@ -3,8 +3,8 @@ from pathlib import Path
 
 from algorithm.algorithms.yolo import Detection, DetectionBatch
 from algorithm.common.roi import RoiConfig
-from algorithm.workers.frame_detection import (
-    build_frame_detection,
+from algorithm.workers.frame_message import (
+    build_frame_message,
     detection_is_inside_roi,
 )
 from algorithm.workers.detector.config import DetectorConfig
@@ -44,7 +44,7 @@ def test_frame_message_filters_roi_and_normalizes_bbox() -> None:
         inference_ms=12.5,
     )
 
-    message = build_frame_detection(
+    message = build_frame_message(
         detector_config(roi),
         result,
         roi,
@@ -72,7 +72,7 @@ def test_frame_message_filters_roi_and_normalizes_bbox() -> None:
 
 def test_empty_frame_is_still_a_valid_message() -> None:
     before_publish_ms = time.time_ns() // 1_000_000
-    message = build_frame_detection(
+    message = build_frame_message(
         detector_config(),
         DetectionBatch(detections=(), inference_ms=3.0),
         None,
@@ -104,7 +104,7 @@ def test_frame_message_preserves_track_id_after_roi_filtering() -> None:
         inference_ms=5.0,
     )
 
-    message = build_frame_detection(
+    message = build_frame_message(
         detector_config(roi),
         result,
         roi,

@@ -171,8 +171,8 @@
     "description": "⚙️ 视频 Worker 公共配置",
     "tooltip": "Detector 与 Tracker 共用的连接、模型、ROI 和发布参数"
   },
-  "src/algorithm/workers/frame_detection.py": {
-    "description": "📨 帧消息转换",
+  "src/algorithm/workers/frame_message.py": {
+    "description": "📨 帧消息构建",
     "tooltip": "检测与追踪共用的 ROI 过滤、坐标归一化和消息构建"
   },
   "src/algorithm/workers/detector": {
