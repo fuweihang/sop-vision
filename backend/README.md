@@ -1,21 +1,21 @@
 # SOP Vision Backend
 
 Backend 是平台的 FastAPI 控制面。当前已完成公共 HTTP/数据库基础、Camera 领域与持久化层、
-MediaMTX v1.20.1 Adapter、PostgreSQL 到 MediaMTX 的后台媒体对账、Camera 创建和详情；其余
-Camera handler、Redis 和 Detector 控制尚未实现。
+MediaMTX v1.20.1 Adapter、PostgreSQL 到 MediaMTX 的后台媒体对账，以及 Camera 创建、列表和详情；
+Camera 更新、默认源切换、删除、Redis 和 Detector 控制尚未实现。
 
 ## 当前能力
 
-| 能力                         | 状态     | 入口                                          |
-| ---------------------------- | -------- | --------------------------------------------- |
-| 存活检查                     | 可用     | `GET /api/v1/health/live`                     |
-| PostgreSQL 就绪检查          | 可用     | `GET /api/v1/health/ready`                    |
-| MediaMTX 协议与 Adapter      | 可用     | `contracts/mediamtx-openapi.json`、`ports.py` |
-| Camera 领域与持久化          | 可用     | `app/modules/cameras/domain`、`persistence`   |
-| 媒体后台对账                 | 可用     | `application/reconciliation.py`               |
-| Cameras HTTP 契约            | 已冻结   | 六个路由和 Schema 已进入 OpenAPI              |
-| Cameras HTTP 行为            | 部分可用 | 创建和详情可用，其余四个 handler 仍为占位     |
-| Redis / WebSocket / Detector | 未实现   | Compose 变量和目标设计不等于应用接入          |
+| 能力                         | 状态     | 入口                                            |
+| ---------------------------- | -------- | ----------------------------------------------- |
+| 存活检查                     | 可用     | `GET /api/v1/health/live`                       |
+| PostgreSQL 就绪检查          | 可用     | `GET /api/v1/health/ready`                      |
+| MediaMTX 协议与 Adapter      | 可用     | `contracts/mediamtx-openapi.json`、`ports.py`   |
+| Camera 领域与持久化          | 可用     | `app/modules/cameras/domain`、`persistence`     |
+| 媒体后台对账                 | 可用     | `application/reconciliation.py`                 |
+| Cameras HTTP 契约            | 已冻结   | 六个路由和 Schema 已进入 OpenAPI                |
+| Cameras HTTP 行为            | 部分可用 | 创建、列表和详情可用，其余三个 handler 仍为占位 |
+| Redis / WebSocket / Detector | 未实现   | Compose 变量和目标设计不等于应用接入            |
 
 `/api/v1/health/ready` 当前只检查 PostgreSQL，不检查 MediaMTX 或 Redis。MediaMTX 不可用不会令
 配置 API 被部署层摘除；媒体故障由状态投影和脱敏对账日志独立表达。
@@ -139,7 +139,7 @@ backend/
 │   │   └── http/               # Trace、Problem、校验与 OpenAPI 公共机制
 │   └── modules/
 │       ├── cameras/
-│       │   ├── api/            # Schema、依赖、错误映射、创建、详情和剩余占位 Router
+│       │   ├── api/            # Schema、依赖、错误映射、创建、列表、详情和剩余占位 Router
 │       │   ├── application/    # 应用端口、媒体 Desired State 与后台对账
 │       │   ├── domain/         # 框架无关的 Camera 聚合和值对象
 │       │   └── persistence/    # Repository/UoW、Mapper、巡检和对账锁/读取

@@ -9,7 +9,8 @@ MediaMTX Adapter、后台对账和具体业务用例由同目录的主题文档�
 - 无外键的 `cameras` / `camera_sources` 模型、稳定约束、完整性巡检和聚合级 Repository/UoW。
 - 框架无关的不可变 Camera 聚合、值规则、固定 ID/时钟和 Fake 持久化实现。
 - Trace ID、Problem Details、严格 UUID、分页参数、异常脱敏和 OpenAPI 公共响应。
-- Cameras 全量请求/响应 Schema、可用创建与详情 Router、四个目标占位 Router 和确定性 OpenAPI 导出。
+- Cameras 全量请求/响应 Schema、可用创建/列表/详情 Router、三个目标占位 Router 和确定性 OpenAPI
+  导出。
 - Frontend 生成类型、单一 API Client、Problem 映射、Query Key、Fixture 和显式 MSW 场景。
 - 契约漂移、占位生命周期、迁移/Repository 和敏感数据的自动化门禁。
 
@@ -149,40 +150,8 @@ Query Key 固定为：
 ["camera", cameraId]
 ```
 
-| 变更       | 更新或失效                         |
-| ---------- | ---------------------------------- |
-| 创建       | `cameras`                          |
-| 更新       | `cameras`、当前 `camera`           |
-| 切换默认源 | `cameras`、当前 `camera`           |
-| 删除       | `cameras`、当前 `camera`           |
-| 状态刷新   | 只合并 `cameras/camera` 的状态字段 |
+创建成功后按前缀失效 `cameras`；列表与详情刷新只更新各自 Query。尚未实现的更新、默认源切换和删除
+如何处理缓存，由对应 [剩余计划](../../plans/cameras-mvp/README.md)负责。
 
 首次加载、后台刷新、空数据、搜索无结果和可恢复失败必须分开；后台刷新保留旧内容。页面 URL
 负责恢复列表查询或详情定位。MSW 只在 Vite 开发模式显式启用，未知场景或未处理请求直接失败。
-
-## 生成与验证
-
-Foundation 的长期门禁：
-
-```bash
-# 仓库根目录
-bash scripts/check-cameras-contracts.sh
-bash scripts/check-cameras-sensitive-data.sh
-
-# backend/
-uv run --env-file .env.local pytest
-uv run ruff check .
-uv run ruff format --check .
-uv run python scripts/check_camera_placeholders.py foundation
-
-# frontend/
-pnpm test
-pnpm lint
-pnpm format:check
-pnpm build
-```
-
-`foundation` 占位门禁允许尚未实现的 handler 逐个用完整实现原位替换，但拒绝混入临时代码的
-半占位。
-最终 MVP 必须改用 `mvp` 模式并保证零占位。数据库集成测试需要独立的 `TEST_DATABASE_URL`；
-未配置时测试会跳过，不能算作完整持久化验收。

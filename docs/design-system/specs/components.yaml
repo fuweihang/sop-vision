@@ -119,6 +119,12 @@ components:
       - Use a visible label unless the surrounding pattern provides an equivalent name.
       - Use native type and autocomplete where applicable.
 
+  input_group:
+    use_for: [input_with_addon, search_with_icon]
+    rules:
+      - Compose the installed InputGroup parts instead of rebuilding border and focus behavior in page code.
+      - Decorative addons are hidden from assistive technology; interactive addon buttons require accessible names.
+
   label:
     use_for: [form_control_name]
     rules:

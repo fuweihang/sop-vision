@@ -28,14 +28,14 @@ flowchart LR
     DET[Detector 预留目录] -. "未实现" .-> REDIS
 ```
 
-| 组件       | 当前实现                                                              | 当前限制                                                |
-| ---------- | --------------------------------------------------------------------- | ------------------------------------------------------- |
-| PostgreSQL | Compose 服务、连接池、迁移、Camera 关系模型、创建与详情读取           | 列表、更新和删除 handler 尚未读写聚合                   |
-| Redis      | Compose 服务、AOF 与健康检查                                          | Backend Settings/Client、消息协议和消费者均未实现       |
-| MediaMTX   | RTSP、WHEP、v1.20.1 Adapter、创建后即时同步与后台对账                 | 尚无更新/删除即时同步                                   |
-| FastAPI    | 公共基础、Camera 创建/详情、MediaMTX Adapter 与后台对账               | 其余四个 Cameras handler 占位；无鉴权、Redis、WebSocket |
-| Frontend   | App Shell、Camera 新增/详情、可临时切源的 WHEP 播放器、API Client/MSW | 无 Camera 列表 Cards，Tasks 仍为页面骨架                |
-| Detector   | 空的预留目录                                                          | 无进程、协议、模型或 Compose 服务                       |
+| 组件       | 当前实现                                                                 | 当前限制                                                |
+| ---------- | ------------------------------------------------------------------------ | ------------------------------------------------------- |
+| PostgreSQL | Compose 服务、连接池、迁移、Camera 关系模型、创建、列表与详情读取        | 更新和删除 handler 尚未写入聚合                         |
+| Redis      | Compose 服务、AOF 与健康检查                                             | Backend Settings/Client、消息协议和消费者均未实现       |
+| MediaMTX   | RTSP、WHEP、v1.20.1 Adapter、创建后即时同步与后台对账                    | 尚无更新/删除即时同步                                   |
+| FastAPI    | 公共基础、Camera 创建/列表/详情、MediaMTX Adapter 与后台对账             | 其余三个 Cameras handler 占位；无鉴权、Redis、WebSocket |
+| Frontend   | App Shell、Camera 新增/列表/实时 Card/详情、WHEP 播放器和 API Client/MSW | 无编辑、持久化默认源切换和删除；Tasks 仍为页面骨架      |
+| Detector   | 空的预留目录                                                             | 无进程、协议、模型或 Compose 服务                       |
 
 [早期目标架构图](vision-platform-architecture.png) 仅作为最初方案的设计证据，其中包含已经调整或
 尚未采用的 Worker、gRPC、WebSocket、Redis 数据链路和业务模块关系，不能用来判断当前实现。当前
@@ -94,10 +94,10 @@ URL 后缀、顺序和时间。完整 RTSP URL 由聚合派生，不单独持久
 
 ## HTTP 与跨端契约
 
-- 公共 API 前缀是 `/api/v1`；健康检查、`POST /api/v1/cameras` 和
+- 公共 API 前缀是 `/api/v1`；健康检查、`GET/POST /api/v1/cameras` 和
   `GET /api/v1/cameras/{camera_id}` 当前可用。
-- Cameras 六个目标 operation 已注册到真实应用并导出到 `contracts/openapi.json`；创建和详情已实现，
-  其余四个 handler 仍为占位。
+- Cameras 六个目标 operation 已注册到真实应用并导出到 `contracts/openapi.json`；创建、列表和详情
+  已实现，更新、默认源切换和删除仍为占位。
 - OpenAPI 生成 Frontend operation 类型；Frontend 不维护第二份手写 DTO。
 - 错误使用 `application/problem+json`，Header 和 body 共享同一 Trace ID。
 - Cameras 写请求禁止未知字段；路径 ID 只接受标准小写 UUID v4。
@@ -133,13 +133,13 @@ PostgreSQL 读取 Desired State，在启动、周期和 MediaMTX 内存状态丢
 
 ## 浏览器视频与检测展示
 
-Frontend 已按以下边界实现共享 WHEP 基础和 Camera 详情播放器；Card 与 Detection 消费者尚未接入：
+Frontend 已按以下边界实现共享 WHEP 基础、Camera Card 和详情播放器；Detection 消费者尚未接入：
 
 ```text
 MediaMTX reader.js → WhepSession → StreamSessionManager → MediaStream
                                                         ├→ Card VideoSurface
                                                         ├→ Detail VideoSurface
-                                                        └→ Task VideoSurface + BoxCanvas
+                                                        └→ Task VideoSurface + BoxCanvas（目标）
 ```
 
 - `reader.js` 只处理 MediaMTX WHEP/WebRTC；`WhepSession` 提供项目内状态和 Stream 边界。
@@ -148,10 +148,13 @@ MediaMTX reader.js → WhepSession → StreamSessionManager → MediaStream
   测量值，不接受 Camera、Card、Detail 或 Detection 模式参数。
 - Camera Detail 在 Camera feature 内解析默认/临时 Source，通过 children 组合 Source Select；网页全屏
   和浏览器全屏只改变同一个 `VideoSurface` 的显示状态，不重建 Session、MediaStream 或 video DOM。
-- Detection 把由视频帧回调驱动的 Canvas 作为 child 组合进 `VideoSurface`，不通过 Canvas 重绘媒体
-  帧，也不让 video feature 依赖 Detection 类型。
-- 视频默认实时播放，Box 依据同一时钟域的时间戳匹配；第一版不为等待 Box 强制延迟视频。
-- WebRTC 质量采样通过 `WhepSession` 的受控接口扩展，不能让 React 读取 vendored reader 私有字段。
+- Camera Card 只读取列表摘要中的默认 Source，与 Detail 共用 Session Manager 和展示状态规则，但
+  保留独立 video DOM、首帧状态和业务 overlay。
+- Detection 实现时把由视频帧回调驱动的 Canvas 作为 child 组合进 `VideoSurface`，不通过 Canvas
+  重绘媒体帧，也不让 video feature 依赖 Detection 类型。Box 依据同一时钟域的时间戳匹配，第一版
+  不为等待 Box 强制延迟视频。
+- 后续 WebRTC 质量采样通过 `WhepSession` 的受控接口扩展，不能让 React 读取 vendored reader 私有
+  字段。
 
 ## 目标检测链路
 

@@ -35,10 +35,8 @@ Runtime Path 快照。这样媒体请求等待期间不会继续占用数据库�
 
 ## Frontend 行为
 
-详情路由从 Router Context 使用现有 Axios Client 和 QueryClient。loader 通过
-`ensureQueryData` 预取数据，只把 Camera 名称返回给 Breadcrumb；包含密码和 RTSP URL 的完整详情只
-保存在 TanStack Query 的当前会话内存缓存中。页面使用相同 Query Options 的 `useSuspenseQuery`
-订阅后续刷新。
+详情路由通过 `ensureQueryData` 预取，只把 Camera 名称返回给 Breadcrumb；完整详情遵守
+[Cameras 敏感数据边界](foundation.md#敏感数据)，由页面使用相同 Query Options 订阅后续刷新。
 
 | Query 设置                    | 当前值  |
 | ----------------------------- | ------- |
@@ -54,9 +52,7 @@ Runtime Path 快照。这样媒体请求等待期间不会继续占用数据库�
 只读页面按以下顺序展示：
 
 1. Camera 名称、可用的开始/停止预览按钮，以及禁用的编辑按钮；
-2. 当前 Source 的 16:9 实时播放器，包含临时 Source Select、持续到当前 Stream 首帧出现的 loading、
-   首帧超时提示、连接状态、首帧真正渲染后才出现的 LIVE、重连、常驻音量、静音、网页全屏和浏览器
-   全屏；
+2. 当前 Source 的 16:9 实时播放器和临时 Source Select；
 3. IPv4、端口、用户名、默认隐藏的密码、默认 Source 最近检查时间，以及标题右侧的
    Camera 聚合状态 Badge；
 4. “摄像头视频源”表格，按响应顺序展示禁用的默认源单选控件、名称、完整 RTSP URL 和状态 Badge；
@@ -64,19 +60,11 @@ Runtime Path 快照。这样媒体请求等待期间不会继续占用数据库�
 
 密码使用固定星号占位，不显示实际长度；用户点击眼睛按钮后可以在当前页面显隐。页面不展示
 `created_at/updated_at`。窄屏下连接信息与预览区域改为单列，视频源表格只在自身容器内横向滚动，
-不扩大整个页面。播放器先验证 Backend 默认 Source ID，再从 `status=ONLINE` 且 `whep_url` 非空的
-Source 中选择实际预览源：默认源可播放时优先，否则使用响应顺序中的第一路可播放源。用户可以只为
-当前页面临时切换 Source，不修改持久化默认源；临时 Source 在详情刷新后仍可播放时保留，删除或
-不可播放后回到默认规则。
+不扩大整个页面。默认/临时 Source 选择、预览意图、操作栏状态、错误恢复和 Lease 生命周期统一由
+[WHEP 浏览器播放](whep-player.md#camera-详情行为)维护。
 
-播放器按用户的开始/停止预览意图保持 Lease，页面隐藏时不主动断开；路由离开和组件卸载会释放当前
-Lease。15 秒详情刷新和 Backend 默认源变化不会覆盖用户主动停止预览的选择。停止预览时仍显示
-Source Select 和显示模式，播放、刷新和音量控件禁用，也不显示旧媒体错误。运行中的 WHEP Session
-连接失败时，常驻错误提示提供“刷新当前流”按钮；全部 Source 不可播放时不渲染操作栏。
+## 排查
 
-## 敏感数据与排查
-
-- 详情不得写入 localStorage、IndexedDB、离线缓存或持久化 Query cache，也不得进入通知和日志。
 - Browser MSW 只在显式开发场景启用，并关闭正常请求日志，避免详情响应进入开发终端。未声明业务请求
   仍报错；仅忽略常见静态资源和 Codex/Playwright 的 `/__tsd/console-pipe` 开发日志请求。
 - 页面显示 404 时，先确认 URL 中 Camera ID 是标准 UUID v4，再确认 PostgreSQL 中聚合存在。
@@ -86,26 +74,3 @@ Source Select 和显示模式，播放、刷新和音量控件禁用，也不显
   与响应映射，Frontend 不会自行选择另一路 Source 掩盖数据问题。
 - 页面提示当前视频源不可播放时检查详情响应的 `whep_url` 和 Source 状态；Frontend 不会自行拼接或
   修复 WHEP 地址。
-
-## 验证命令
-
-```bash
-# 仓库根目录
-bash scripts/check-cameras-contracts.sh
-bash scripts/check-cameras-sensitive-data.sh
-
-# backend/
-uv run --env-file .env.local pytest
-uv run ruff check .
-uv run ruff format --check .
-uv run python scripts/check_camera_placeholders.py foundation
-
-# frontend/
-pnpm vendor:check
-pnpm test
-pnpm lint
-pnpm format:check
-pnpm build
-```
-
-数据库集成测试需要独立 `TEST_DATABASE_URL`；相关测试被跳过时不能算作完整详情持久化验收。

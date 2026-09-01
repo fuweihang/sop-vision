@@ -2,21 +2,22 @@
 
 SOP Vision 是面向 IP Camera 的视觉分析平台。当前仓库已经完成可运行的基础设施、
 FastAPI/React 工程骨架，以及 Camera 配置、MediaMTX 适配和后台媒体对账所需的公共能力；
-Camera 创建、详情和 WHEP 播放已经可用，列表、更新、删除和 Detector 业务仍未实现。
+Camera 创建、搜索分页列表、详情和 WHEP 播放已经可用，更新、默认源切换、删除和 Detector 业务
+仍未实现。
 
 ## 当前状态
 
-| 范围                | 状态     | 说明                                                                        |
-| ------------------- | -------- | --------------------------------------------------------------------------- |
-| 本地运行栈          | 可用     | PostgreSQL、Redis、MediaMTX、FastAPI、React/Nginx                           |
-| Backend 公共基础    | 可用     | 应用工厂、数据库生命周期、统一日志、Problem、Trace ID、CORS                 |
-| 健康检查            | 可用     | `GET /api/v1/health/live` 与 `GET /api/v1/health/ready`                     |
-| Cameras Foundation  | 已完成   | 领域聚合、Repository/UoW、关系模型、OpenAPI、前端 Client/Mock 和 CI 门禁    |
-| MediaMTX 媒体边界   | 已完成   | v1.20.1 协议、Path 读写、完整快照、状态投影和真实 Adapter 门禁              |
-| 媒体后台对账        | 已完成   | 启动/周期恢复数据库 Source Path，并清理受管孤儿 Path                        |
-| Cameras HTTP 业务   | 部分可用 | 创建和详情可用；列表、更新、切默认源和删除四个 handler 仍为占位             |
-| Web UI              | 部分可用 | Camera 新增、详情、WHEP 播放和临时切源可用；列表、编辑、删除和 Tasks 未实现 |
-| Detector 与实时检测 | 未实现   | `detector/` 仅为预留目录；Backend 尚未接入 Redis 客户端或 WebSocket         |
+| 范围                | 状态     | 说明                                                                                         |
+| ------------------- | -------- | -------------------------------------------------------------------------------------------- |
+| 本地运行栈          | 可用     | PostgreSQL、Redis、MediaMTX、FastAPI、React/Nginx                                            |
+| Backend 公共基础    | 可用     | 应用工厂、数据库生命周期、统一日志、Problem、Trace ID、CORS                                  |
+| 健康检查            | 可用     | `GET /api/v1/health/live` 与 `GET /api/v1/health/ready`                                      |
+| Cameras Foundation  | 已完成   | 领域聚合、Repository/UoW、关系模型、OpenAPI、前端 Client/Mock 和 CI 门禁                     |
+| MediaMTX 媒体边界   | 已完成   | v1.20.1 协议、Path 读写、完整快照、状态投影和真实 Adapter 门禁                               |
+| 媒体后台对账        | 已完成   | 启动/周期恢复数据库 Source Path，并清理受管孤儿 Path                                         |
+| Cameras HTTP 业务   | 部分可用 | 创建、列表和详情可用；更新、切默认源和删除三个 handler 仍为占位                              |
+| Web UI              | 部分可用 | 新增、搜索分页、Card 实时预览、详情播放和临时切源可用；编辑、默认源切换、删除和 Tasks 未实现 |
+| Detector 与实时检测 | 未实现   | `detector/` 仅为预留目录；Backend 尚未接入 Redis 客户端或 WebSocket                          |
 
 精确的 Cameras 当前能力见 [Cameras 模块文档](docs/modules/cameras/README.md)，未完成工作见
 [Cameras MVP 剩余计划](docs/plans/cameras-mvp/README.md)。
@@ -74,8 +75,8 @@ docker compose --env-file .env exec backend alembic upgrade head
 - MediaMTX WHEP 服务：<http://localhost:8889>
 
 容器启动不会自动执行数据库迁移；部署新 revision 后必须显式运行 `alembic upgrade head`。
-当前 Frontend 可以创建和查看 Camera，并在详情页播放 WHEP 流和临时切换 Source；列表仍是占位
-内容。Backend 的创建和详情接口可用，列表、更新、切默认源和删除仍进入占位 handler。
+当前 Frontend 可以创建、搜索和分页浏览 Camera，Card 可以实时预览默认 Source，详情页可以播放 WHEP
+流和临时切换 Source。Backend 的创建、列表和详情接口可用，更新、切默认源和删除仍进入占位 handler。
 
 停止服务使用：
 

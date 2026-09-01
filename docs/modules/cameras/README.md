@@ -7,18 +7,17 @@ Cameras 模块维护 Camera 与 CameraSource 配置，并把 PostgreSQL 中的�
 
 ## 当前能力
 
-| 能力                                    | 状态   | 详细说明                                      |
-| --------------------------------------- | ------ | --------------------------------------------- |
-| Camera 领域、持久化、HTTP 与跨端基础    | 已实现 | [基础能力](foundation.md)                     |
-| MediaMTX v1.20.1 协议和部署边界         | 已实现 | [MediaMTX 契约](mediamtx-contract.md)         |
-| Path 读写、快照、Source 状态和 WHEP URL | 已实现 | [Stream Gateway](stream-gateway.md)           |
-| PostgreSQL 到 MediaMTX 的周期恢复       | 已实现 | [媒体对账](media-reconciliation.md)           |
-| 创建 Camera 及前端新增 Dialog           | 已实现 | [Camera 创建](camera-create.md)               |
-| Camera 完整详情 API 与前端只读详情页    | 已实现 | [Camera 详情](camera-detail.md)               |
-| 共享 WHEP Session、临时切源与详情播放器 | 已实现 | [WHEP 浏览器播放](whep-player.md)             |
-| Camera 搜索分页列表 API                 | 已实现 | [Camera 列表 API](camera-list.md)             |
-| Camera 搜索分页列表页与实时预览 Card    | 已实现 | [Camera 列表](camera-list.md)                 |
-| Camera 更新和删除                       | 未实现 | [剩余计划](../../plans/cameras-mvp/README.md) |
+| 能力                                     | 状态   | 详细说明                                      |
+| ---------------------------------------- | ------ | --------------------------------------------- |
+| Camera 领域、持久化、HTTP 与跨端基础     | 已实现 | [基础能力](foundation.md)                     |
+| MediaMTX v1.20.1 协议和部署边界          | 已实现 | [MediaMTX 契约](mediamtx-contract.md)         |
+| Path 读写、快照、Source 状态和 WHEP URL  | 已实现 | [Stream Gateway](stream-gateway.md)           |
+| PostgreSQL 到 MediaMTX 的周期恢复        | 已实现 | [媒体对账](media-reconciliation.md)           |
+| 创建 Camera 及前端新增 Dialog            | 已实现 | [Camera 创建](camera-create.md)               |
+| Camera 完整详情 API 与前端只读详情页     | 已实现 | [Camera 详情](camera-detail.md)               |
+| 共享 WHEP Session、临时切源与详情播放器  | 已实现 | [WHEP 浏览器播放](whep-player.md)             |
+| Camera 搜索分页列表 API、页面与实时 Card | 已实现 | [Camera 列表](camera-list.md)                 |
+| Camera 更新、默认源切换和删除            | 未实现 | [剩余计划](../../plans/cameras-mvp/README.md) |
 
 “路由已出现在 OpenAPI”只表示占位契约可用于生成跨端类型，不表示 handler 已经可用。当前
 `GET /api/v1/cameras`、`POST /api/v1/cameras` 和 `GET /api/v1/cameras/{camera_id}` 是可用的
@@ -48,4 +47,30 @@ Frontend → FastAPI Cameras API → Cameras Application → PostgreSQL
 - 鉴权、RBAC、多租户、录像、截图、回放和 WebSocket 状态推送。
 - 软删除以及事务级 Outbox/Saga 媒体投递。
 
-实现新能力后，先更新本表和对应主题文档，再新增 `docs/changes/` 记录并移除完成的计划。
+## 公共验证入口
+
+常规 Cameras 改动使用以下检查；真实 MediaMTX、媒体对账和浏览器播放的额外入口由对应主题文档
+说明，不在每个业务用例文档中重复全量命令。
+
+```bash
+# 仓库根目录
+bash scripts/check-cameras-contracts.sh
+bash scripts/check-cameras-sensitive-data.sh
+
+# backend/
+uv run --env-file .env.local pytest
+uv run ruff check .
+uv run ruff format --check .
+uv run python scripts/check_camera_placeholders.py foundation
+
+# frontend/
+pnpm vendor:check
+pnpm test
+pnpm lint
+pnpm format:check
+pnpm build
+```
+
+PostgreSQL 集成测试必须配置独立的 `TEST_DATABASE_URL`；相关测试被跳过时不能算作完整持久化验收。
+`foundation` 门禁允许尚未实现的 handler 保持纯占位，完整 MVP 发布改用 `mvp` 门禁并要求零占位，
+详见 [发布门禁计划](../../plans/cameras-mvp/11-release-gates/README.md)。

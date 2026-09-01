@@ -53,11 +53,9 @@
 | 规范化后缀重复 | `sources[i].url_suffix/DUPLICATE_SOURCE_SUFFIX`          |
 | 只读或未知字段 | 对应字段 / `UNKNOWN_FIELD`                               |
 
-`CameraCreateRequest` 必须继续在 OpenAPI 声明 `sources.minItems=1`，同时为 HTTP 空数组输出上表的
-`SOURCE_REQUIRED`，不能让 Pydantic 的列表长度错误变成 `OUT_OF_RANGE`。直接调用 Application/Domain
-时仍由 Camera 聚合执行同一业务规则，不能只在 Router 校验。HTTP Schema 保留现有 `min_length=1`，
-并在列表长度约束前用不携带输入值的自定义 Pydantic 错误类型标记空数组；公共校验转换器只按该
-错误类型输出 `SOURCE_REQUIRED`，不得按字段名或错误文案猜测。
+`CameraCreateRequest` 必须同时满足两项兼容要求：OpenAPI 保留 `sources.minItems=1`，HTTP 和直接调用
+Application/Domain 时的空数组都返回 `SOURCE_REQUIRED`，不能退化为 `OUT_OF_RANGE`。Pydantic 到
+公共字段错误的转换使用明确错误类型，不按字段名或错误文案猜测。
 
 用户输入导致的重复后缀必须在写库前由领域规则返回准确 `422`。数据库已知约束只转换成不包含 SQL、
 参数或约束名的应用错误：除非 Application 根据本次请求仍能准确定位字段，否则沿用 Foundation 的
@@ -102,11 +100,10 @@
 结果，API 层再映射为 Pydantic `CameraDetail`。详情使用同一组 Camera 状态规则，Application 不依赖
 FastAPI/Pydantic。
 
-### 依赖、错误与测试替身
+### 依赖与异常边界
 
 - 生产依赖使用现有请求级 UoW 和 lifespan 级 Stream Gateway；生产 UUID/Clock 使用 Foundation 的
   `Uuid4Generator`、`SystemClock`，测试可以替换为固定序列和固定时间。
-- 创建和详情 handler 当前可用；列表、更新、切默认源和删除仍保持占位。
 - 领域、持久化、Adapter 错误继续通过现有脱敏异常边界转换；创建服务、响应映射和日志不得记录
   请求 DTO、Camera 聚合、凭据、完整 RTSP URL 或 MediaMTX 原始响应。
 - 若客户端在数据库提交后、收到响应前中断，请求结果对客户端属于未知；服务端不为此回滚已提交
@@ -134,64 +131,8 @@ FastAPI/Pydantic。
   创建表单启动播放器或循环准备播放。
 - 已收到可信 `422` 时属于确定失败，允许用户修正后再次提交。
 - `ApiTransportError`、`ApiUnexpectedResponseError` 或可信 `503` 都按“创建结果未知”处理：保留输入，
-  显示可能已经创建成功的持久提示，绝不自动重发。用户可在列表能力完成后核对；当前创建能力不使用名称
-  或 IP 猜测结果，因为两者都不唯一，也不为解决该场景提前实现列表或新增幂等协议。
+  显示可能已经创建成功的持久提示，绝不自动重发。用户可返回列表核对；不使用名称或 IP 猜测结果，
+  因为两者都不唯一，也不为解决该场景新增幂等协议。
 - 未知结果提示后，用户若再次点击保存，属于一次明确的新写请求，界面必须提示可能创建重复 Camera；
   不能由 Query/Mutation 的默认重试机制静默发起。
-- CameraDetail 和表单草稿只保存在当前页面内存；不得写入 localStorage、IndexedDB、离线缓存或持久化
-  Query cache。
-
-## 行为门禁
-
-### Backend
-
-- 单 Source、双 Source、十 Source 创建使用固定 ID/时钟，断言 Source 顺序、连续 `sort_order`、唯一
-  默认源、服务端 UUID v4 和相同创建时间。
-- 前导 `/` 被移除；空 Source、无默认源、多个默认源、重复后缀、非法 IPv4/端口和未知字段得到上文
-  准确字段路径与 code，且 OpenAPI 仍声明 `sources.minItems=1`。
-- `add`、flush 或 commit 失败完整回滚且零 MediaMTX 调用；数据库错误、Problem 和日志不含 SQL、
-  约束名、测试密码或完整 RTSP URL。
-- 提交后按顺序为全部 Source 尽力 `ensure_path`；单项失败继续其余项；运行快照只读取一次，媒体失败
-  仍返回 `201`，下一轮对账能够恢复；多个受支持媒体错误只产生一条带 trace 的请求级 WARNING。
-- 在线 Path 返回 WHEP URL；离线、缺失、未就绪或 Control API 故障返回确定状态和
-  `whep_url=null`。
-- 共享纯聚合函数覆盖全在线 `ONLINE`、全离线 `OFFLINE`、混合 `DEGRADED`、计数以及 Source
-  ID/顺序/数量不匹配的防御分支。
-- API 集成测试断言 `201`、Location、no-store、完整 `CameraDetail` 和请求级依赖替换；占位门禁继续
-  阻止列表、更新、切默认源和删除被误报为已实现。
-
-### Frontend
-
-- 初始值、增删、固定添加顺序、默认源重选、最后一路保护、十 Source 和提交期间禁止关闭/重复提交
-  均有组件测试。
-- 成功关闭并重置 Dialog、显示通知、失效 Cameras 前缀且不跳转；创建响应不进入持久化缓存，也不
-  自动启动播放器。
-- 嵌套 `422` 映射并聚焦第一个字段；数据库失败保留输入；网络中断、未知响应和 `503` 显示结果未知、
-  不自动重发，并在用户明确再次保存前提示重复风险。
-- MSW 场景可以分别独立演示成功、字段错误、数据库失败和未知提交结果；可访问名称、焦点和敏感数据
-  门禁通过。
-
-### 验证命令
-
-```bash
-# 仓库根目录
-bash scripts/check-cameras-contracts.sh
-bash scripts/check-cameras-sensitive-data.sh
-
-# backend/
-uv run --env-file .env.local pytest
-uv run ruff check .
-uv run ruff format --check .
-uv run python scripts/check_camera_placeholders.py foundation
-
-# frontend/
-pnpm test
-pnpm lint
-pnpm format:check
-pnpm build
-```
-
-需要 PostgreSQL 的事务验收必须配置独立 `TEST_DATABASE_URL`；相关测试被跳过时，不能宣称数据库
-回滚和延迟约束路径已经验证。`foundation` 占位门禁用于允许 MVP 分步实现，完整 `mvp` 门禁用于
-发布前确认所有目标 handler 已实现，见
-[发布门禁计划](../../plans/cameras-mvp/11-release-gates/README.md)。
+- 表单草稿遵守 [Cameras 敏感数据边界](foundation.md#敏感数据)，只保存在当前页面内存。

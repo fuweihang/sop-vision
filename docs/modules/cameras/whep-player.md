@@ -92,8 +92,7 @@ Chrome 打开 `http://127.0.0.1:8000/cameras` 或
 
 ## 当前边界与排查
 
-- 一页多路容量上限尚未经过真实部署发布验收；当前 UI 首屏默认最多展示 12 路，Card 不按视口或
-  页面 hidden 状态暂停连接。
+- 一页多路容量上限尚未经过真实部署发布验收；当前 UI 首屏默认最多展示 12 路。
 - Detection Canvas、BoxBuffer、时间戳同步和 WebRTC Stats 尚未实现。
 - 当前音量浮层只能由指针 hover 打开，键盘无法直接访问其中的 Slider；这是已知可访问性限制，
   发布前必须按 Cameras 发布门禁修复和验收。
@@ -103,17 +102,3 @@ Chrome 打开 `http://127.0.0.1:8000/cameras` 或
   `127.0.0.1:8889` 和 `8189/udp`。
 - 生产部署必须让 `PUBLIC_WEBRTC_BASE_URL` 和 `MTX_WEBRTCADDITIONALHOSTS` 对浏览器可达，并使用
   TLS 与合适的来源限制。
-
-## 验证命令
-
-```bash
-# 仓库根目录
-bash scripts/check-cameras-sensitive-data.sh
-
-# frontend/
-pnpm vendor:check
-pnpm test
-pnpm lint
-pnpm format:check
-pnpm build
-```

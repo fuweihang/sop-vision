@@ -2,7 +2,8 @@
 
 Frontend 使用 React 19、TypeScript、Vite、TanStack Router/Query、Tailwind CSS v4 和 shadcn/ui。
 当前已完成应用 Shell、主题、路由状态、生成式 API Client、错误映射、Cameras MSW、Camera 新增
-Dialog、只读详情和可临时切源的 WHEP 播放器；Cameras 列表与 Detection Tasks 页面仍是业务骨架。
+Dialog、搜索分页列表、实时预览 Card、只读详情和可临时切源的 WHEP 播放器；Detection Tasks 页面
+仍是业务骨架。
 
 ## 环境与启动
 
@@ -20,16 +21,16 @@ pnpm dev
 
 ## 当前页面
 
-| 路由                 | 当前实现                                          |
-| -------------------- | ------------------------------------------------- |
-| `/`                  | 重定向到 `/cameras`                               |
-| `/cameras`           | App Shell、Camera 新增 Dialog、路由状态和列表骨架 |
-| `/cameras/$cameraId` | 完整只读详情、WHEP 播放器和临时 Source 切换       |
-| `/tasks`             | App Shell、标题和列表骨架                         |
-| `/tasks/$taskId`     | 详情层级、Breadcrumb、返回操作和详情骨架          |
+| 路由                 | 当前实现                                            |
+| -------------------- | --------------------------------------------------- |
+| `/`                  | 重定向到 `/cameras`                                 |
+| `/cameras`           | Camera 新增、URL 搜索分页、实时预览 Card 和列表状态 |
+| `/cameras/$cameraId` | 完整只读详情、WHEP 播放器和临时 Source 切换         |
+| `/tasks`             | App Shell、标题和列表骨架                           |
+| `/tasks/$taskId`     | 详情层级、Breadcrumb、返回操作和详情骨架            |
 
 Shell 已支持桌面 Sidebar、移动 Sheet、Light/Dark 主题、跳转主内容、路由后焦点恢复和响应式重排。
-Camera 列表数据、配置编辑、删除、ROI 和任务操作属于后续业务实现。
+Camera 配置编辑、默认源切换、删除、ROI 和任务操作属于后续业务实现。
 
 ## API 与生成文件
 
@@ -90,6 +91,7 @@ frontend/src/
 │       ├── components/
 │       │   ├── video-controls/ # 实时播放操作栏、反馈和浮层扩展入口
 │       │   └── video-surface/  # video DOM、媒体状态、布局和全屏能力
+│       ├── display-state/  # Card 与 Detail 共用的展示状态和恢复规则
 │       ├── geometry/      # cover/contain 后的媒体区域纯计算
 │       ├── mediamtx/      # MediaMTX WHEP 适配器，首次连接时加载官方 reader
 │       └── stream-session/ # 通用 Session 类型、Manager、Provider 和 Hook

@@ -8,8 +8,10 @@
 1. [仓库 README](../README.md)：运行方式、开发命令和项目现状。
 2. [总体架构](vision-platform-architecture.md)：服务边界和目标演进方向。
 3. [模块文档](modules/README.md)：已经实现并需要长期维护的业务与技术能力。
-4. [Design System](design-system/README.md)：前端视觉、布局和交互规则。
-5. [执行计划](plans/README.md)：尚未完成、可以直接执行的任务。
+4. [技术决策](decisions/README.md)：跨模块且长期有效的取舍及原因。
+5. [Design System](design-system/README.md)：前端视觉、布局和交互规则。
+6. [执行计划](plans/README.md)：尚未完成、可以直接执行的任务。
+7. [变更记录](changes/README.md)：已经交付的行为与兼容性影响。
 
 ## 目录职责
 
@@ -54,7 +56,7 @@ changes/<日期>-<主题>  记录这次交付改变了什么
 
 ## 当前长期文档
 
-- [Cameras](modules/cameras/README.md)：Camera 配置、创建与详情、MediaMTX 对账和 WHEP 播放能力。
+- [Cameras](modules/cameras/README.md)：Camera 配置、创建、列表与详情、MediaMTX 对账和 WHEP 播放能力。
 - [Backend 日志](modules/backend-logging/README.md)：统一输出、业务事件、HTTP access 与数据库日志。
 - [总体架构](vision-platform-architecture.md)：当前服务与数据边界。
 - [产品范围](product-requirements.md)：产品对象、计划能力和范围外事项。

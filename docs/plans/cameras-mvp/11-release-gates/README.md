@@ -1,6 +1,6 @@
 # 11｜Cameras MVP 发布门禁
 
-> 前置：[Cameras 当前能力](../../../modules/cameras/README.md)与 08–10 全部任务
+> 前置：[Cameras 当前能力](../../../modules/cameras/README.md)与 09–10 全部任务
 >
 > 交付：真实依赖、端到端故障、安全、浏览器和容量验收；无新公共路由
 
