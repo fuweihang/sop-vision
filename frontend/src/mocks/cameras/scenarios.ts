@@ -21,6 +21,7 @@ export const CAMERAS_MSW_SCENARIO_NAMES = [
   "search-no-results",
   "nested-validation-error",
   "camera-not-found",
+  "aggregate-invalid",
   "dependency-unavailable",
   "initial-failure",
   "background-refresh-failure",
@@ -135,6 +136,16 @@ export function createCamerasMswScenario(
 
       if (scenario === "dependency-unavailable") {
         return unavailableProblem(instance);
+      }
+      if (scenario === "aggregate-invalid") {
+        return problemResponse(
+          buildProblem({
+            status: 500,
+            code: "CAMERA_AGGREGATE_INVALID",
+            instance,
+            title: "摄像头数据无效",
+          }),
+        );
       }
       if (scenario === "initial-failure" && listRequestCount === 1) {
         return unavailableProblem(instance);

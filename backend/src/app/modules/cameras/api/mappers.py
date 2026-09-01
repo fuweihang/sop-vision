@@ -2,10 +2,76 @@
 
 from collections.abc import Sequence
 
-from app.modules.cameras.api.schemas import CameraDetail, CameraSourceDetail
-from app.modules.cameras.application import CameraRuntimeSummary, summarize_camera_runtime
+from app.modules.cameras.api.schemas import (
+    CameraDetail,
+    CameraPage,
+    CameraSourceDetail,
+    CameraSummary,
+    DefaultPreviewSourceSummary,
+)
+from app.modules.cameras.application import (
+    CameraListItemResult,
+    CameraListResult,
+    CameraRuntimeSummary,
+    summarize_camera_runtime,
+)
 from app.modules.cameras.domain import Camera
 from app.modules.stream_gateway.ports import SourceRuntimeProjection
+
+
+def camera_page_from_result(result: CameraListResult) -> CameraPage:
+    """把列表 Application 结果转换为严格非敏感的分页响应。
+
+    分页元数据直接来自已验证的应用结果；每条摘要必须经由专用逐字段 Mapper，不能把包含凭据和
+    Source 后缀的 Camera 聚合展开成字典后再删字段。白名单构造可以让领域未来新增字段时保持默认
+    不公开。
+    """
+
+    return CameraPage(
+        items=[camera_summary_from_runtime(item) for item in result.items],
+        page=result.page,
+        page_size=result.page_size,
+        total=result.total,
+    )
+
+
+def camera_summary_from_runtime(item: CameraListItemResult) -> CameraSummary:
+    """逐字段构造一条列表摘要，并验证默认 Source 与运行态投影来自同一聚合。"""
+
+    camera = item.camera
+    projections = tuple(item.source_runtime)
+    expected_summary = summarize_camera_runtime(camera, projections)
+    if item.runtime_summary != expected_summary:
+        raise ValueError("Camera 列表运行状态统计与 Source 投影不一致。")
+
+    default_source = next(
+        source for source in camera.sources if source.source_id == camera.default_preview_source_id
+    )
+    projections_by_id = {projection.source_id: projection for projection in projections}
+    default_runtime = projections_by_id.get(default_source.source_id)
+    if default_runtime is None or len(projections_by_id) != len(projections):
+        # summarize_camera_runtime 已核对 ID 和顺序；保留防御分支，避免未来 Mapper 调整后静默返回
+        # 另一路 Source 的状态或在重复 ID 时发生字典覆盖。
+        raise ValueError("Camera 列表默认 Source 缺少唯一运行状态投影。")
+
+    return CameraSummary(
+        camera_id=camera.camera_id,
+        name=camera.name,
+        ip_address=camera.ip_address,
+        rtsp_port=camera.rtsp_port,
+        status=item.runtime_summary.status,
+        online_source_count=item.runtime_summary.online_source_count,
+        source_count=item.runtime_summary.source_count,
+        default_preview_source=DefaultPreviewSourceSummary(
+            source_id=default_source.source_id,
+            name=default_source.name,
+            status=default_runtime.status,
+            last_checked_at=default_runtime.last_checked_at,
+            whep_url=default_runtime.whep_url,
+        ),
+        created_at=camera.created_at,
+        updated_at=camera.updated_at,
+    )
 
 
 def camera_detail_from_runtime(

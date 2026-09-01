@@ -6,6 +6,7 @@ from app.core.http import FieldError, add_http_exception_handler, problem_respon
 from app.modules.cameras.application.errors import (
     CameraAggregateInvalidError,
     CameraConstraintViolationError,
+    CameraListAggregateInvalidError,
     CameraNotFoundError,
     CameraPersistenceOperationError,
 )
@@ -51,9 +52,9 @@ async def camera_not_found_error_handler(request: Request, error: CameraNotFound
 
 async def camera_aggregate_invalid_error_handler(
     request: Request,
-    _error: CameraAggregateInvalidError,
+    _error: CameraAggregateInvalidError | CameraListAggregateInvalidError,
 ):
-    """把详情读取发现的损坏聚合转换为稳定且不含损坏项的 500。"""
+    """把详情或列表发现的损坏聚合转换为稳定且不含损坏项的 500。"""
 
     return problem_response(
         request,
@@ -114,6 +115,13 @@ def install_camera_exception_handlers(application: FastAPI) -> None:
     add_http_exception_handler(
         application,
         CameraAggregateInvalidError,
+        camera_aggregate_invalid_error_handler,
+    )
+    # 列表错误不携带 camera_id，但公共 Problem 与详情保持一致；分别注册可以让两种应用错误继续
+    # 保持各自精确字段，而无需把详情错误中的 ID 改成可空值。
+    add_http_exception_handler(
+        application,
+        CameraListAggregateInvalidError,
         camera_aggregate_invalid_error_handler,
     )
     # 子类分别注册而不是笼统捕获 CameraPersistenceError：NotFound 是 404，依赖不可用是

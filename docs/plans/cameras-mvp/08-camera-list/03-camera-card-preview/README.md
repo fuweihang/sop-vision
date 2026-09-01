@@ -8,7 +8,7 @@
 
 ## 当前上下文与前置条件
 
-- [01｜Camera 列表 API](../01-camera-list-api/README.md)和
+- [Camera 列表 API](../../../../modules/cameras/camera-list.md)和
   [02｜Camera 列表页面](../02-camera-list-page/README.md)必须已经实施完成并通过验证。
 - 开始实施前以当前 Camera Card、列表 Query、Route 测试和生成类型为准，不重新实现 01、02 的数据
   获取、搜索分页或页面状态。

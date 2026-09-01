@@ -236,6 +236,7 @@ def test_http_access_event_keeps_real_status_outcome_and_field_order() -> None:
         ("app.factory", "backend.lifecycle"),
         ("app.modules.cameras.application.create.child", "camera.create"),
         ("app.modules.cameras.application.detail.child", "camera.detail"),
+        ("app.modules.cameras.application.listing.child", "camera.list"),
         ("uvicorn.access", "server.access"),
         ("uvicorn.error", "server"),
         ("app.custom.worker", "custom.worker"),
@@ -276,6 +277,32 @@ def test_camera_detail_invalid_event_uses_registered_safe_fields() -> None:
     assert list(payload)[-4:] == ["event", "operation", "outcome", "camera_id"]
     assert "operation=get_camera result=failed" in console
     assert "source=" not in console
+    assert sentinel not in console
+    assert sentinel not in json.dumps(payload)
+
+
+def test_camera_list_invalid_event_omits_camera_identity_and_unknown_fields() -> None:
+    """列表聚合损坏事件只输出操作和结果，不泄露损坏条目的身份或字段。"""
+
+    sentinel = "camera-list-log-secret"
+    record = make_record(
+        name="app.modules.cameras.application.listing",
+        level=logging.ERROR,
+        message="Camera 列表聚合数据无效",
+        event="camera.list_aggregate_invalid",
+        operation="list_cameras",
+        outcome="failed",
+        camera_id="should-not-be-rendered",
+        password=sentinel,
+    )
+
+    console = ConsoleFormatter().format(record)
+    payload = json.loads(JsonFormatter().format(record))
+
+    assert payload["component"] == "camera.list"
+    assert list(payload)[-3:] == ["event", "operation", "outcome"]
+    assert "operation=list_cameras result=failed" in console
+    assert "camera=" not in console
     assert sentinel not in console
     assert sentinel not in json.dumps(payload)
 

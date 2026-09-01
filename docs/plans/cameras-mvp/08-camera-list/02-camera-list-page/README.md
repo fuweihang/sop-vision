@@ -8,7 +8,7 @@
 
 ## 当前上下文与前置条件
 
-- [01｜Camera 列表 API](../01-camera-list-api/README.md)必须已经实施完成并通过验证。
+- [Camera 列表 API](../../../../modules/cameras/camera-list.md)已经实施完成并通过验证。
 - 开始实施前以当前 `contracts/openapi.json`、生成类型、`listCameras` Client、Query Key、Fixture 和
   MSW handler 为准，不使用 01 计划中的旧假设代替实际代码。
 - 先阅读 [Cameras 基础能力](../../../../modules/cameras/foundation.md)和设计系统中的

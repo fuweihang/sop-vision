@@ -52,6 +52,9 @@ class FakeCameraRepository:
         # 详情用例需要覆盖数据库失败、聚合损坏和任务取消，同时保持 Fake 的 get 签名与真实
         # Repository 一致。测试只设置脱敏应用/领域异常，不在这里模拟 SQLAlchemy 异常细节。
         self.get_error: BaseException | None = None
+        # 列表会先 count 再 list；两个独立注入点可以证明任一数据库阶段失败后都不会访问媒体服务。
+        self.count_error: BaseException | None = None
+        self.list_error: BaseException | None = None
 
     async def add(self, camera: Camera) -> None:
         if camera.camera_id in self._state.cameras:
@@ -101,6 +104,9 @@ class FakeCameraRepository:
         page: int,
         page_size: int,
     ) -> tuple[Camera, ...]:
+        self._operation_log.append(f"repository.list:{criteria.q}:{page}:{page_size}")
+        if self.list_error is not None:
+            raise self.list_error
         offset = validate_camera_list_pagination(page, page_size)
         matched = sorted(
             (camera for camera in self._state.cameras.values() if _matches(camera, criteria)),
@@ -109,6 +115,9 @@ class FakeCameraRepository:
         return tuple(matched[offset : offset + page_size])
 
     async def count(self, criteria: CameraListCriteria) -> int:
+        self._operation_log.append(f"repository.count:{criteria.q}")
+        if self.count_error is not None:
+            raise self.count_error
         return sum(_matches(camera, criteria) for camera in self._state.cameras.values())
 
     async def delete(self, camera_id: CameraId) -> Camera | None:

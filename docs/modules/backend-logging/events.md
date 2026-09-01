@@ -13,6 +13,7 @@ Formatter 按最长 Logger 段前缀选择 `component`。未命中的 `app.*` Lo
 | `app.factory`                                    | `backend.lifecycle`    |
 | `app.modules.stream_gateway.services.mediamtx`   | `stream.gateway`       |
 | `app.modules.cameras.application.reconciliation` | `media.reconciliation` |
+| `app.modules.cameras.application.listing`        | `camera.list`          |
 | `app.modules.cameras.application.detail`         | `camera.detail`        |
 | `app.modules.cameras.application.create`         | `camera.create`        |
 | `app.modules.cameras.persistence.integrity`      | `camera.integrity`     |
@@ -36,6 +37,7 @@ Formatter 按最长 Logger 段前缀选择 `component`。未命中的 `app.*` Lo
 | `media_reconciliation.runner_exit`     | `backend.lifecycle`    | ERROR                                                      | `outcome,timeout_seconds,error_type,error_frames`                                                                                  |
 | `camera.media_sync_degraded`           | `camera.create`        | WARNING                                                    | `operation,outcome,camera_id,failed_count`                                                                                         |
 | `camera.detail_aggregate_invalid`       | `camera.detail`        | ERROR                                                      | `operation,outcome,camera_id`                                                                                                      |
+| `camera.list_aggregate_invalid`         | `camera.list`          | ERROR                                                      | `operation,outcome`                                                                                                                |
 | `camera.reference_integrity_failed`    | `camera.integrity`     | ERROR                                                      | `integrity_issue_kind,camera_id,source_id`                                                                                         |
 | `http.request_completed`               | `http.access`          | 完整 100–499 为 INFO；完整 500–599、处理失败或中断为 ERROR | `method,path,status_code,outcome,duration_ms`                                                                                      |
 

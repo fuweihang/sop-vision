@@ -22,7 +22,7 @@ from app.modules.cameras.api.dependencies import (
     CameraListParametersDependency,
     CameraUnitOfWorkDependency,
 )
-from app.modules.cameras.api.mappers import camera_detail_from_runtime
+from app.modules.cameras.api.mappers import camera_detail_from_runtime, camera_page_from_result
 from app.modules.cameras.api.schemas import (
     CameraCreateRequest,
     CameraDetail,
@@ -37,6 +37,7 @@ from app.modules.cameras.application import (
 )
 from app.modules.cameras.application import create_camera as execute_create_camera
 from app.modules.cameras.application import get_camera_detail as execute_get_camera_detail
+from app.modules.cameras.application import list_cameras as execute_list_cameras
 from app.modules.stream_gateway.api.dependencies import StreamGatewayDependency
 
 router = APIRouter()
@@ -61,12 +62,31 @@ def _example(model: type[BaseModel]) -> dict[str, Any]:
             "返回一页 Camera 摘要。", example=_example(CameraPage)
         ),
         **problem_responses(
-            [status.HTTP_422_UNPROCESSABLE_CONTENT, status.HTTP_503_SERVICE_UNAVAILABLE]
+            [
+                status.HTTP_422_UNPROCESSABLE_CONTENT,
+                status.HTTP_500_INTERNAL_SERVER_ERROR,
+                status.HTTP_503_SERVICE_UNAVAILABLE,
+            ]
         ),
     },
 )
-async def list_cameras(_parameters: CameraListParametersDependency) -> CameraPage:
-    raise NotImplementedError
+async def list_cameras(
+    parameters: CameraListParametersDependency,
+    uow: CameraUnitOfWorkDependency,
+    stream_gateway: StreamGatewayDependency,
+    clock: CameraClockDependency,
+) -> CameraPage:
+    """返回一页非敏感 Camera 摘要；外部媒体故障只降级运行状态。"""
+
+    result = await execute_list_cameras(
+        parameters.criteria,
+        parameters.page,
+        parameters.page_size,
+        uow=uow,
+        stream_gateway=stream_gateway,
+        clock=clock,
+    )
+    return camera_page_from_result(result)
 
 
 @router.post(

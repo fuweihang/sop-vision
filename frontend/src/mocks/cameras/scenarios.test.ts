@@ -138,6 +138,19 @@ test.each([
   expect(error.problem.code).toBe(code);
 });
 
+test("列表聚合损坏返回脱敏且不携带 Camera 身份的 500 Problem", async () => {
+  useScenario("aggregate-invalid");
+  const error = await captureProblem(listCameras());
+  const serialized = JSON.stringify(error.problem);
+
+  expect(error.problem.status).toBe(500);
+  expect(error.problem.code).toBe("CAMERA_AGGREGATE_INVALID");
+  expect(error.problem.context).toEqual({});
+  expect(serialized).not.toContain(CAMERA_FIXTURE_SECRET);
+  expect(serialized).not.toContain("camera_id");
+  expect(serialized).not.toContain("url_suffix");
+});
+
 test("首次失败与后台刷新失败按独立计数器返回确定序列", async () => {
   useScenario("initial-failure");
   await expect(listCameras()).rejects.toBeInstanceOf(ApiProblemError);

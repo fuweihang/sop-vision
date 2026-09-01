@@ -49,6 +49,20 @@ class CameraAggregateInvalidError(CameraPersistenceError):
         super().__init__("Camera 聚合数据无效。")
 
 
+class CameraListAggregateInvalidError(CameraPersistenceError):
+    """列表中的至少一个持久化聚合损坏，但不公开具体 Camera 身份。
+
+    列表请求没有单一目标 Camera，批量 Repository 的领域异常也故意不携带底层 Row 或 ID。单独
+    使用无字段错误可以避免为了复用详情错误而重新查询、猜测或公开损坏条目，同时让 HTTP 层继续
+    返回相同的 ``CAMERA_AGGREGATE_INVALID`` 稳定协议。
+    """
+
+    code = "CAMERA_AGGREGATE_INVALID"
+
+    def __init__(self) -> None:
+        super().__init__("Camera 列表包含无法读取的聚合数据。")
+
+
 class CameraConstraintViolationKind(StrEnum):
     """说明数据库具体拒绝了哪一种 Camera 数据。
 

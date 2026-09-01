@@ -20,12 +20,14 @@ from app.modules.cameras.application import (
     CameraAggregateInvalidError,
     CameraConstraintViolationError,
     CameraConstraintViolationKind,
+    CameraListAggregateInvalidError,
     CameraListCriteria,
     CameraNotFoundError,
     CreateCameraCommand,
     CreateCameraSourceCommand,
     create_camera,
     get_camera_detail,
+    list_cameras,
 )
 from app.modules.cameras.domain import (
     CameraAggregateCorruptedError,
@@ -601,6 +603,73 @@ async def test_camera_detail_converts_postgresql_corruption_and_ends_read_transa
         assert not reading_session.in_transaction()
 
     assert captured.value.camera_id == CAMERA_A
+    assert captured.value.__context__ is None
+    assert gateway.runtime_snapshot_count == 0
+    assert gateway.ensure_calls == []
+
+
+async def test_camera_list_reads_postgresql_page_after_ending_read_transaction(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    """真实列表在事务外读取一次媒体快照，并保留 PostgreSQL 固定排序和分页总数。"""
+
+    first = CameraBuilder().build(source_count=2, id_start=900)
+    second = CameraBuilder().build(source_count=1, id_start=950)
+    async with session_factory() as writing_session:
+        writing_uow = SQLAlchemyCameraUnitOfWork(writing_session)
+        await writing_uow.cameras.add(first)
+        await writing_uow.cameras.add(second)
+        await writing_uow.commit()
+
+    gateway = FakeStreamGateway(RuntimePathSnapshot(paths=(), checked_at=NOW))
+    async with session_factory() as reading_session:
+        original_fetch = gateway.fetch_runtime_path_snapshot
+
+        async def fetch_after_transaction() -> RuntimePathSnapshot:
+            # 外部 I/O 开始前必须释放 PostgreSQL 事务，否则慢 MediaMTX 请求会占用数据库连接。
+            assert not reading_session.in_transaction()
+            return await original_fetch()
+
+        gateway.fetch_runtime_path_snapshot = fetch_after_transaction  # type: ignore[method-assign]
+        result = await list_cameras(
+            CameraListCriteria(),
+            1,
+            1,
+            uow=SQLAlchemyCameraUnitOfWork(reading_session),
+            stream_gateway=gateway,
+            clock=FixedClock(NOW),
+        )
+        assert not reading_session.in_transaction()
+
+    assert result.total == 2
+    assert tuple(item.camera.camera_id for item in result.items) == (first.camera_id,)
+    assert gateway.runtime_snapshot_count == 1
+    assert gateway.ensure_calls == []
+
+
+async def test_camera_list_converts_postgresql_corruption_without_media_access(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    """真实批量重建失败返回无 Camera 身份的列表错误，并先结束只读事务。"""
+
+    async with session_factory() as writing_session:
+        writing_session.add(make_camera(CAMERA_A, SOURCE_A))
+        await writing_session.commit()
+
+    gateway = FakeStreamGateway(RuntimePathSnapshot(paths=(), checked_at=NOW))
+    async with session_factory() as reading_session:
+        with pytest.raises(CameraListAggregateInvalidError) as captured:
+            await list_cameras(
+                CameraListCriteria(),
+                1,
+                20,
+                uow=SQLAlchemyCameraUnitOfWork(reading_session),
+                stream_gateway=gateway,
+                clock=FixedClock(NOW),
+            )
+        assert not reading_session.in_transaction()
+
+    assert not hasattr(captured.value, "camera_id")
     assert captured.value.__context__ is None
     assert gateway.runtime_snapshot_count == 0
     assert gateway.ensure_calls == []

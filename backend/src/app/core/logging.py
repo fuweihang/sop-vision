@@ -31,6 +31,7 @@ COMPONENT_BY_LOGGER_PREFIX: dict[str, str] = {
     "app.factory": "backend.lifecycle",
     "app.modules.stream_gateway.services.mediamtx": "stream.gateway",
     "app.modules.cameras.application.reconciliation": "media.reconciliation",
+    "app.modules.cameras.application.listing": "camera.list",
     "app.modules.cameras.application.detail": "camera.detail",
     "app.modules.cameras.application.create": "camera.create",
     "app.modules.cameras.persistence.integrity": "camera.integrity",
@@ -99,6 +100,10 @@ EVENT_FIELD_ORDER: dict[str, tuple[str, ...]] = {
         "operation",
         "outcome",
         "camera_id",
+    ),
+    "camera.list_aggregate_invalid": (
+        "operation",
+        "outcome",
     ),
     "camera.reference_integrity_failed": (
         "integrity_issue_kind",

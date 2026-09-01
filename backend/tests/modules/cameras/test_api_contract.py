@@ -5,7 +5,6 @@ from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
-import httpx
 import pytest
 from fastapi import FastAPI
 from pydantic import BaseModel
@@ -28,7 +27,7 @@ from scripts.export_openapi import build_openapi_document, export_openapi, seria
 pytestmark = pytest.mark.anyio
 
 EXPECTED_CAMERA_OPERATIONS = {
-    ("/api/v1/cameras", "get"): ("listCameras", {"200", "422", "503"}),
+    ("/api/v1/cameras", "get"): ("listCameras", {"200", "422", "500", "503"}),
     ("/api/v1/cameras", "post"): ("createCamera", {"201", "422", "503"}),
     ("/api/v1/cameras/{camera_id}", "get"): (
         "getCamera",
@@ -256,26 +255,10 @@ def test_placeholder_handlers_only_raise_not_implemented() -> None:
     report = check_camera_placeholders(GateMode.FOUNDATION)
     assert not report.invalid_handlers
     assert report.placeholders == (
-        "list_cameras",
         "update_camera",
         "set_default_preview_source",
         "delete_camera",
     )
-
-
-async def test_placeholder_runtime_500_is_not_added_to_target_contract(
-    application: FastAPI,
-) -> None:
-    """占位运行时结果保持脱敏，但不能冒充未来列表接口的正式错误响应。"""
-
-    transport = httpx.ASGITransport(app=application, raise_app_exceptions=False)
-    async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as client:
-        response = await client.get("/api/v1/cameras")
-
-    assert response.status_code == 500
-    assert response.headers["content-type"] == PROBLEM_MEDIA_TYPE
-    assert response.json()["code"] == "INTERNAL_SERVER_ERROR"
-    assert "500" not in application.openapi()["paths"]["/api/v1/cameras"]["get"]["responses"]
 
 
 def test_problem_example_is_valid_and_openapi_export_is_byte_stable(tmp_path: Path) -> None:

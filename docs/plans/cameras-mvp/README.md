@@ -1,7 +1,7 @@
 # Cameras MVP 剩余计划
 
-> 当前状态：Camera 创建、只读详情和可临时切源的 WHEP 详情播放器已经完成；本计划跟踪列表、
-> 更新、删除和发布验收。
+> 当前状态：Camera 创建、列表 API、只读详情和可临时切源的 WHEP 详情播放器已经完成；本计划跟踪
+> 列表页面与 Card 预览、更新、删除和发布验收。
 
 已实现能力和当前约束见 [Cameras 模块文档](../../modules/cameras/README.md)。本目录不得复制这些
 当前事实；计划执行时以模块文档、代码、迁移、OpenAPI 和测试为输入。
@@ -10,7 +10,7 @@
 
 | #   | 任务                                                      | 状态   | 主要交付                         |
 | --- | --------------------------------------------------------- | ------ | -------------------------------- |
-| 08  | [Camera 列表](08-camera-list/README.md)                   | 待实施 | `GET /cameras`、搜索、分页与卡片 |
+| 08  | [Camera 列表](08-camera-list/README.md)                   | 实施中 | 列表页面、搜索分页交互与卡片预览 |
 | 09  | [更新与默认源](09-camera-update-default-source/README.md) | 待实施 | 编辑 Camera 和切换默认预览源     |
 | 10  | [Camera 删除](10-camera-delete/README.md)                 | 待实施 | 删除聚合并尽力释放媒体 Path      |
 | 11  | [发布门禁](11-release-gates/README.md)                    | 待实施 | 故障、安全、容量和端到端验收     |
