@@ -40,14 +40,14 @@
   数据库状态恢复缺失、漂移或孤儿 Path。
 - 验证 Frontend 确定失败/结果未知、草稿刷新保护、关闭/路由/浏览器离开、提交禁用、缓存失效及
   Mutation 敏感数据回收。
-- 验证默认源在线/离线、默认/临时选择、停止预览、Card/Detail 同源共享和 ID/URL 变化时的 Lease
-  切换。
+- 验证默认源在线/离线、Detail 排序自动选择/临时选择、默认源修改不替换 Detail 当前流、停止预览、
+  Card/Detail 同源共享和 ID/URL 变化时的 Lease 切换。
 
 ### Synthetic 浏览器验收
 
 - 使用 WHEP 模块已有的两路视觉可区分 synthetic RTSP/WHEP Source，不新增第三套测试源或媒体工具。
-- 浏览器中完成 Camera 编辑、连接字段/Source 变化、默认源 PATCH、临时 Source 保留、离线默认源、
-  Card 与 Detail 同源共享及最后一个 Lease 释放。
+- 浏览器中完成 Camera 编辑、连接字段/Source 变化、默认源 PATCH、Detail 保持排序第一路或临时
+  Source、离线默认源、Card 与 Detail 同源共享及最后一个 Lease 释放。
 - Synthetic 冒烟只证明 09 的确定交互和浏览器生命周期，不替代真实设备、网络和容量发布门禁。
 
 ### 长期文档与计划处理

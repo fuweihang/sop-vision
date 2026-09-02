@@ -34,9 +34,9 @@ async function openCameraDetail(
   return { user: userEvent.setup(), sources, ...rendered };
 }
 
-function secondaryRadio(container: HTMLElement) {
+function secondaryRadio(container: HTMLElement, sourceName = "子码流") {
   return within(container).getByRole("radio", {
-    name: "设“子码流”为默认预览源",
+    name: `设“${sourceName}”为默认预览源`,
   });
 }
 
@@ -62,6 +62,22 @@ test("成功 PATCH 不乐观更新，并用重新读取的详情和列表确认�
   await waitFor(() =>
     expect(queryClient.getMutationCache().getAll()).toHaveLength(0),
   );
+});
+
+test("修改默认预览源只更新 Card 配置，Detail 继续播放排序第一路", async () => {
+  const { user, sources } = await openCameraDetail("whep-player");
+  const radio = secondaryRadio(sources, "彩条测试图");
+
+  expect(
+    screen.getByRole("combobox", { name: "切换预览源" }),
+  ).toHaveTextContent("动态测试图");
+
+  await user.click(radio);
+
+  await waitFor(() => expect(radio).toBeChecked());
+  expect(
+    screen.getByRole("combobox", { name: "切换预览源" }),
+  ).toHaveTextContent("动态测试图");
 });
 
 test("PATCH 未完成时保持旧默认 ID、禁用全部单选并阻止快速重复提交", async () => {

@@ -1,7 +1,6 @@
 import { expect, test } from "vitest";
 
 import {
-  findCameraDefaultSource,
   isCameraSourcePlayable,
   resolveCameraPreviewSource,
   type CameraPreviewSelection,
@@ -12,11 +11,7 @@ function resolve(
   selection: CameraPreviewSelection,
   camera = buildCameraDetail(),
 ) {
-  const defaultSource = findCameraDefaultSource(camera);
-  if (defaultSource === undefined) {
-    throw new Error("测试 Camera 缺少默认 Source。");
-  }
-  return resolveCameraPreviewSource(camera, defaultSource, selection);
+  return resolveCameraPreviewSource(camera, selection);
 }
 
 test("只有 ONLINE 且包含 WHEP URL 的 Source 才可播放", () => {
@@ -35,16 +30,16 @@ test("只有 ONLINE 且包含 WHEP URL 的 Source 才可播放", () => {
   ]);
 });
 
-test("默认源可播放时优先默认源，否则按响应顺序回退第一路可播放源", () => {
-  const availableDefault = buildCameraDetail({
+test("自动选择忽略默认源，按响应顺序取第一路可播放 Source", () => {
+  const laterDefault = buildCameraDetail({
     sources: [{ status: "ONLINE" }, { status: "ONLINE" }],
     defaultSourceIndex: 1,
   });
-  expect(resolve({ kind: "default" }, availableDefault).source?.source_id).toBe(
-    availableDefault.default_preview_source_id,
+  expect(resolve({ kind: "automatic" }, laterDefault).source?.source_id).toBe(
+    laterDefault.sources[0]?.source_id,
   );
 
-  const unavailableDefault = buildCameraDetail({
+  const unavailableFirst = buildCameraDetail({
     sources: [
       { status: "OFFLINE" },
       { status: "ONLINE" },
@@ -52,11 +47,11 @@ test("默认源可播放时优先默认源，否则按响应顺序回退第一�
     ],
   });
   expect(
-    resolve({ kind: "default" }, unavailableDefault).source?.source_id,
-  ).toBe(unavailableDefault.sources[1]?.source_id);
+    resolve({ kind: "automatic" }, unavailableFirst).source?.source_id,
+  ).toBe(unavailableFirst.sources[1]?.source_id);
 });
 
-test("保留仍可播放的临时选择，选择失效时回到默认规则", () => {
+test("保留仍可播放的临时选择，选择失效时回到排序自动选择", () => {
   const camera = buildCameraDetail({
     sources: [{ status: "ONLINE" }, { status: "ONLINE" }],
   });
@@ -82,7 +77,7 @@ test("保留仍可播放的临时选择，选择失效时回到默认规则", ()
     unavailableCamera,
   );
   expect(fallback.source?.source_id).toBe(
-    unavailableCamera.default_preview_source_id,
+    unavailableCamera.sources[0]?.source_id,
   );
   expect(fallback.temporarySelectionLost).toBe(true);
 });
@@ -95,5 +90,5 @@ test("全部 Source 不可播放时返回 null", () => {
     ],
   });
 
-  expect(resolve({ kind: "default" }, camera).source).toBeNull();
+  expect(resolve({ kind: "automatic" }, camera).source).toBeNull();
 });

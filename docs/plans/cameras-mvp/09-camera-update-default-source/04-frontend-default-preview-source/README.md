@@ -1,10 +1,10 @@
-# 04｜Frontend 默认源与播放器联动
+# 04｜Frontend 默认源与 Card 预览
 
 ## 任务目标
 
 启用 Camera 详情 Source 表格中的默认源单选，通过
-`PATCH /api/v1/cameras/{camera_id}/default-preview-source` 持久化选择，并保证 Camera Card、详情
-默认/临时选择和共享 WHEP Session 只在实际媒体来源变化时切换。
+`PATCH /api/v1/cameras/{camera_id}/default-preview-source` 持久化选择。默认源只控制 Camera Card；
+Detail 默认播放按 `sort_order` 排列后的第一路可播放 Source，修改默认源不能替换 Detail 当前流。
 
 ## 当前上下文 / 前置条件
 
@@ -15,7 +15,7 @@
   [Camera 列表](../../../../modules/cameras/camera-list.md)和
   [WHEP 浏览器播放](../../../../modules/cameras/whep-player.md)，并以任务 03 后的实际组件和测试为准。
 - 当前 `CameraSources` 已渲染默认源 RadioGroup，但整体禁用。现有
-  `resolveCameraPreviewSource` 已区分 `{kind: "default"}` 与 `{kind: "temporary"}`，详情和
+  `resolveCameraPreviewSource` 已区分自动选择与临时选择，详情和
   Card 已通过 `source_id+whep_url` 使用共享 Stream Session Manager。
 - `setDefaultPreviewSource` Client 和响应类型已存在；任务 02 已交付真实 Backend handler。
 - 任务 03 当前只有表单专用的 `mapCameraEditFailure`，尚无可直接供 PATCH 使用的公共分类函数。本任务
@@ -49,11 +49,13 @@
 
 - Camera Card 只消费最新列表响应的 `default_preview_source.source_id+whep_url`。新默认 Source
   的 `whep_url=null` 时不 acquire，不请求 CameraDetail，也不选择其他 Source。
-- Detail 当前选择是 `{kind: "default"}` 时，最新详情返回后重新执行“Backend 默认源可播放时优先，
-  否则响应顺序中的第一路可播放源”；全部不可播放时不 acquire。
-- Detail 当前选择是 `{kind: "temporary"}` 时，默认源 PATCH 成功或详情默认 ID 刷新都不改变当前
-  Session。只有临时 Source 被删除、变为离线或失去 `whep_url` 时，才退出临时选择并按默认规则回退。
-- 用户已经停止详情预览时，默认源刷新只更新已解析选择，不能自行恢复预览。
+- Detail 自动选择不读取 `default_preview_source_id`；Backend 已按 `sort_order` 返回 Source，因此始终
+  选择响应顺序中的第一路可播放 Source。全部不可播放时不 acquire。
+- Detail 当前为自动选择或临时选择时，默认源 PATCH 成功和详情默认 ID 刷新都不改变当前 Session。
+  只有 Source 排序、ID、`whep_url`、可播放状态发生实际变化时才重新解析；临时 Source 被删除、变为
+  离线或失去 `whep_url` 时，退出临时选择并按排序规则回退。
+- 用户已经停止详情预览时，默认源刷新不能自行恢复预览；再次开始仍使用当前临时 Source，或排序中
+  的第一路可播放 Source。
 - Card 或 Detail 仅在实际 Source ID 或 `whep_url` 改变时 release 旧 Lease 并按需 acquire；相同
   Source 和 URL 的名称、默认标记或状态文字变化不重建 Session。
 - 同一 Source 被 Card 和 Detail 消费时继续共享一个 reader 和 MediaStream；单个消费者 release 不
@@ -77,13 +79,14 @@
 1. 从任务 03 表单错误映射中提取窄用途 Camera 写错误分类纯函数，保持 PUT 现有行为不变；为默认源
    PATCH 新增独立固定中文提示和 Mutation 状态，不建立通用写框架。
 2. 启用 `CameraSources` RadioGroup，接通提交禁用、错误反馈和列表/详情 Query 失效。
-3. 扩展详情组合状态测试，覆盖默认选择、临时选择、停止预览、离线默认源和全部不可播放。
+3. 扩展详情组合状态测试，覆盖排序自动选择、临时选择、停止预览、默认 ID 变化和全部不可播放。
 4. 扩展 Card 与详情组件测试，证明只在实际 Source ID 或 URL 变化时切换 Lease。
 5. 扩展 Stream Session 集成测试，验证 Card+Detail 同源共享、逐个 release 和最后引用清理。
 6. 让现有 Cameras MSW 场景在各自闭包内保存默认 ID，并由 GET 列表/详情投影最新默认源；不持久化到
    浏览器，也不建立通用可变 Mock Store。
-7. 使用 `whep-player` 的现有双路 synthetic WHEP Source 确认默认源切换、临时选择保留、停止预览和
-   两路画面/Session 变化；再使用 `success` 场景的既有离线 Source 确认离线默认源和 Card 不 acquire。
+7. 使用 `whep-player` 的现有双路 synthetic WHEP Source 确认默认源切换只影响 Card、Detail 保持
+   排序第一路、临时选择保留、停止预览和两路画面/Session 变化；再使用 `success` 场景的既有离线
+   Source 确认离线默认源和 Card 不 acquire。
 
 ## 验证方式
 
@@ -101,7 +104,8 @@ pnpm build
 ```
 
 浏览器冒烟先使用 [WHEP 浏览器播放](../../../../modules/cameras/whep-player.md)已有的 `whep-player`
-双路 synthetic Source，检查默认选择切换、临时选择不变、停止预览不自启、Card/Detail 同源共享和
+双路 synthetic Source，检查默认源切换不替换 Detail 当前流、临时选择不变、停止预览不自启、
+Card/Detail 同源共享和
 最后一个 Lease 释放；再切换到 `success` 场景，使用其中既有的离线 Source 检查离线默认源与 Card
 不 acquire。两个场景都必须在 PATCH 后从重新读取的 GET 响应显示新默认 ID。
 
@@ -109,7 +113,7 @@ pnpm build
 
 - 默认源单选可以持久化在线或离线 Source，提交期间不可重复操作，且没有错误的乐观状态。
 - 成功、确定失败和结果未知分别呈现正确行为，列表与详情按最终服务端响应刷新。
-- Card 只跟随列表默认 Source；Detail 默认/临时选择和停止意图符合既有播放器规则。
+- Card 只跟随列表默认 Source；Detail 按排序自动选择或保留临时选择，默认源变化不替换当前流。
 - 相同实际 ID+URL 不重建 Session，变化时旧 Lease 正确释放并 acquire 新源；共享引用计数无泄漏。
 - Frontend 全套检查、契约与敏感数据检查、synthetic WHEP 浏览器冒烟全部通过。
 

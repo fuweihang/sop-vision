@@ -10,7 +10,7 @@ import {
 } from "@/mocks/cameras/fixtures";
 import { installFullscreenMocks } from "@/test/media-browser-mocks";
 
-test("默认 Source 无法匹配时显示损坏响应错误且不 acquire", () => {
+test("默认 Source 无法匹配也不影响详情按排序播放第一路 Source", async () => {
   const camera = buildCameraDetail();
   const invalidCamera = {
     ...camera,
@@ -20,12 +20,14 @@ test("默认 Source 无法匹配时显示损坏响应错误且不 acquire", () =
     <CameraDetailView camera={invalidCamera} />,
   );
 
-  expect(screen.getByText("默认预览源无效")).toBeVisible();
-  expect(screen.queryByRole("region", { name: "视频源预览" })).toBeNull();
-  expect(fakeStreamSessions).toHaveLength(0);
+  await waitFor(() => expect(fakeStreamSessions).toHaveLength(1));
+  expect(screen.getByRole("region", { name: "视频源预览" })).toBeVisible();
+  expect(
+    screen.getByRole("combobox", { name: "切换预览源" }),
+  ).toHaveTextContent(camera.sources[0]?.name ?? "");
 });
 
-test("停止意图跨详情刷新和默认 Source 改变保留，再次开始才连接最新默认源", async () => {
+test("停止意图跨详情刷新和默认 Source 改变保留，再次开始仍连接排序第一路", async () => {
   const user = userEvent.setup();
   const initialCamera = buildCameraDetail({
     sources: [
@@ -71,17 +73,18 @@ test("停止意图跨详情刷新和默认 Source 改变保留，再次开始才
   await user.click(screen.getByRole("button", { name: "开始预览" }));
   await waitFor(() => expect(result.fakeStreamSessions).toHaveLength(2));
   expect(result.acquiredWhepUrls[1]).toBe(
-    changedDefaultCamera.sources[1]?.whep_url,
+    changedDefaultCamera.sources[0]?.whep_url,
   );
 
-  // 已重新开始后，default 选择会继续跟随 Backend 默认源变化。
+  // 默认源 ID 改回去也不改变详情的实际 Source，因此不能新建第三个 Session。
   result.rerender(<CameraDetailView camera={initialCamera} />);
-  await waitFor(() => expect(result.fakeStreamSessions).toHaveLength(3));
+  await act(() => Promise.resolve());
+  expect(result.fakeStreamSessions).toHaveLength(2);
   expect(screen.getByRole("button", { name: "停止预览" })).toBeEnabled();
   expect(result.streamSessionManager.activeSessionCount).toBe(1);
 });
 
-test("默认 Source 的 WHEP 入口恢复后按原有预览意图自动开始", async () => {
+test("排序中的首个可播放 Source 恢复后按原有预览意图自动开始", async () => {
   const unavailableCamera = buildCameraDetail({
     sources: [
       { status: "OFFLINE", whep_url: null },
@@ -101,13 +104,14 @@ test("默认 Source 的 WHEP 入口恢复后按原有预览意图自动开始", 
   expect(screen.getByRole("button", { name: "停止预览" })).toBeEnabled();
 });
 
-test("默认 Source 不可播放时连接响应顺序中的第一路可播放 Source", async () => {
+test("排序第一路不可播放时连接响应顺序中的第一路可播放 Source", async () => {
   const camera = buildCameraDetail({
     sources: [
       { status: "OFFLINE", whep_url: null },
       { status: "ONLINE" },
       { status: "ONLINE" },
     ],
+    defaultSourceIndex: 2,
   });
   const result = renderWithStreamSession(<CameraDetailView camera={camera} />);
 

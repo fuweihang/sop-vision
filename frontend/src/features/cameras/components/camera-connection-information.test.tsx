@@ -10,25 +10,27 @@ import {
 } from "@/mocks/cameras/fixtures";
 
 test("展示连接字段、Camera 状态和最近检查时间", () => {
-  const camera = buildCameraDetail();
-  const defaultSource = camera.sources[0];
-  if (defaultSource === undefined) {
-    throw new Error("Camera Fixture 缺少默认 Source。");
+  const firstSourceCheckedAt = "2026-03-05T10:11:12Z";
+  const camera = buildCameraDetail({
+    sources: [
+      { status: "ONLINE", last_checked_at: firstSourceCheckedAt },
+      { status: "OFFLINE", last_checked_at: CAMERA_FIXTURE_TIMES.checkedAt },
+    ],
+    defaultSourceIndex: 1,
+  });
+  const firstSource = camera.sources[0];
+  if (firstSource === undefined) {
+    throw new Error("Camera Fixture 缺少第一路 Source。");
   }
   const { container } = render(
-    <CameraConnectionInformation
-      camera={camera}
-      defaultSource={defaultSource}
-    />,
+    <CameraConnectionInformation camera={camera} firstSource={firstSource} />,
   );
 
   expect(screen.getByText(camera.ip_address)).toBeVisible();
   expect(screen.getByText(String(camera.rtsp_port))).toBeVisible();
   expect(screen.getByText(camera.username)).toBeVisible();
   expect(
-    container.querySelector(
-      `time[datetime="${CAMERA_FIXTURE_TIMES.checkedAt}"]`,
-    ),
+    container.querySelector(`time[datetime="${firstSourceCheckedAt}"]`),
   ).toBeVisible();
   expect(container.querySelector("[data-camera-status]")).toHaveClass(
     "bg-status-degraded",
@@ -42,15 +44,12 @@ test("展示连接字段、Camera 状态和最近检查时间", () => {
 test("密码默认隐藏，并允许用户显式显示和再次隐藏", async () => {
   const user = userEvent.setup();
   const camera = buildCameraDetail();
-  const defaultSource = camera.sources[0];
-  if (defaultSource === undefined) {
-    throw new Error("Camera Fixture 缺少默认 Source。");
+  const firstSource = camera.sources[0];
+  if (firstSource === undefined) {
+    throw new Error("Camera Fixture 缺少第一路 Source。");
   }
   render(
-    <CameraConnectionInformation
-      camera={camera}
-      defaultSource={defaultSource}
-    />,
+    <CameraConnectionInformation camera={camera} firstSource={firstSource} />,
   );
 
   expect(screen.getByText("********")).toBeVisible();

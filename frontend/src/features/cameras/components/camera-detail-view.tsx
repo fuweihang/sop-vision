@@ -1,11 +1,8 @@
-import { AlertCircleIcon } from "@hugeicons/core-free-icons";
-import { HugeiconsIcon } from "@hugeicons/react";
 import { useState } from "react";
 import type { AxiosInstance } from "axios";
 
 import { PageContainer } from "@/components/layout/page-container";
 import { PageHeader } from "@/components/layout/page-header";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import type {
   CameraDetail,
   CameraSourceDetail,
@@ -15,7 +12,6 @@ import { CameraDestructiveSection } from "@/features/cameras/components/camera-d
 import { CameraDetailActions } from "@/features/cameras/components/camera-detail-actions";
 import { CameraDetailPlayer } from "@/features/cameras/components/camera-detail-player";
 import {
-  findCameraDefaultSource,
   resolveCameraPreviewSource,
   type CameraPreviewSelection,
 } from "@/features/cameras/components/camera-preview-selection";
@@ -26,25 +22,21 @@ import { apiClient as defaultApiClient } from "@/lib/api-client";
 function CameraDetailContent({
   camera,
   apiClient,
-  defaultSource,
+  firstSource,
 }: {
   camera: CameraDetail;
   apiClient: AxiosInstance;
-  defaultSource: CameraSourceDetail;
+  firstSource: CameraSourceDetail;
 }) {
   const [previewRequested, setPreviewRequested] = useState(true);
   const [previewSelection, setPreviewSelection] =
-    useState<CameraPreviewSelection>({ kind: "default" });
-  const preview = resolveCameraPreviewSource(
-    camera,
-    defaultSource,
-    previewSelection,
-  );
+    useState<CameraPreviewSelection>({ kind: "automatic" });
+  const preview = resolveCameraPreviewSource(camera, previewSelection);
 
   if (preview.temporarySelectionLost) {
     // React 允许组件在 render 中根据新 props 调整自己的状态。该分支只会执行一次：下一次 render
-    // 已是 default，因此不会形成循环，也不会短暂提交已失效的临时 Source。
-    setPreviewSelection({ kind: "default" });
+    // 已是 automatic，因此不会形成循环，也不会短暂提交已失效的临时 Source。
+    setPreviewSelection({ kind: "automatic" });
   }
 
   return (
@@ -75,7 +67,7 @@ function CameraDetailContent({
         />
         <CameraConnectionInformation
           camera={camera}
-          defaultSource={defaultSource}
+          firstSource={firstSource}
         />
       </div>
       <CameraSources camera={camera} apiClient={apiClient} />
@@ -85,8 +77,8 @@ function CameraDetailContent({
 }
 
 /**
- * Camera 详情组合入口管理默认 Source 校验、预览意图和当前页临时 Source。连接信息、Source 表格、
- * 页面 actions 与删除区域各自在相邻组件中维护。
+ * Camera 详情组合入口管理按 sort_order 自动选择、预览意图和当前页临时 Source。连接信息、Source
+ * 表格、页面 actions 与删除区域各自在相邻组件中维护；默认预览源只影响 Card，不参与详情播放。
  */
 export function CameraDetailView({
   camera,
@@ -95,34 +87,20 @@ export function CameraDetailView({
   camera: CameraDetail;
   apiClient?: AxiosInstance;
 }) {
-  const defaultSource = findCameraDefaultSource(camera);
+  const firstSource = camera.sources[0];
 
-  if (defaultSource === undefined) {
-    // Backend 聚合和 Schema 正常情况下不会触发；防御分支避免损坏响应静默显示错误默认源。
-    return (
-      <PageContainer>
-        <PageHeader
-          title={camera.name}
-          description="摄像头详情暂时无法完整显示。"
-        />
-        <Alert variant="destructive" className="max-w-2xl">
-          <HugeiconsIcon icon={AlertCircleIcon} strokeWidth={2} />
-          <AlertTitle>默认预览源无效</AlertTitle>
-          <AlertDescription>
-            当前详情没有匹配的默认预览源，请稍后重试。
-          </AlertDescription>
-        </Alert>
-      </PageContainer>
-    );
+  if (firstSource === undefined) {
+    // Camera 聚合要求至少一路 Source；这里保留防御检查，同时避免把默认源 ID 当作详情可用条件。
+    throw new Error("Camera Detail 至少需要一路视频源。");
   }
 
-  // 详情刷新和 Backend 默认源变化都只重新解析实际 Source，不覆盖用户开始/停止预览的选择。
+  // 详情刷新按最新排序重新解析自动 Source；默认源变化不影响详情，且不会覆盖开始/停止意图。
   return (
     <CameraDetailContent
       key={camera.camera_id}
       camera={camera}
       apiClient={apiClient}
-      defaultSource={defaultSource}
+      firstSource={firstSource}
     />
   );
 }

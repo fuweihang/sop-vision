@@ -64,10 +64,11 @@ function PasswordValue({ password }: Pick<CameraDetail, "password">) {
 
 export function CameraConnectionInformation({
   camera,
-  defaultSource,
+  firstSource,
 }: {
   camera: CameraDetail;
-  defaultSource: CameraSourceDetail;
+  /** CameraDetail.sources 已按 sort_order 排序，最近检查时间跟随详情第一路而非 Card 默认源。 */
+  firstSource: CameraSourceDetail;
 }) {
   const fields = [
     { label: "IPv4 地址", value: camera.ip_address, mono: true },
@@ -115,7 +116,7 @@ export function CameraConnectionInformation({
           <div className={CONNECTION_INFORMATION_ROW_CLASS_NAME}>
             <dt className="text-muted-foreground">最近检查</dt>
             <dd className="min-w-0 wrap-break-word">
-              <Timestamp value={defaultSource.last_checked_at} />
+              <Timestamp value={firstSource.last_checked_at} />
             </dd>
           </div>
         </dl>
