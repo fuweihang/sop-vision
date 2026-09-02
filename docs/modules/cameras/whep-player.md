@@ -26,14 +26,13 @@ MediaMTX reader.js → WhepSession → StreamSessionManager → MediaStream
 
 ## Camera 详情行为
 
-- Frontend 先确认 `default_preview_source_id` 能匹配实际 Source；匹配失败显示损坏响应错误，不用其他
-  Source 掩盖问题。`status=ONLINE` 且 `whep_url` 非空才可播放。
-- 未临时切源时优先选择可播放的 Backend 默认源；默认源不可播放时使用响应顺序中的第一路可播放源。
-  全部 Source 不可播放时不 acquire，显示“当前视频源不可播放”并禁用开始按钮。
+- `status=ONLINE` 且 `whep_url` 非空才可播放。Detail 不读取 `default_preview_source_id`；未临时切源时
+  使用响应顺序中的第一路可播放 Source。全部 Source 不可播放时不 acquire，显示“当前视频源不可播放”
+  并禁用开始按钮。持久化默认源只控制 Camera Card。
 - Source Select 列出全部 Source，不可播放项保持可见但禁用。用户选择只保存在当前 Detail 页面内存，
   不发送默认源 PATCH，也不写入 URL、Query cache 或浏览器持久化存储。
 - 临时 Source 在 15 秒详情刷新后仍可播放时继续使用；被删除、离线或失去 WHEP URL 后 release 旧
-  Lease，并重新执行默认源优先规则。切换可播放 Source 会自动播放新 Stream。
+  Lease，并按最新响应顺序回到第一路可播放 Source。切换可播放 Source 会自动播放新 Stream。
 - 用户停止后，详情刷新、Backend 默认源变化和 Source 可用性变化都不会自行恢复预览。停止状态仍可
   切换 Source 和显示模式，播放、刷新与音量控件禁用；再次开始后连接当前已解析的 Source。
 - 页面隐藏时保持 Lease；用户停止、路由离开、Source 改变和组件卸载时 release。

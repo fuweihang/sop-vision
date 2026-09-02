@@ -60,7 +60,7 @@ Runtime Path 快照。这样媒体请求等待期间不会继续占用数据库�
 
 密码使用固定星号占位，不显示实际长度；用户点击眼睛按钮后可以在当前页面显隐。页面不展示
 `created_at/updated_at`。窄屏下连接信息与预览区域改为单列，视频源表格只在自身容器内横向滚动，
-不扩大整个页面。默认/临时 Source 选择、预览意图、操作栏状态、错误恢复和 Lease 生命周期统一由
+不扩大整个页面。排序自动/临时 Source 选择、预览意图、操作栏状态、错误恢复和 Lease 生命周期统一由
 [WHEP 浏览器播放](whep-player.md#camera-详情行为)维护。
 
 ## 排查
@@ -70,7 +70,5 @@ Runtime Path 快照。这样媒体请求等待期间不会继续占用数据库�
 - 页面显示 404 时，先确认 URL 中 Camera ID 是标准 UUID v4，再确认 PostgreSQL 中聚合存在。
 - 页面显示数据库错误时检查 PostgreSQL；若页面仍能打开但 Source 全部显示媒体服务不可用，则检查
   MediaMTX Control API 和 Stream Gateway，不要把它误判成 Camera 配置读取失败。
-- 页面提示默认预览源无效表示返回数据没有匹配 `default_preview_source_id` 的 Source，应检查后端聚合
-  与响应映射，Frontend 不会自行选择另一路 Source 掩盖数据问题。
 - 页面提示当前视频源不可播放时检查详情响应的 `whep_url` 和 Source 状态；Frontend 不会自行拼接或
   修复 WHEP 地址。

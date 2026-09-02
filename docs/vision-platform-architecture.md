@@ -146,8 +146,9 @@ MediaMTX reader.js → WhepSession → StreamSessionManager → MediaStream
 - `StreamSessionManager` 按稳定 `source_id` 共享一路 Session，消费者使用独立 video、canvas 和 overlay。
 - `VideoSurface` 使用 React children 组合业务 overlay，并通过受控 Context 提供 video 元素和通用
   测量值，不接受 Camera、Card、Detail 或 Detection 模式参数。
-- Camera Detail 在 Camera feature 内解析默认/临时 Source，通过 children 组合 Source Select；网页全屏
-  和浏览器全屏只改变同一个 `VideoSurface` 的显示状态，不重建 Session、MediaStream 或 video DOM。
+- Camera Detail 在 Camera feature 内解析按保存顺序自动选择或当前页临时选择的 Source，通过 children
+  组合 Source Select；持久化默认源只控制 Card。网页全屏和浏览器全屏只改变同一个 `VideoSurface`
+  的显示状态，不重建 Session、MediaStream 或 video DOM。
 - Camera Card 只读取列表摘要中的默认 Source，与 Detail 共用 Session Manager 和展示状态规则，但
   保留独立 video DOM、首帧状态和业务 overlay。
 - Detection 实现时把由视频帧回调驱动的 Canvas 作为 child 组合进 `VideoSurface`，不通过 Canvas

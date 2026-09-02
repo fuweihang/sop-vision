@@ -40,12 +40,12 @@
 - 贴底全宽渐变操作栏的鼠标活动/自动隐藏、触摸、音量浮层、刷新、首帧渲染后才显示的 LIVE 和连接状态通过
   支持浏览器验收；音量浮层可用键盘打开和关闭，Slider 可用键盘调整，焦点始终可见且关闭后正确
   返回触发按钮。Card 保持静音且不显示 Detail controls。
-- 至少一路 Source 可播放时，Detail 按“Backend 默认源可播放时优先，否则响应中的第一路可播放源”
-  自动选择；全部 Source 不可播放时不创建 Session，并沿用不可播放展示。
+- 至少一路 Source 可播放时，Detail 不读取 Backend 默认源，按响应顺序选择第一路可播放 Source；
+  全部 Source 不可播放时不创建 Session，并沿用不可播放展示。默认源只控制 Camera Card。
 - 临时 Source 切换只影响当次 Detail 预览，不发送默认源 PATCH；旧 Lease 释放、新 Lease acquire、
   Source 删除或不可播放后回退、网页全屏与浏览器全屏互斥/退出、模式切换不重建 Session 均通过验收。
-- 标准浏览器验收使用两路视觉可区分的 synthetic RTSP/WHEP 流，验证默认源回退、临时切源后的
-  画面变化，以及两个 Path 各自 Session 的 acquire/release。
+- 标准浏览器验收使用两路视觉可区分的 synthetic RTSP/WHEP 流，验证 Detail 按排序自动选择、临时
+  Source 失效后按排序回退、Card 跟随默认源，以及两个 Path 各自 Session 的 acquire/release。
 - Frontend 的 FFmpeg synthetic RTSP Source 只验证可重复的基础播放与浏览器生命周期；发布验收必须另外
   使用目标 IPC/RTSP 设备覆盖支持的 Codec、厂商实现和长时间连接，不能用合成源代替。
 - 容量基线至少覆盖一页 20 个 Camera、多路 Source 配置和全部已挂载 Card 会话；资源上限与失败
