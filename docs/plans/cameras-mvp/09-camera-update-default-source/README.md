@@ -4,96 +4,67 @@
 > [媒体对账](../../../modules/cameras/media-reconciliation.md)、
 > [WHEP 浏览器播放](../../../modules/cameras/whep-player.md)
 >
-> 交付：`PUT /api/v1/cameras/{camera_id}`、`PATCH /api/v1/cameras/{camera_id}/default-preview-source` 和对应详情交互
+> 最终交付：`PUT /api/v1/cameras/{camera_id}`、
+> `PATCH /api/v1/cameras/{camera_id}/default-preview-source` 和对应详情交互
 
-## 完整更新 Camera
+09 同时跨越 Backend 完整更新、默认源写入、Frontend 编辑表单、路由离开保护、查询缓存和共享媒体
+Session，不能作为一个开发任务一次性实施。按以下顺序拆成可独立审核、实现和验证的任务：
 
-PUT 完整替换 Camera 可变配置和 Source 集合。已有 Source 由稳定 `source_id` 识别；无 ID 的项
-新增，请求中缺失的已有项删除，数组顺序成为新顺序，唯一 `is_default_preview=true` 项成为
-默认源。成功返回 `200 CameraDetail` 和 `Cache-Control: no-store`。
+| #   | 任务                                                                        | 主要交付                                      |
+| --- | --------------------------------------------------------------------------- | --------------------------------------------- |
+| 01  | [Backend Camera 完整更新](01-backend-camera-update/README.md)               | PUT、事务、媒体 diff、CameraDetail 与错误响应 |
+| 02  | [Backend 默认预览源切换](02-backend-default-preview-source/README.md)       | PATCH、默认 ID 原子保存与最小确认响应         |
+| 03  | [Frontend Camera 编辑 Dialog](03-frontend-camera-edit/README.md)            | 完整编辑、排序、结果未知和未保存修改保护      |
+| 04  | [Frontend 默认源与播放器联动](04-frontend-default-preview-source/README.md) | 默认源单选、缓存刷新和 Card/Detail Lease 切换 |
+| 05  | [09 集成验收与文档收尾](05-integration-docs/README.md)                      | 跨端组合验收、长期文档、交付记录与计划移除    |
 
-```json
-{
-  "name": "洗手区东侧 01",
-  "ip_address": "192.168.1.65",
-  "rtsp_port": 554,
-  "username": "admin",
-  "password": "new-camera-secret",
-  "sources": [
-    {
-      "source_id": "3f2504e0-4f89-41d3-9a0c-0305e82c3301",
-      "name": "子码流",
-      "url_suffix": "Streaming/Channels/102",
-      "is_default_preview": true
-    },
-    {
-      "name": "通道 2",
-      "url_suffix": "Streaming/Channels/201",
-      "is_default_preview": false
-    }
-  ]
-}
-```
+任务必须顺序执行。后续任务以已落地代码、迁移、OpenAPI、生成类型和测试为准，不能用前序计划中的实现
+假设覆盖当前事实，也不能并行创建临时接口或重复规则。
 
-| 场景                 | 字段 / code                                       |
-| -------------------- | ------------------------------------------------- |
-| 非标准 Source UUID   | `sources[i].source_id/INVALID_UUID`               |
-| Source 不属于 Camera | `sources[i].source_id/SOURCE_NOT_OWNED_BY_CAMERA` |
-| 请求内重复 Source ID | 后续项 / `DUPLICATE_SOURCE_ID`                    |
-| 只读字段             | 对应字段 / `UNKNOWN_FIELD`                        |
+## 共同交付范围
 
-后端锁定并读取最新聚合，验证请求，计算保留/新增/删除/重排，在一个事务中保存并提交。已有项保留
-`source_id/created_at`；任意数据库失败完整回滚。不存在返回 `404 CAMERA_NOT_FOUND`，字段错误
-返回 `422`，数据库不可用返回 `503`。
+- PUT 完整替换 Camera 可变配置和 Source 集合：有 `source_id` 的项保留身份，无 ID 项新增，请求中
+  缺失的旧项删除，数组顺序成为保存顺序，唯一默认标记成为默认 Source。
+- PUT 在数据库事务提交后只同步实际变化的 MediaMTX Desired State；名称或排序变化不重载 Path，
+  新增、后缀或连接字段变化执行 ensure，删除执行 release，媒体故障不回滚数据库结果。
+- PATCH 只更新默认 Source ID 和 Camera `updated_at`。离线 Source 可以设为默认，不修改 Source
+  配置、顺序或 MediaMTX Path。
+- Frontend 编辑使用 Dialog，支持连接字段、Source 增删、上移/下移排序和默认源；打开后的详情轮询
+  不覆盖表单，未保存修改在关闭、应用内路由和浏览器离开前确认。
+- 默认源单选不做乐观更新。列表 Card 只跟随列表响应中的默认 Source；详情默认选择重新解析，临时
+  选择仍可播放时保持不变。
+- Card 或 Detail 只在实际 Source ID 或 `whep_url` 变化时切换 Lease；相同媒体来源不重建共享
+  Session，最后一个引用释放后才关闭。
 
-数据库提交后按 diff 执行媒体同步：
+精确字段、事务、敏感数据和播放器公共规则继续以
+[Cameras 基础能力](../../../modules/cameras/foundation.md)、
+[Camera 详情](../../../modules/cameras/camera-detail.md)和
+[WHEP 浏览器播放](../../../modules/cameras/whep-player.md)为准，各任务不维护第二份公共事实。
 
-- Source 只改名称或排序不改变 Path，也不重载媒体连接。
-- 新增 Source 调用 `ensure_path`；后缀变化时保留 ID 并覆盖同名 Path。
-- Camera IP、端口或凭据变化时，确保全部所属 Path 使用新 Desired State。
-- 删除 Source 后立即尽力 `release_path`；失败不回滚，后台对账继续清理。
-- 同步后共享一次状态快照生成 CameraDetail；媒体故障不改变 `200` 配置结果。
+## 共同失败语义
 
-服务端不比较前端版本；并发合法更新以数据库最后完成提交者为准，媒体最终由对账收敛到数据库
-最新状态。
+- `404 CAMERA_NOT_FOUND`、`422 VALIDATION_ERROR` 和
+  `500 CAMERA_AGGREGATE_INVALID` 是确定失败。
+- Transport、无法识别或不符合契约的响应、`503 DATABASE_UNAVAILABLE` 及其他服务端 `5xx` 对
+  Frontend 都是结果未知，因为数据库可能已经提交但成功响应没有到达。
+- PUT 和 PATCH Mutation 都禁止自动重试。结果未知时保留当前表单或提交前选择，不做乐观更新，立即
+  重新获取列表和详情；重新读取失败时继续提示结果未知，只有用户确认后才发送新的写请求。
+- 请求、响应、Problem、日志、通知、追踪、错误上报和 Mutation cache 必须遵守现有密码、Source
+  后缀和完整 RTSP URL 边界。
 
-## 切换默认预览源
+## 共同不做事项
 
-```json
-{ "source_id": "3f2504e0-4f89-41d3-9a0c-0305e82c3301" }
-```
+- 不实现鉴权、RBAC、多租户、软删除、批量编辑、自动保存、跨页面草稿或拖拽排序。
+- 不增加 ETag、版本比较、冲突解决 UI、幂等键、Outbox/Saga、Generic Repository 或通用 CRUD/
+  Mutation 框架。
+- 不修改 Camera 删除，不为默认源 PATCH 探测在线状态，不让 Frontend 直接访问 MediaMTX Control
+  API。
+- 09 只使用独立 PostgreSQL、可控 Stream Gateway/对账和现有 synthetic WHEP Source 做确定性验收。
+  真实 MediaMTX 重启、进程崩溃、多实例、真实 IPC/浏览器/网络、长时间和容量继续由
+  [11｜发布门禁](../11-release-gates/README.md)负责。
 
-成功返回：
+## 09 完成条件
 
-```json
-{
-  "camera_id": "6f9619ff-8b86-4e4f-9f68-bb3f8f6f4f21",
-  "default_preview_source_id": "3f2504e0-4f89-41d3-9a0c-0305e82c3301",
-  "updated_at": "2026-08-19T03:10:00Z"
-}
-```
-
-后端锁定 Camera，确认 Source 属于该聚合，原子更新默认 ID 和 `updated_at`。离线 Source 也可以
-设为默认。切换不修改 Source 配置、顺序或 MediaMTX Path。Frontend 失效列表与详情后，根据当前
-页面的预览选择决定是否切换 Session：Camera Card 只跟随最新默认源；使用默认选择的 Detail
-重新执行详情页的可播放源选择规则；使用临时选择的 Detail 保持当前 Source。
-
-Camera 不存在返回 `404 CAMERA_NOT_FOUND`；Source 不存在或不属于 Camera 返回
-`source_id/SOURCE_NOT_OWNED_BY_CAMERA`；数据库不可用返回 `503 DATABASE_UNAVAILABLE`。
-
-## 前端与验收
-
-- 编辑表单从最新 CameraDetail 初始化；已有行保存 ID，新行只使用 UI 临时 key。
-- 删除最后一路禁用；删除默认源时选择剩余第一项；排序不改变 Source ID。
-- 有未保存修改时离开需确认；提交失败保留输入和顺序。
-- 默认源提交期间禁用全部单选项；失败恢复原状态，不保留错误的乐观结果。
-- 更新成功后失效 `cameras` 和当前 `camera`。
-- 默认源切换成功后失效 `cameras` 和当前 `camera`。Camera Card 只使用最新列表响应中的默认 Source；
-  新默认 Source 的 `whep_url=null` 时不 acquire，不尝试选择列表未返回的其他 Source。
-- `{kind: "default"}` 的 Detail 按“新默认源可播放时优先，否则第一路可播放源”重新计算实际预览
-  Source。Card 或 Detail 只有在实际 Source ID 或 `whep_url` 改变时才 release 旧 Lease 并按需
-  acquire；实际 Source 未改变时保留现有 Lease，只有引用计数归零时才关闭共享 Session。
-- `{kind: "temporary"}` 的 Detail 不因默认源 PATCH 成功切换当前 Session；只有临时 Source 在最新
-  Detail 中被删除或变为不可播放时，才退出临时选择并按默认源优先规则回退。
-- 验收覆盖增删改排、连接字段变化、配置 diff、Path 同步失败及对账恢复、默认源在线/离线、
-  所有权错误、事务回滚、并发更新和新旧密码脱敏。
+只有 01–05 全部完成后，09 才算交付。任务 05 必须以实际实现为准更新 Cameras 模块文档，在
+`docs/changes/` 新增交付记录，执行完整自动化与 synthetic 浏览器验收，再从上级剩余计划和文件
+系统移除 09。任何必要测试失败或 PostgreSQL 集成测试跳过时都不能提前收尾。
