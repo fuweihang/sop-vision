@@ -65,6 +65,15 @@ bash scripts/check-cameras-sensitive-data.sh
 uv run --env-file .env.local pytest tests/modules/cameras
 uv run ruff check .
 uv run ruff format --check .
+
+# frontend/
+pnpm exec vitest run \
+  src/features/cameras/api/cameras-api.test.ts \
+  src/mocks/cameras/fixtures.test.ts \
+  src/mocks/cameras/scenarios.test.ts
+pnpm lint
+pnpm format:check
+pnpm build
 ```
 
 PostgreSQL 测试必须配置独立 `TEST_DATABASE_URL`，跳过时不能算作完整验收。

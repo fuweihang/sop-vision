@@ -6,6 +6,7 @@ import {
   buildCameraPage,
   buildCameraSummary,
   buildCameraUpdateRequest,
+  buildDefaultPreviewSourceResponse,
   buildProblem,
   CAMERA_FIXTURE_IDS,
   CAMERA_FIXTURE_SECRET,
@@ -73,6 +74,10 @@ describe("Cameras Fixture Builder", () => {
     const nonDetailPayloads = [
       buildCameraSummary(detail),
       buildCameraPage({ items: [buildCameraSummary(detail)] }),
+      buildDefaultPreviewSourceResponse(
+        detail,
+        CAMERA_FIXTURE_IDS.secondarySource,
+      ),
       buildProblem({
         status: 503,
         code: "DATABASE_UNAVAILABLE",
@@ -89,6 +94,27 @@ describe("Cameras Fixture Builder", () => {
       expect(serialized).not.toContain("url_suffix");
       expect(serialized).not.toContain("rtsp://");
     }
+  });
+
+  test("默认源确认响应只接受当前 Camera 所属 Source", () => {
+    const detail = buildCameraDetail();
+
+    expect(
+      buildDefaultPreviewSourceResponse(
+        detail,
+        CAMERA_FIXTURE_IDS.secondarySource,
+      ),
+    ).toEqual({
+      camera_id: detail.camera_id,
+      default_preview_source_id: CAMERA_FIXTURE_IDS.secondarySource,
+      updated_at: detail.updated_at,
+    });
+    expect(() =>
+      buildDefaultPreviewSourceResponse(
+        detail,
+        CAMERA_FIXTURE_IDS.tertiarySource,
+      ),
+    ).toThrow("默认预览源响应的 sourceId 必须属于 Camera Detail。");
   });
 
   test("拒绝无 Source 或默认下标越界的伪合法 Fixture", () => {

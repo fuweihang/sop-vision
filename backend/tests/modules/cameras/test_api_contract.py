@@ -39,7 +39,7 @@ EXPECTED_CAMERA_OPERATIONS = {
     ),
     ("/api/v1/cameras/{camera_id}/default-preview-source", "patch"): (
         "setDefaultPreviewSource",
-        {"200", "404", "422", "503"},
+        {"200", "404", "422", "500", "503"},
     ),
     ("/api/v1/cameras/{camera_id}", "delete"): (
         "deleteCamera",
@@ -257,10 +257,7 @@ def test_placeholder_handlers_only_raise_not_implemented() -> None:
 
     report = check_camera_placeholders(GateMode.FOUNDATION)
     assert not report.invalid_handlers
-    assert report.placeholders == (
-        "set_default_preview_source",
-        "delete_camera",
-    )
+    assert report.placeholders == ("delete_camera",)
 
 
 def test_problem_example_is_valid_and_openapi_export_is_byte_stable(tmp_path: Path) -> None:

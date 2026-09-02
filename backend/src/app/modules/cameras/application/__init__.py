@@ -10,6 +10,11 @@ from app.modules.cameras.application.create import (
     CreateCameraSourceCommand,
     create_camera,
 )
+from app.modules.cameras.application.default_preview_source import (
+    SetDefaultPreviewSourceCommand,
+    SetDefaultPreviewSourceResult,
+    set_default_preview_source,
+)
 from app.modules.cameras.application.detail import CameraDetailResult, get_camera_detail
 from app.modules.cameras.application.errors import (
     CameraAggregateInvalidError,
@@ -61,12 +66,15 @@ __all__ = [
     "CreateCameraCommand",
     "CreateCameraResult",
     "CreateCameraSourceCommand",
+    "SetDefaultPreviewSourceCommand",
+    "SetDefaultPreviewSourceResult",
     "UpdateCameraCommand",
     "UpdateCameraResult",
     "UpdateCameraSourceCommand",
     "create_camera",
     "get_camera_detail",
     "list_cameras",
+    "set_default_preview_source",
     "summarize_camera_runtime",
     "update_camera",
 ]

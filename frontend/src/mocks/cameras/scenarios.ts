@@ -5,6 +5,7 @@ import {
   type RequestHandler,
 } from "msw";
 
+import type { SetDefaultPreviewSourceRequest } from "@/features/cameras/api/cameras-api";
 import { apiBaseUrl } from "@/lib/api-client";
 import {
   buildCameraDetail,
@@ -313,7 +314,7 @@ export function createCamerasMswScenario(
       return jsonResponse(detail, 200, { "Cache-Control": "no-store" });
     }),
 
-    http.patch(defaultSourceUrl, ({ request }) => {
+    http.patch(defaultSourceUrl, async ({ request }) => {
       const instance = new URL(request.url).pathname;
       if (scenario === "dependency-unavailable") {
         return unavailableProblem(instance);
@@ -328,7 +329,57 @@ export function createCamerasMswScenario(
           }),
         );
       }
-      return jsonResponse(buildDefaultPreviewSourceResponse(detail));
+      if (scenario === "aggregate-invalid") {
+        return problemResponse(
+          buildProblem({
+            status: 500,
+            code: "CAMERA_AGGREGATE_INVALID",
+            instance,
+            title: "摄像头数据无效",
+          }),
+        );
+      }
+      if (scenario === "nested-validation-error") {
+        return problemResponse(
+          buildProblem({
+            status: 422,
+            code: "VALIDATION_ERROR",
+            instance,
+            title: "请求字段验证失败",
+            errors: [
+              {
+                field: "source_id",
+                code: "SOURCE_NOT_OWNED_BY_CAMERA",
+                detail: "Source 不存在或不属于当前 Camera。",
+              },
+            ],
+          }),
+        );
+      }
+
+      const body = (await request.json()) as SetDefaultPreviewSourceRequest;
+      if (
+        !detail.sources.some((source) => source.source_id === body.source_id)
+      ) {
+        return problemResponse(
+          buildProblem({
+            status: 422,
+            code: "VALIDATION_ERROR",
+            instance,
+            title: "请求字段验证失败",
+            errors: [
+              {
+                field: "source_id",
+                code: "SOURCE_NOT_OWNED_BY_CAMERA",
+                detail: "Source 不存在或不属于当前 Camera。",
+              },
+            ],
+          }),
+        );
+      }
+      return jsonResponse(
+        buildDefaultPreviewSourceResponse(detail, body.source_id),
+      );
     }),
 
     http.delete(cameraUrl, ({ request }) => {

@@ -1,8 +1,8 @@
 """Cameras Router 与完整目标 OpenAPI 契约。
 
-创建、列表、详情和完整更新 handler 已实现；其余两个 handler 在对应切片落地前继续保持纯
-``raise NotImplementedError``。全部路径预先注册到真实应用，使 OpenAPI、前端生成类型和 MSW
-共享同一棵路由树；剩余占位的临时 500 不属于声明契约。
+创建、列表、详情、完整更新和默认源切换 handler 已实现；删除 handler 在对应切片落地前继续
+保持纯 ``raise NotImplementedError``。全部路径预先注册到真实应用，使 OpenAPI、前端生成类型
+和 MSW 共享同一棵路由树；剩余占位的临时 500 不属于声明契约。
 """
 
 from typing import Any
@@ -22,7 +22,11 @@ from app.modules.cameras.api.dependencies import (
     CameraListParametersDependency,
     CameraUnitOfWorkDependency,
 )
-from app.modules.cameras.api.mappers import camera_detail_from_runtime, camera_page_from_result
+from app.modules.cameras.api.mappers import (
+    camera_detail_from_runtime,
+    camera_page_from_result,
+    default_preview_source_from_result,
+)
 from app.modules.cameras.api.schemas import (
     CameraCreateRequest,
     CameraDetail,
@@ -34,12 +38,16 @@ from app.modules.cameras.api.schemas import (
 from app.modules.cameras.application import (
     CreateCameraCommand,
     CreateCameraSourceCommand,
+    SetDefaultPreviewSourceCommand,
     UpdateCameraCommand,
     UpdateCameraSourceCommand,
 )
 from app.modules.cameras.application import create_camera as execute_create_camera
 from app.modules.cameras.application import get_camera_detail as execute_get_camera_detail
 from app.modules.cameras.application import list_cameras as execute_list_cameras
+from app.modules.cameras.application import (
+    set_default_preview_source as execute_set_default_preview_source,
+)
 from app.modules.cameras.application import update_camera as execute_update_camera
 from app.modules.stream_gateway.api.dependencies import StreamGatewayDependency
 
@@ -271,6 +279,7 @@ async def update_camera(
             [
                 status.HTTP_404_NOT_FOUND,
                 status.HTTP_422_UNPROCESSABLE_CONTENT,
+                status.HTTP_500_INTERNAL_SERVER_ERROR,
                 status.HTTP_503_SERVICE_UNAVAILABLE,
             ]
         ),
@@ -278,9 +287,20 @@ async def update_camera(
 )
 async def set_default_preview_source(
     camera_id: CanonicalUUID4,
-    _request: SetDefaultPreviewSourceRequest,
+    request: SetDefaultPreviewSourceRequest,
+    uow: CameraUnitOfWorkDependency,
+    clock: CameraClockDependency,
 ) -> DefaultPreviewSourceResponse:
-    raise NotImplementedError
+    result = await execute_set_default_preview_source(
+        SetDefaultPreviewSourceCommand(
+            camera_id=camera_id,
+            source_id=request.source_id,
+        ),
+        uow=uow,
+        clock=clock,
+    )
+    # 响应只含 ID 和更新时间，不包含凭据、后缀或完整 RTSP URL，因此无需 no-store。
+    return default_preview_source_from_result(result)
 
 
 @router.delete(

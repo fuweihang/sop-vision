@@ -25,11 +25,13 @@ from app.modules.cameras.application import (
     CameraNotFoundError,
     CreateCameraCommand,
     CreateCameraSourceCommand,
+    SetDefaultPreviewSourceCommand,
     UpdateCameraCommand,
     UpdateCameraSourceCommand,
     create_camera,
     get_camera_detail,
     list_cameras,
+    set_default_preview_source,
     update_camera,
 )
 from app.modules.cameras.domain import (
@@ -815,6 +817,78 @@ async def test_camera_update_use_case_persists_complete_aggregate_before_media(
     assert await row_counts(session_factory) == (1, 2)
 
 
+async def test_default_preview_source_use_case_only_persists_default_id_and_camera_time(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    """真实 PostgreSQL 保存默认 ID 与 Camera 时间，Source 行内容和顺序完全不变。"""
+
+    camera = CameraBuilder().build(source_count=2, id_start=1_250)
+    async with session_factory() as writing_session:
+        writer = SQLAlchemyCameraUnitOfWork(writing_session)
+        await writer.cameras.add(camera)
+        await writer.commit()
+
+    async with session_factory() as reading_session:
+        source_rows_before = tuple(
+            (
+                row.source_id,
+                row.camera_id,
+                row.name,
+                row.url_suffix,
+                row.sort_order,
+                row.created_at,
+                row.updated_at,
+            )
+            for row in (
+                await reading_session.scalars(
+                    select(CameraSourceRow)
+                    .where(CameraSourceRow.camera_id == camera.camera_id)
+                    .order_by(CameraSourceRow.sort_order.asc())
+                )
+            ).all()
+        )
+
+    changed_at = NOW.replace(microsecond=1)
+    async with session_factory() as update_session:
+        result = await set_default_preview_source(
+            SetDefaultPreviewSourceCommand(
+                camera_id=camera.camera_id,
+                source_id=camera.sources[1].source_id,
+            ),
+            uow=SQLAlchemyCameraUnitOfWork(update_session),
+            clock=FixedClock(changed_at),
+        )
+        assert not update_session.in_transaction()
+
+    assert result.default_preview_source_id == camera.sources[1].source_id
+    assert result.updated_at == changed_at
+    async with session_factory() as reading_session:
+        persisted = await SQLAlchemyCameraRepository(reading_session).get(camera.camera_id)
+        source_rows_after = tuple(
+            (
+                row.source_id,
+                row.camera_id,
+                row.name,
+                row.url_suffix,
+                row.sort_order,
+                row.created_at,
+                row.updated_at,
+            )
+            for row in (
+                await reading_session.scalars(
+                    select(CameraSourceRow)
+                    .where(CameraSourceRow.camera_id == camera.camera_id)
+                    .order_by(CameraSourceRow.sort_order.asc())
+                )
+            ).all()
+        )
+    assert persisted is not None
+    assert persisted.default_preview_source_id == camera.sources[1].source_id
+    assert persisted.updated_at == changed_at
+    assert persisted.sources == camera.sources
+    assert source_rows_after == source_rows_before
+
+
 async def test_camera_update_use_case_serializes_concurrent_writes_last_commit_wins(
     session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
@@ -891,3 +965,83 @@ async def test_camera_update_use_case_serializes_concurrent_writes_last_commit_w
         persisted = await SQLAlchemyCameraRepository(reading_session).get(camera.camera_id)
     assert persisted is not None
     assert persisted.name == "第二笔更新"
+
+
+async def test_put_and_default_source_patch_serialize_on_same_camera_lock(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    """PUT 持锁提交前 PATCH 必须等待，并基于 PUT 提交后的最新聚合继续写入。"""
+
+    camera = CameraBuilder().build(source_count=2, id_start=1_400)
+    async with session_factory() as writing_session:
+        writer = SQLAlchemyCameraUnitOfWork(writing_session)
+        await writer.cameras.add(camera)
+        await writer.commit()
+
+    put_command = UpdateCameraCommand(
+        camera_id=camera.camera_id,
+        name="PUT 更新后的名称",
+        ip_address=camera.ip_address,
+        rtsp_port=camera.rtsp_port,
+        username=camera.credentials.username,
+        password=camera.credentials.password.reveal(),
+        sources=tuple(
+            UpdateCameraSourceCommand(
+                source_id=source.source_id,
+                name=source.name,
+                url_suffix=source.url_suffix,
+                is_default_preview=camera.is_default_preview(source.source_id),
+            )
+            for source in camera.sources
+        ),
+    )
+    patch_command = SetDefaultPreviewSourceCommand(
+        camera_id=camera.camera_id,
+        source_id=camera.sources[1].source_id,
+    )
+    put_reached_commit = asyncio.Event()
+    allow_put_commit = asyncio.Event()
+
+    class BlockingPutUnitOfWork(SQLAlchemyCameraUnitOfWork):
+        """PUT 保存完整聚合并持有行锁后暂停，让 PATCH 的等待行为可确定复现。"""
+
+        async def commit(self) -> None:
+            put_reached_commit.set()
+            await allow_put_commit.wait()
+            await super().commit()
+
+    async def run_put():
+        async with session_factory() as session:
+            return await update_camera(
+                put_command,
+                uow=BlockingPutUnitOfWork(session),
+                stream_gateway=FakeStreamGateway(RuntimePathSnapshot(paths=(), checked_at=NOW)),
+                id_generator=FixedIdGenerator(()),
+                clock=FixedClock(NOW.replace(microsecond=1)),
+            )
+
+    async def run_patch():
+        async with session_factory() as session:
+            return await set_default_preview_source(
+                patch_command,
+                uow=SQLAlchemyCameraUnitOfWork(session),
+                clock=FixedClock(NOW.replace(microsecond=2)),
+            )
+
+    put_task = asyncio.create_task(run_put())
+    await asyncio.wait_for(put_reached_commit.wait(), timeout=1)
+    patch_task = asyncio.create_task(run_patch())
+    with pytest.raises(TimeoutError):
+        await asyncio.wait_for(asyncio.shield(patch_task), timeout=0.1)
+
+    allow_put_commit.set()
+    put_result, patch_result = await asyncio.gather(put_task, patch_task)
+    assert put_result.camera.name == "PUT 更新后的名称"
+    assert patch_result.default_preview_source_id == camera.sources[1].source_id
+
+    async with session_factory() as reading_session:
+        persisted = await SQLAlchemyCameraRepository(reading_session).get(camera.camera_id)
+    assert persisted is not None
+    assert persisted.name == "PUT 更新后的名称"
+    assert persisted.default_preview_source_id == camera.sources[1].source_id
+    assert persisted.updated_at == NOW.replace(microsecond=2)

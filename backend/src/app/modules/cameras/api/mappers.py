@@ -7,16 +7,30 @@ from app.modules.cameras.api.schemas import (
     CameraPage,
     CameraSourceDetail,
     CameraSummary,
+    DefaultPreviewSourceResponse,
     DefaultPreviewSourceSummary,
 )
 from app.modules.cameras.application import (
     CameraListItemResult,
     CameraListResult,
     CameraRuntimeSummary,
+    SetDefaultPreviewSourceResult,
     summarize_camera_runtime,
 )
 from app.modules.cameras.domain import Camera
 from app.modules.stream_gateway.ports import SourceRuntimeProjection
+
+
+def default_preview_source_from_result(
+    result: SetDefaultPreviewSourceResult,
+) -> DefaultPreviewSourceResponse:
+    """白名单映射默认源写结果，避免完整 Camera 聚合进入非敏感响应。"""
+
+    return DefaultPreviewSourceResponse(
+        camera_id=result.camera_id,
+        default_preview_source_id=result.default_preview_source_id,
+        updated_at=result.updated_at,
+    )
 
 
 def camera_page_from_result(result: CameraListResult) -> CameraPage:

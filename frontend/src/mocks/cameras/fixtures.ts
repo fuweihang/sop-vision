@@ -325,10 +325,14 @@ export function buildCameraUpdateRequest(
 /** 逐字段投影默认预览源写操作的响应，防止敏感 Camera Detail 字段意外泄漏。 */
 export function buildDefaultPreviewSourceResponse(
   detail: CameraDetail = buildCameraDetail(),
+  sourceId: string = detail.default_preview_source_id,
 ): DefaultPreviewSourceResponse {
+  if (!detail.sources.some((source) => source.source_id === sourceId)) {
+    throw new Error("默认预览源响应的 sourceId 必须属于 Camera Detail。");
+  }
   return {
     camera_id: detail.camera_id,
-    default_preview_source_id: detail.default_preview_source_id,
+    default_preview_source_id: sourceId,
     updated_at: detail.updated_at,
   };
 }

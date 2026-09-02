@@ -51,7 +51,7 @@ test("成功场景覆盖六个 Cameras operation", async () => {
   );
   const defaultSource = await setDefaultPreviewSource(
     CAMERA_FIXTURE_IDS.primaryCamera,
-    { source_id: CAMERA_FIXTURE_IDS.primarySource },
+    { source_id: CAMERA_FIXTURE_IDS.secondarySource },
   );
   await deleteCamera(CAMERA_FIXTURE_IDS.primaryCamera);
 
@@ -60,7 +60,7 @@ test("成功场景覆盖六个 Cameras operation", async () => {
   expect(detail.password).toBeDefined();
   expect(updated.source_count).toBe(2);
   expect(defaultSource.default_preview_source_id).toBe(
-    CAMERA_FIXTURE_IDS.primarySource,
+    CAMERA_FIXTURE_IDS.secondarySource,
   );
 });
 
@@ -148,6 +148,39 @@ test("嵌套 422 保留字段路径并通过 Client 严格 Problem 边界", asyn
       code: "DUPLICATE_SOURCE_SUFFIX",
     }),
   ]);
+});
+
+test("默认源 PATCH 场景覆盖所属校验和聚合损坏 500", async () => {
+  useScenario("nested-validation-error");
+  let error = await captureProblem(
+    setDefaultPreviewSource(CAMERA_FIXTURE_IDS.primaryCamera, {
+      source_id: CAMERA_FIXTURE_IDS.tertiarySource,
+    }),
+  );
+  expect(error.problem).toMatchObject({
+    status: 422,
+    code: "VALIDATION_ERROR",
+    errors: [
+      expect.objectContaining({
+        field: "source_id",
+        code: "SOURCE_NOT_OWNED_BY_CAMERA",
+      }),
+    ],
+  });
+
+  mockServer.resetHandlers();
+  useScenario("aggregate-invalid");
+  error = await captureProblem(
+    setDefaultPreviewSource(CAMERA_FIXTURE_IDS.primaryCamera, {
+      source_id: CAMERA_FIXTURE_IDS.secondarySource,
+    }),
+  );
+  expect(error.problem).toMatchObject({
+    status: 500,
+    code: "CAMERA_AGGREGATE_INVALID",
+    context: {},
+  });
+  expect(JSON.stringify(error.problem)).not.toContain(CAMERA_FIXTURE_SECRET);
 });
 
 test.each([
