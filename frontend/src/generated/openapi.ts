@@ -1081,6 +1081,30 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ProblemDetails"];
                 };
             };
+            /** @description HTTP 500 Problem Details */
+            500: {
+                headers: {
+                    /** @description 本次请求的关联 ID；与 Problem body 的 trace_id 相同。 */
+                    "X-Trace-Id"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "INTERNAL_SERVER_ERROR",
+                     *       "context": {},
+                     *       "detail": "请求未能完成。",
+                     *       "errors": [],
+                     *       "instance": "/api/v1/cameras",
+                     *       "status": 500,
+                     *       "title": "服务器内部错误",
+                     *       "trace_id": "tr_openapi_example",
+                     *       "type": "urn:sop-vision:problem:internal-server-error"
+                     *     }
+                     */
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
             /** @description HTTP 503 Problem Details */
             503: {
                 headers: {

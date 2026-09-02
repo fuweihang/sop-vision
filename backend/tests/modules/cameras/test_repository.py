@@ -25,9 +25,12 @@ from app.modules.cameras.application import (
     CameraNotFoundError,
     CreateCameraCommand,
     CreateCameraSourceCommand,
+    UpdateCameraCommand,
+    UpdateCameraSourceCommand,
     create_camera,
     get_camera_detail,
     list_cameras,
+    update_camera,
 )
 from app.modules.cameras.domain import (
     CameraAggregateCorruptedError,
@@ -741,3 +744,150 @@ async def test_camera_delete_serializes_concurrent_save_without_orphan_sources(
 
     await asyncio.wait_for(waiting_save, timeout=3)
     assert await row_counts(session_factory) == (0, 0)
+
+
+async def test_camera_update_use_case_persists_complete_aggregate_before_media(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    """真实 PostgreSQL 完整保存增删改排，且 MediaMTX I/O 开始前事务已经提交。"""
+
+    camera = CameraBuilder().build(source_count=3, id_start=1_100)
+    async with session_factory() as writing_session:
+        writer = SQLAlchemyCameraUnitOfWork(writing_session)
+        await writer.cameras.add(camera)
+        await writer.commit()
+
+    retained = camera.sources[1]
+    new_source_id = uuid4_from_index(1_199)
+    command = UpdateCameraCommand(
+        camera_id=camera.camera_id,
+        name="PostgreSQL 更新结果",
+        ip_address="192.0.2.88",
+        rtsp_port=8554,
+        username="updated-operator",
+        password=CAMERA_LEAK_SENTINEL,
+        sources=(
+            UpdateCameraSourceCommand(
+                source_id=retained.source_id,
+                name="保留 Source",
+                url_suffix="changed/stream",
+                is_default_preview=True,
+            ),
+            UpdateCameraSourceCommand(
+                name="新增 Source",
+                url_suffix="new/stream",
+                is_default_preview=False,
+            ),
+        ),
+    )
+    gateway = FakeStreamGateway(RuntimePathSnapshot(paths=(), checked_at=NOW))
+
+    async with session_factory() as update_session:
+        original_ensure = gateway.ensure_path
+
+        async def ensure_after_commit(desired_source) -> None:
+            # 外部调用不能继续占用 Camera 行锁或数据库连接事务。
+            assert not update_session.in_transaction()
+            await original_ensure(desired_source)
+
+        gateway.ensure_path = ensure_after_commit  # type: ignore[method-assign]
+        result = await update_camera(
+            command,
+            uow=SQLAlchemyCameraUnitOfWork(update_session),
+            stream_gateway=gateway,
+            id_generator=FixedIdGenerator((new_source_id,)),
+            clock=FixedClock(NOW.replace(microsecond=1)),
+        )
+        assert not update_session.in_transaction()
+
+    assert tuple(source.source_id for source in result.camera.sources) == (
+        retained.source_id,
+        new_source_id,
+    )
+    assert tuple(item.source_id for item in gateway.ensure_calls) == (
+        retained.source_id,
+        new_source_id,
+    )
+    assert gateway.release_calls == [camera.sources[0].source_id, camera.sources[2].source_id]
+    async with session_factory() as reading_session:
+        persisted = await SQLAlchemyCameraRepository(reading_session).get(camera.camera_id)
+    assert persisted == result.camera
+    assert await row_counts(session_factory) == (1, 2)
+
+
+async def test_camera_update_use_case_serializes_concurrent_writes_last_commit_wins(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    """两个 PUT 按 Camera 行锁串行，后取得锁的合法写入成为最终数据库状态。"""
+
+    camera = CameraBuilder().build(source_count=2, id_start=1_300)
+    async with session_factory() as writing_session:
+        writer = SQLAlchemyCameraUnitOfWork(writing_session)
+        await writer.cameras.add(camera)
+        await writer.commit()
+
+    def command_with_name(name: str) -> UpdateCameraCommand:
+        return UpdateCameraCommand(
+            camera_id=camera.camera_id,
+            name=name,
+            ip_address=camera.ip_address,
+            rtsp_port=camera.rtsp_port,
+            username=camera.credentials.username,
+            password=camera.credentials.password.reveal(),
+            sources=tuple(
+                UpdateCameraSourceCommand(
+                    source_id=source.source_id,
+                    name=source.name,
+                    url_suffix=source.url_suffix,
+                    is_default_preview=camera.is_default_preview(source.source_id),
+                )
+                for source in camera.sources
+            ),
+        )
+
+    first_reached_commit = asyncio.Event()
+    allow_first_commit = asyncio.Event()
+
+    class BlockingCommitUnitOfWork(SQLAlchemyCameraUnitOfWork):
+        """在持有 Camera 行锁时暂停第一笔事务，确定性验证第二笔等待。"""
+
+        async def commit(self) -> None:
+            first_reached_commit.set()
+            await allow_first_commit.wait()
+            await super().commit()
+
+    async def run_first_update():
+        async with session_factory() as session:
+            return await update_camera(
+                command_with_name("第一笔更新"),
+                uow=BlockingCommitUnitOfWork(session),
+                stream_gateway=FakeStreamGateway(RuntimePathSnapshot(paths=(), checked_at=NOW)),
+                id_generator=FixedIdGenerator(()),
+                clock=FixedClock(NOW.replace(microsecond=1)),
+            )
+
+    async def run_second_update():
+        async with session_factory() as session:
+            return await update_camera(
+                command_with_name("第二笔更新"),
+                uow=SQLAlchemyCameraUnitOfWork(session),
+                stream_gateway=FakeStreamGateway(RuntimePathSnapshot(paths=(), checked_at=NOW)),
+                id_generator=FixedIdGenerator(()),
+                clock=FixedClock(NOW.replace(microsecond=2)),
+            )
+
+    first_task = asyncio.create_task(run_first_update())
+    await asyncio.wait_for(first_reached_commit.wait(), timeout=1)
+    second_task = asyncio.create_task(run_second_update())
+    with pytest.raises(TimeoutError):
+        await asyncio.wait_for(asyncio.shield(second_task), timeout=0.1)
+
+    allow_first_commit.set()
+    first_result, second_result = await asyncio.gather(first_task, second_task)
+    assert first_result.camera.name == "第一笔更新"
+    assert second_result.camera.name == "第二笔更新"
+
+    async with session_factory() as reading_session:
+        persisted = await SQLAlchemyCameraRepository(reading_session).get(camera.camera_id)
+    assert persisted is not None
+    assert persisted.name == "第二笔更新"

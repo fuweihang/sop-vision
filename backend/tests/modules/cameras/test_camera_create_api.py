@@ -186,7 +186,7 @@ async def test_empty_sources_returns_source_required_without_echoing_request(
         {
             "field": "sources",
             "code": "SOURCE_REQUIRED",
-            "detail": "创建 Camera 至少需要一路 Source。",
+            "detail": "Camera 至少需要一路 Source。",
         }
     ]
     assert TEST_PASSWORD not in response.text

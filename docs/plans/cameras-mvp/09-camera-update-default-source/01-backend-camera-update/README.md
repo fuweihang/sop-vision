@@ -51,12 +51,16 @@ Path，并返回 `200 CameraDetail` 和 `Cache-Control: no-store`。
 | 无或多个默认源       | 沿用 Camera 创建的默认源字段错误                  |
 | 只读或未知字段       | 对应字段 / `UNKNOWN_FIELD`                        |
 | 持久化聚合损坏       | `500 CAMERA_AGGREGATE_INVALID`                    |
-| 数据库操作失败       | `503 DATABASE_UNAVAILABLE`                        |
+| 数据库操作不可用     | `503 DATABASE_UNAVAILABLE`                        |
 
 - 空 Source 数组在 HTTP Schema 和直接调用 Domain/Application 时都必须稳定得到
   `SOURCE_REQUIRED`，不能因 Pydantic `minItems` 退化为通用范围错误。
 - Repository 重建聚合失败时，Application 必须结束事务并转换为不携带领域 issues 的
   `CameraAggregateInvalidError`；该分支不得访问 Stream Gateway。
+- `CameraPersistenceOperationError` 沿用 `503 DATABASE_UNAVAILABLE`。无法准确定位到本次请求字段的
+  `CameraConstraintViolationError` 或服务端不变量错误沿用安全 `500 INTERNAL_SERVER_ERROR`；只有
+  Application 能确定请求数组下标时才返回字段级 `422`，不得把所有数据库约束冲突统一改写为
+  `503` 或猜测成用户输入错误。
 - 更新 Router 的公共 `500` 声明，并同步 Backend Schema、受控 OpenAPI、Frontend 生成类型、Client
   类型断言、MSW 与 Fixture。不得公开 Pydantic 原始 input、SQL、参数、约束名或底层异常文本。
 
@@ -71,6 +75,9 @@ Path，并返回 `200 CameraDetail` 和 `Cache-Control: no-store`。
   删除项；单项受支持故障不阻止其余操作。
 - 只捕获 Stream Gateway Port 声明的不可用或无效响应；任务取消和程序缺陷继续传播。媒体故障不能
   回滚或反向修改已提交数据库配置，后台对账负责恢复。
+- 数据库锁在 `commit` 后释放，不跨提交持有行锁等待 MediaMTX。相同 Camera 的并发请求可能让提交后
+  的媒体调用交错并短暂写入旧 Desired State；本任务接受该短暂窗口，由后台对账按最新数据库配置
+  恢复，不增加版本、Outbox、分布式锁或跨实例协调。真实多实例交错验收仍属于任务 11。
 - 即时同步完成后只读取一次 Runtime Path 快照，复用详情的投影和 Camera 状态汇总返回
   `CameraDetail`。受支持的快照故障使用同一次失败完成时间投影，仍返回 `200`。
 - 日志不得记录 Command、Camera/Source 集合、凭据、后缀、Desired State、完整 RTSP URL、远端响应
@@ -94,6 +101,7 @@ Path，并返回 `200 CameraDetail` 和 `Cache-Control: no-store`。
 5. 替换 PUT 占位 handler，注入 UoW、Stream Gateway、IdGenerator 和 Clock，设置 no-store 响应。
 6. 补齐损坏聚合和数据库错误转换，更新 OpenAPI 响应声明、生成类型、Fixture 与契约测试。
 7. 增加领域边界、Application、API、Repository/PostgreSQL 并发、媒体失败和敏感数据回归测试。
+   明确覆盖提交前取消会回滚且零媒体调用，以及提交后媒体阶段取消继续传播且不反向修改数据库。
 
 ## 验证方式
 
@@ -106,6 +114,15 @@ bash scripts/check-cameras-sensitive-data.sh
 uv run --env-file .env.local pytest tests/modules/cameras
 uv run ruff check .
 uv run ruff format --check .
+
+# frontend/
+pnpm exec vitest run \
+  src/features/cameras/api/cameras-api.test.ts \
+  src/mocks/cameras/fixtures.test.ts \
+  src/mocks/cameras/scenarios.test.ts
+pnpm lint
+pnpm format:check
+pnpm build
 ```
 
 PostgreSQL 保存、回滚和并发测试必须配置独立 `TEST_DATABASE_URL`；相关测试被跳过时，本任务不能算
@@ -117,6 +134,7 @@ PostgreSQL 保存、回滚和并发测试必须配置独立 `TEST_DATABASE_URL`�
 - 增删改排、默认源、稳定 ID/时间、所有权和字段错误均按公开路径验证。
 - 已知数据库失败不留下部分修改；同 Camera 并发更新按锁串行，最终数据库状态对应最后完成的合法
   更新。
+- 提交前取消会回滚且不访问媒体；提交后媒体阶段取消会原样传播，已经提交的数据库配置保持不变。
 - 精确媒体 diff、ensure-before-release、单项失败继续、单次快照和媒体降级 `200` 均通过测试。
 - 损坏聚合返回安全 `500` 且零媒体调用；契约、生成类型、Fixture 和敏感数据检查无漂移。
 

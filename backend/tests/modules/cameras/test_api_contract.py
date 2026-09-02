@@ -35,7 +35,7 @@ EXPECTED_CAMERA_OPERATIONS = {
     ),
     ("/api/v1/cameras/{camera_id}", "put"): (
         "updateCamera",
-        {"200", "404", "422", "503"},
+        {"200", "404", "422", "500", "503"},
     ),
     ("/api/v1/cameras/{camera_id}/default-preview-source", "patch"): (
         "setDefaultPreviewSource",
@@ -135,16 +135,19 @@ def test_request_schemas_normalize_fields_and_forbid_unknown_input() -> None:
         CameraUpdateRequest.model_validate(update_without_port)
 
 
-def test_create_sources_keeps_min_items_and_uses_dedicated_empty_error() -> None:
-    """运行时空数组 code 不得以移除 OpenAPI 最小条目约束为代价。"""
+@pytest.mark.parametrize("model", [CameraCreateRequest, CameraUpdateRequest])
+def test_camera_sources_keep_min_items_and_use_dedicated_empty_error(
+    model: type[BaseModel],
+) -> None:
+    """创建与更新的空数组 code 都不能以移除 OpenAPI 最小条目约束为代价。"""
 
-    sources_schema = CameraCreateRequest.model_json_schema()["properties"]["sources"]
+    sources_schema = model.model_json_schema()["properties"]["sources"]
     assert sources_schema["minItems"] == 1
 
-    invalid = _model_example(CameraCreateRequest).copy()
+    invalid = _model_example(model).copy()
     invalid["sources"] = []
     with pytest.raises(ValidationError) as captured:
-        CameraCreateRequest.model_validate(invalid)
+        model.model_validate(invalid)
     safe_errors = captured.value.errors(include_input=False, include_context=False)
     assert [(error["loc"], error["type"]) for error in safe_errors] == [
         (("sources",), "camera_source_required")
@@ -255,7 +258,6 @@ def test_placeholder_handlers_only_raise_not_implemented() -> None:
     report = check_camera_placeholders(GateMode.FOUNDATION)
     assert not report.invalid_handlers
     assert report.placeholders == (
-        "update_camera",
         "set_default_preview_source",
         "delete_camera",
     )

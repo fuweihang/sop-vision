@@ -1,6 +1,6 @@
 """Cameras Router 与完整目标 OpenAPI 契约。
 
-创建和详情 handler 已实现；其余四个 handler 在对应切片落地前继续保持纯
+创建、列表、详情和完整更新 handler 已实现；其余两个 handler 在对应切片落地前继续保持纯
 ``raise NotImplementedError``。全部路径预先注册到真实应用，使 OpenAPI、前端生成类型和 MSW
 共享同一棵路由树；剩余占位的临时 500 不属于声明契约。
 """
@@ -34,10 +34,13 @@ from app.modules.cameras.api.schemas import (
 from app.modules.cameras.application import (
     CreateCameraCommand,
     CreateCameraSourceCommand,
+    UpdateCameraCommand,
+    UpdateCameraSourceCommand,
 )
 from app.modules.cameras.application import create_camera as execute_create_camera
 from app.modules.cameras.application import get_camera_detail as execute_get_camera_detail
 from app.modules.cameras.application import list_cameras as execute_list_cameras
+from app.modules.cameras.application import update_camera as execute_update_camera
 from app.modules.stream_gateway.api.dependencies import StreamGatewayDependency
 
 router = APIRouter()
@@ -207,13 +210,51 @@ async def get_camera(
             [
                 status.HTTP_404_NOT_FOUND,
                 status.HTTP_422_UNPROCESSABLE_CONTENT,
+                status.HTTP_500_INTERNAL_SERVER_ERROR,
                 status.HTTP_503_SERVICE_UNAVAILABLE,
             ]
         ),
     },
 )
-async def update_camera(camera_id: CanonicalUUID4, _request: CameraUpdateRequest) -> CameraDetail:
-    raise NotImplementedError
+async def update_camera(
+    camera_id: CanonicalUUID4,
+    request: CameraUpdateRequest,
+    response: Response,
+    uow: CameraUnitOfWorkDependency,
+    stream_gateway: StreamGatewayDependency,
+    id_generator: CameraIdGeneratorDependency,
+    clock: CameraClockDependency,
+) -> CameraDetail:
+    result = await execute_update_camera(
+        UpdateCameraCommand(
+            camera_id=camera_id,
+            name=request.name,
+            ip_address=request.ip_address,
+            rtsp_port=request.rtsp_port,
+            username=request.username,
+            password=request.password,
+            sources=tuple(
+                UpdateCameraSourceCommand(
+                    source_id=source.source_id,
+                    name=source.name,
+                    url_suffix=source.url_suffix,
+                    is_default_preview=source.is_default_preview,
+                )
+                for source in request.sources
+            ),
+        ),
+        uow=uow,
+        stream_gateway=stream_gateway,
+        id_generator=id_generator,
+        clock=clock,
+    )
+    # CameraDetail 包含密码、Source 后缀和完整 RTSP URL，任何成功更新都禁止缓存。
+    response.headers["Cache-Control"] = "no-store"
+    return camera_detail_from_runtime(
+        result.camera,
+        result.source_runtime,
+        result.runtime_summary,
+    )
 
 
 @router.patch(

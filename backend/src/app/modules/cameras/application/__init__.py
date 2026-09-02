@@ -35,6 +35,12 @@ from app.modules.cameras.application.status import (
     CameraStatus,
     summarize_camera_runtime,
 )
+from app.modules.cameras.application.update import (
+    UpdateCameraCommand,
+    UpdateCameraResult,
+    UpdateCameraSourceCommand,
+    update_camera,
+)
 
 __all__ = [
     "CameraAggregateInvalidError",
@@ -55,8 +61,12 @@ __all__ = [
     "CreateCameraCommand",
     "CreateCameraResult",
     "CreateCameraSourceCommand",
+    "UpdateCameraCommand",
+    "UpdateCameraResult",
+    "UpdateCameraSourceCommand",
     "create_camera",
     "get_camera_detail",
     "list_cameras",
     "summarize_camera_runtime",
+    "update_camera",
 ]

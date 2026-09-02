@@ -68,7 +68,7 @@ def _public_validation_code(error_type: str) -> str:
 
 # detail 采用固定文本，不拼接限制值或原始输入；稳定 code 才是前端业务分支的事实来源。
 _PUBLIC_DETAILS = {
-    "SOURCE_REQUIRED": "创建 Camera 至少需要一路 Source。",
+    "SOURCE_REQUIRED": "Camera 至少需要一路 Source。",
     "UNKNOWN_FIELD": "该字段不受支持。",
     "REQUIRED": "该字段不能为空。",
     "STRING_TOO_LONG": "该字段超过允许的最大长度。",

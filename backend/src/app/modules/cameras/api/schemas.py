@@ -85,8 +85,8 @@ class CameraSourceCreateRequest(_RequestModel):
     is_default_preview: bool
 
 
-def _require_create_sources(value: Any) -> Any:
-    """为空数组生成创建业务专用错误，同时把其他输入交给 Pydantic 正常校验。
+def _require_camera_sources(value: Any) -> Any:
+    """为空数组生成 Camera 业务错误，同时把其他输入交给 Pydantic 正常校验。
 
     自定义错误不附加 ``ctx`` 或原始值；公共转换器只读取错误类型和位置。字段仍保留
     ``min_length=1``，因此 OpenAPI 会继续声明 ``minItems=1``。
@@ -95,14 +95,14 @@ def _require_create_sources(value: Any) -> Any:
     if isinstance(value, (list, tuple)) and not value:
         raise PydanticCustomError(
             "camera_source_required",
-            "创建 Camera 至少需要一路 Source。",
+            "Camera 至少需要一路 Source。",
         )
     return value
 
 
 CameraCreateSources = Annotated[
     list[CameraSourceCreateRequest],
-    BeforeValidator(_require_create_sources),
+    BeforeValidator(_require_camera_sources),
 ]
 
 
@@ -154,6 +154,12 @@ class CameraSourceUpdateRequest(_RequestModel):
     is_default_preview: bool
 
 
+CameraUpdateSources = Annotated[
+    list[CameraSourceUpdateRequest],
+    BeforeValidator(_require_camera_sources),
+]
+
+
 class CameraUpdateRequest(_RequestModel):
     """完整替换 Camera 可变配置与 Source 集合的请求。"""
 
@@ -192,7 +198,7 @@ class CameraUpdateRequest(_RequestModel):
     rtsp_port: int = Field(ge=1, le=65535)
     username: Username
     password: Password
-    sources: list[CameraSourceUpdateRequest] = Field(min_length=1)
+    sources: CameraUpdateSources = Field(min_length=1)
 
 
 class SetDefaultPreviewSourceRequest(_RequestModel):

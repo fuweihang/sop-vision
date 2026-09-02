@@ -52,11 +52,14 @@ class FakeCameraRepository:
         # 详情用例需要覆盖数据库失败、聚合损坏和任务取消，同时保持 Fake 的 get 签名与真实
         # Repository 一致。测试只设置脱敏应用/领域异常，不在这里模拟 SQLAlchemy 异常细节。
         self.get_error: BaseException | None = None
+        # 更新用例需要模拟锁定读取成功但完整保存失败，不能用 get_error 代替这一阶段。
+        self.save_error: BaseException | None = None
         # 列表会先 count 再 list；两个独立注入点可以证明任一数据库阶段失败后都不会访问媒体服务。
         self.count_error: BaseException | None = None
         self.list_error: BaseException | None = None
 
     async def add(self, camera: Camera) -> None:
+        self._operation_log.append(f"repository.add:{camera.camera_id}")
         if camera.camera_id in self._state.cameras:
             raise CameraConstraintViolationError(
                 CameraConstraintViolationKind.CAMERA_ID_ALREADY_EXISTS
@@ -71,6 +74,9 @@ class FakeCameraRepository:
         self._state.cameras[camera.camera_id] = camera
 
     async def save(self, camera: Camera) -> None:
+        self._operation_log.append(f"repository.save:{camera.camera_id}")
+        if self.save_error is not None:
+            raise self.save_error
         stored = self._state.cameras.get(camera.camera_id)
         if stored is None:
             raise CameraNotFoundError(camera.camera_id)
@@ -159,15 +165,17 @@ class FakeStreamGateway:
 
     def __init__(
         self,
-        runtime_observation: RuntimePathSnapshot | Exception,
+        runtime_observation: RuntimePathSnapshot | BaseException,
         *,
         whep_base_url: str = "https://media.example.invalid",
         operation_log: list[str] | None = None,
     ) -> None:
         self.runtime_observation = runtime_observation
         self.whep_base_url = whep_base_url.rstrip("/")
-        self.ensure_failures: dict[UUID, Exception] = {}
+        self.ensure_failures: dict[UUID, BaseException] = {}
+        self.release_failures: dict[UUID, BaseException] = {}
         self.ensure_calls: list[DesiredSource] = []
+        self.release_calls: list[UUID] = []
         self.runtime_snapshot_count = 0
         self.whep_source_ids: list[UUID] = []
         self.operation_log = operation_log
@@ -176,11 +184,13 @@ class FakeStreamGateway:
         if self.operation_log is not None:
             self.operation_log.append("stream_gateway.fetch_runtime_path_snapshot")
         self.runtime_snapshot_count += 1
-        if isinstance(self.runtime_observation, Exception):
+        if isinstance(self.runtime_observation, BaseException):
             raise self.runtime_observation
         return self.runtime_observation
 
     async def ensure_path(self, desired_source: DesiredSource) -> None:
+        if self.operation_log is not None:
+            self.operation_log.append(f"stream_gateway.ensure_path:{desired_source.source_id}")
         self.ensure_calls.append(desired_source)
         failure = self.ensure_failures.get(desired_source.source_id)
         if failure is not None:
@@ -194,8 +204,12 @@ class FakeStreamGateway:
         raise AssertionError("Camera 创建用例不应读取 MediaMTX 配置快照。")
 
     async def release_path(self, source_id: UUID) -> None:
-        del source_id
-        raise AssertionError("Camera 创建用例不应删除 MediaMTX Path。")
+        if self.operation_log is not None:
+            self.operation_log.append(f"stream_gateway.release_path:{source_id}")
+        self.release_calls.append(source_id)
+        failure = self.release_failures.get(source_id)
+        if failure is not None:
+            raise failure
 
 
 def _matches(camera: Camera, criteria: CameraListCriteria) -> bool:
