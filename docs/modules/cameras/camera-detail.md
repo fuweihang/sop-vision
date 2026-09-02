@@ -7,11 +7,12 @@
 
 当前详情能力通过 `GET /api/v1/cameras/{camera_id}` 返回一个 Camera 的完整连接配置、按保存顺序
 排列的 Source，以及同一次 MediaMTX 快照得到的运行状态。Frontend `/cameras/$cameraId` 提供对应的
-只读页面，并沿用应用外壳中的“返回摄像头列表”链接。
+详情页面，并沿用应用外壳中的“返回摄像头列表”链接。
 
 详情页使用 Backend 返回的 `whep_url` 解析并播放当前可用 Source；播放器行为与共享 Session 规则见
-[WHEP 浏览器播放](whep-player.md)。编辑、切换默认源和删除仍是禁用控件，不会产生业务请求。完整
-RTSP URL 只作为可换行的等宽普通文本展示，不是链接，也没有复制按钮或 Clipboard 调用。
+[WHEP 浏览器播放](whep-player.md)。页面支持完整编辑 Camera，Source 表格也可独立切换默认预览源，详细
+见 [Camera 更新与默认预览源](camera-update.md)。删除仍为禁用控件。完整 RTSP URL 只作为可换行的
+等宽普通文本展示，不是链接，也没有复制按钮或 Clipboard 调用。
 
 ## Backend 行为
 
@@ -49,13 +50,13 @@ Runtime Path 快照。这样媒体请求等待期间不会继续占用数据库�
 `503 DATABASE_UNAVAILABLE` 最多自动重试一次，404、422、损坏聚合、意外响应和程序错误不自动
 重试。可信的 `404 CAMERA_NOT_FOUND` 进入专用未找到页面，其他错误进入 Cameras 路由错误页。
 
-只读页面按以下顺序展示：
+详情页面按以下顺序展示：
 
-1. Camera 名称、可用的开始/停止预览按钮，以及禁用的编辑按钮；
+1. Camera 名称、可用的开始/停止预览按钮，以及打开完整编辑 Dialog 的编辑按钮；
 2. 当前 Source 的 16:9 实时播放器和临时 Source Select；
 3. IPv4、端口、用户名、默认隐藏的密码、默认 Source 最近检查时间，以及标题右侧的
    Camera 聚合状态 Badge；
-4. “摄像头视频源”表格，按响应顺序展示禁用的默认源单选控件、名称、完整 RTSP URL 和状态 Badge；
+4. “摄像头视频源”表格，按响应顺序展示可操作的默认源单选控件、名称、完整 RTSP URL 和状态 Badge；
 5. 禁用的删除摄像头按钮。
 
 密码使用固定星号占位，不显示实际长度；用户点击眼睛按钮后可以在当前页面显隐。页面不展示

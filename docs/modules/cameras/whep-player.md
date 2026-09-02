@@ -33,6 +33,8 @@ MediaMTX reader.js → WhepSession → StreamSessionManager → MediaStream
   不发送默认源 PATCH，也不写入 URL、Query cache 或浏览器持久化存储。
 - 临时 Source 在 15 秒详情刷新后仍可播放时继续使用；被删除、离线或失去 WHEP URL 后 release 旧
   Lease，并按最新响应顺序回到第一路可播放 Source。切换可播放 Source 会自动播放新 Stream。
+- 默认源 PATCH 后的详情刷新不改变当前临时 Source；没有临时选择时仍按最新保存顺序的
+  第一路可播放 Source 解析，不会因默认 ID 变化重建 Lease。
 - 用户停止后，详情刷新、Backend 默认源变化和 Source 可用性变化都不会自行恢复预览。停止状态仍可
   切换 Source 和显示模式，播放、刷新与音量控件禁用；再次开始后连接当前已解析的 Source。
 - 页面隐藏时保持 Lease；用户停止、路由离开、Source 改变和组件卸载时 release。

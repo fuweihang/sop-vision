@@ -13,6 +13,7 @@
 
 ## 已记录变更
 
+- [2026-09-02｜Camera 完整更新与默认预览源](2026-09-02-camera-update-default-source.md)
 - [2026-08-24｜Cameras 基础能力](2026-08-24-cameras-foundation.md)
 - [2026-08-26｜MediaMTX 接入契约](2026-08-26-mediamtx-contract.md)
 - [2026-08-27｜Stream Gateway 与媒体对账](2026-08-27-stream-gateway-and-reconciliation.md)

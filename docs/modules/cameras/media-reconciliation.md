@@ -18,6 +18,10 @@ Backend 启动后立即在后台执行首轮对账，之后周期执行，用数
 Camera 创建、更新和删除提交后的即时媒体调用属于各自业务用例。对账不实现 Camera CRUD、运行状态聚合、播放器、
 媒体健康路由、指标框架或事务级 Outbox/Saga。
 
+完整更新在数据库提交后只同步实际变化：新增 Source、Camera 连接字段或 Source 后缀变化
+执行 `ensure_path`，删除 Source 执行 `release_path`；名称、顺序和默认标记变化不重载 Path。单项
+即时同步失败不阻断其余项，也不回滚已提交配置；下一轮对账仍从数据库完整状态重新计算。
+
 ## Desired State 与所有权
 
 每个数据库 Source 生成一项不可变 `DesiredSource`：

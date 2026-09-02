@@ -5,7 +5,10 @@ import {
   type RequestHandler,
 } from "msw";
 
-import type { SetDefaultPreviewSourceRequest } from "@/features/cameras/api/cameras-api";
+import type {
+  CameraUpdateRequest,
+  SetDefaultPreviewSourceRequest,
+} from "@/features/cameras/api/cameras-api";
 import { apiBaseUrl } from "@/lib/api-client";
 import {
   buildCameraDetail,
@@ -132,17 +135,19 @@ export function createCamerasMswScenario(
           ],
         })
       : buildCameraDetail();
+  let configuredDetail = initialDetail;
   let defaultPreviewSourceId = initialDetail.default_preview_source_id;
 
   /**
-   * PATCH 只改变当前场景闭包中的默认 ID。后续 GET 每次重新投影 Detail 和列表摘要，既能模拟
-   * 服务端最终读取结果，又不会把可变状态扩散到其他测试、localStorage 或通用 Mock Store。
+   * PUT 和 PATCH 只改变当前场景闭包中的最小验收状态。后续 GET 每次重新投影
+   * Detail 和列表摘要，既能模拟服务端最终读取结果，又不会把可变状态扩散到
+   * 其他测试、localStorage 或通用 Mock Store。
    */
   function currentDetail() {
     return {
-      ...initialDetail,
+      ...configuredDetail,
       default_preview_source_id: defaultPreviewSourceId,
-      sources: initialDetail.sources.map((source) => ({
+      sources: configuredDetail.sources.map((source) => ({
         ...source,
         is_default_preview: source.source_id === defaultPreviewSourceId,
       })),
@@ -301,7 +306,7 @@ export function createCamerasMswScenario(
       });
     }),
 
-    http.put(cameraUrl, ({ request }) => {
+    http.put(cameraUrl, async ({ request }) => {
       const instance = new URL(request.url).pathname;
       if (scenario === "dependency-unavailable") {
         return unavailableProblem(instance);
@@ -333,6 +338,54 @@ export function createCamerasMswScenario(
           }),
         );
       }
+      const body = (await request.json()) as CameraUpdateRequest;
+      const currentSourcesById = new Map(
+        configuredDetail.sources.map((source) => [source.source_id, source]),
+      );
+      const existingSources = body.sources.flatMap((source) => {
+        const currentSource = source.source_id
+          ? currentSourcesById.get(source.source_id)
+          : undefined;
+
+        /**
+         * 这个可变状态只服务双路既有 Source 的浏览器验收。新增和删除的服务端规则
+         * 已由 Backend 自动化测试覆盖，Mock 不分配 ID，也不复制第二份领域校验。
+         */
+        if (!currentSource) {
+          return [];
+        }
+
+        return [
+          {
+            ...currentSource,
+            name: source.name,
+            url_suffix: source.url_suffix,
+          },
+        ];
+      });
+      const defaultSourceIndex = existingSources.findIndex(
+        (source) =>
+          body.sources.find(
+            (requestSource) => requestSource.source_id === source.source_id,
+          )?.is_default_preview === true,
+      );
+
+      if (existingSources.length > 0 && defaultSourceIndex >= 0) {
+        configuredDetail = buildCameraDetail({
+          cameraId: configuredDetail.camera_id,
+          name: body.name,
+          ipAddress: body.ip_address,
+          rtspPort: body.rtsp_port,
+          username: body.username,
+          password: body.password,
+          sources: existingSources,
+          defaultSourceIndex,
+          createdAt: configuredDetail.created_at,
+          updatedAt: configuredDetail.updated_at,
+        });
+        defaultPreviewSourceId = configuredDetail.default_preview_source_id;
+      }
+
       return jsonResponse(currentDetail(), 200, {
         "Cache-Control": "no-store",
       });
@@ -383,7 +436,7 @@ export function createCamerasMswScenario(
 
       const body = (await request.json()) as SetDefaultPreviewSourceRequest;
       if (
-        !initialDetail.sources.some(
+        !configuredDetail.sources.some(
           (source) => source.source_id === body.source_id,
         )
       ) {

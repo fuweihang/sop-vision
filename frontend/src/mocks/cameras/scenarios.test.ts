@@ -160,6 +160,84 @@ test("默认源 PATCH 后列表与详情 GET 都投影场景闭包中的最新�
   ).toBe(true);
 });
 
+test("PUT 后重新读取保留连接字段、既有 Source 配置和顺序", async () => {
+  useScenario("whep-player");
+  const beforeUpdate = await getCamera(CAMERA_FIXTURE_IDS.primaryCamera);
+  const [primarySource, secondarySource] = beforeUpdate.sources;
+  if (!primarySource || !secondarySource) {
+    throw new Error("双路 WHEP 场景必须提供两路 Source。");
+  }
+
+  await updateCamera(CAMERA_FIXTURE_IDS.primaryCamera, {
+    name: "包装区相机 09",
+    ip_address: "192.0.2.109",
+    rtsp_port: 8554,
+    username: "updated-camera-user",
+    password: "updated-camera-password",
+    sources: [
+      {
+        source_id: secondarySource.source_id,
+        name: "彩条副码流",
+        url_suffix: "Streaming/Channels/202",
+        is_default_preview: true,
+      },
+      {
+        source_id: primarySource.source_id,
+        name: "动态主码流",
+        url_suffix: "Streaming/Channels/201",
+        is_default_preview: false,
+      },
+    ],
+  });
+
+  const [page, detail] = await Promise.all([
+    listCameras(),
+    getCamera(CAMERA_FIXTURE_IDS.primaryCamera),
+  ]);
+  expect(detail).toMatchObject({
+    name: "包装区相机 09",
+    ip_address: "192.0.2.109",
+    rtsp_port: 8554,
+    username: "updated-camera-user",
+    password: "updated-camera-password",
+    default_preview_source_id: secondarySource.source_id,
+  });
+  expect(
+    detail.sources.map((source) => ({
+      source_id: source.source_id,
+      name: source.name,
+      url_suffix: source.url_suffix,
+      status: source.status,
+      whep_url: source.whep_url,
+    })),
+  ).toEqual([
+    {
+      source_id: secondarySource.source_id,
+      name: "彩条副码流",
+      url_suffix: "Streaming/Channels/202",
+      status: secondarySource.status,
+      whep_url: secondarySource.whep_url,
+    },
+    {
+      source_id: primarySource.source_id,
+      name: "动态主码流",
+      url_suffix: "Streaming/Channels/201",
+      status: primarySource.status,
+      whep_url: primarySource.whep_url,
+    },
+  ]);
+  expect(page.items[0]).toMatchObject({
+    name: "包装区相机 09",
+    ip_address: "192.0.2.109",
+    rtsp_port: 8554,
+    default_preview_source: {
+      source_id: secondarySource.source_id,
+      name: "彩条副码流",
+      whep_url: WHEP_TEST_SECONDARY_URL,
+    },
+  });
+});
+
 test("嵌套 422 保留字段路径并通过 Client 严格 Problem 边界", async () => {
   useScenario("nested-validation-error");
   const error = await captureProblem(createCamera(buildCameraCreateRequest()));

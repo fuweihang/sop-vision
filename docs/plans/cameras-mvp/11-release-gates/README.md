@@ -1,6 +1,6 @@
 # 11｜Cameras MVP 发布门禁
 
-> 前置：[Cameras 当前能力](../../../modules/cameras/README.md)与 09–10 全部任务
+> 前置：[Cameras 当前能力](../../../modules/cameras/README.md)与任务 10
 >
 > 交付：真实依赖、端到端故障、安全、浏览器和容量验收；无新公共路由
 
@@ -40,7 +40,8 @@
 - 贴底全宽渐变操作栏的鼠标活动/自动隐藏、触摸、音量浮层、刷新、首帧渲染后才显示的 LIVE 和连接状态通过
   支持浏览器验收；音量浮层可用键盘打开和关闭，Slider 可用键盘调整，焦点始终可见且关闭后正确
   返回触发按钮。Card 保持静音且不显示 Detail controls。
-- 至少一路 Source 可播放时，Detail 不读取 Backend 默认源，按响应顺序选择第一路可播放 Source；
+- 至少一路 Source 可播放时，Detail 不读取 Backend 默认源，按 PUT 保存后的响应顺序选择第一路可播放
+  Source；
   全部 Source 不可播放时不创建 Session，并沿用不可播放展示。默认源只控制 Camera Card。
 - 临时 Source 切换只影响当次 Detail 预览，不发送默认源 PATCH；旧 Lease 释放、新 Lease acquire、
   Source 删除或不可播放后回退、网页全屏与浏览器全屏互斥/退出、模式切换不重建 Session 均通过验收。
