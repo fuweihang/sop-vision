@@ -46,7 +46,7 @@ test("直接 URL 加载详情区域、默认预览和实体 Breadcrumb", async (
   expect(screen.getByRole("heading", { name: "摄像头视频源" })).toBeVisible();
   expect(screen.getByRole("heading", { name: "删除摄像头" })).toBeVisible();
   expect(screen.getByRole("button", { name: "停止预览" })).toBeEnabled();
-  expect(screen.getByRole("button", { name: "编辑摄像头" })).toBeDisabled();
+  expect(screen.getByRole("button", { name: "编辑摄像头" })).toBeEnabled();
   expect(screen.getByRole("button", { name: "删除摄像头" })).toBeDisabled();
 });
 

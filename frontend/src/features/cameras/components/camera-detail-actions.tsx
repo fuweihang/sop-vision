@@ -1,7 +1,11 @@
 import { Edit02Icon, PlayIcon, StopIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
+import type { AxiosInstance } from "axios";
+import { useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import type { CameraDetail } from "@/features/cameras/api/cameras-api";
+import { CameraEditDialog } from "@/features/cameras/components/camera-edit-dialog";
 interface CameraPreviewActionProps {
   available: boolean;
   previewRequested: boolean;
@@ -33,29 +37,33 @@ export function CameraPreviewAction({
 }
 
 export function CameraDetailActions({
+  camera,
+  apiClient,
   available,
   previewRequested,
   onPreviewRequestedChange,
 }: {
+  camera: CameraDetail;
+  apiClient: AxiosInstance;
   available: boolean;
   previewRequested: boolean;
   onPreviewRequestedChange: (requested: boolean) => void;
 }) {
+  const editTriggerRef = useRef<HTMLButtonElement>(null);
+  const [editing, setEditing] = useState(false);
+
   return (
     <>
-      <span id="camera-detail-placeholder-actions" className="sr-only">
-        编辑摄像头功能暂未实现
-      </span>
       <CameraPreviewAction
         available={available}
         previewRequested={previewRequested}
         onPreviewRequestedChange={onPreviewRequestedChange}
       />
       <Button
+        ref={editTriggerRef}
         type="button"
         variant="outline"
-        disabled
-        aria-describedby="camera-detail-placeholder-actions"
+        onClick={() => setEditing(true)}
       >
         <HugeiconsIcon
           icon={Edit02Icon}
@@ -64,6 +72,17 @@ export function CameraDetailActions({
         />
         编辑摄像头
       </Button>
+      {editing ? (
+        <CameraEditDialog
+          camera={camera}
+          apiClient={apiClient}
+          onClosed={() => {
+            setEditing(false);
+            // Dialog 采用外部触发按钮并在关闭后卸载，显式恢复焦点以保持与 Base UI Trigger 一致。
+            requestAnimationFrame(() => editTriggerRef.current?.focus());
+          }}
+        />
+      ) : null}
     </>
   );
 }

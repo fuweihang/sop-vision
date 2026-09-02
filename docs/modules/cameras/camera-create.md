@@ -117,8 +117,8 @@ FastAPI/Pydantic。
   `RadioGroup`、`Button`、`ScrollArea`、`Alert`、`Spinner` 和根级 Sonner，不新增 UI primitive。
 - 使用现有 React Hook Form 与 Zod。初始值包含一路空 Source 且默认选中，`rtsp_port=554`；用户名和
   密码使用合适的 `autocomplete`，密码输入不在错误或通知中回显。
-- Source 新增到末尾且不改变当前默认，顺序固定为添加时的视觉顺序，不提供排序；删除默认源时选择
-  删除后剩余数组的第一项；最后一路不可删除。图标按钮均有可访问名称。
+- Source 新增到末尾且不改变当前默认；用户可以使用上移、下移按钮调整最终保存顺序，首项不能上移、
+  末项不能下移。删除默认源时选择删除后剩余数组的第一项；最后一路不可删除。图标按钮均有可访问名称。
 - Dialog Body 可滚动、Footer 保持可见。提交期间禁用取消、关闭、增删和再次提交，并保留按钮
   尺寸与可感知的加载文案。
 - `422 VALIDATION_ERROR` 使用现有 Problem 字段路径映射到 React Hook Form，保留服务端顺序并聚焦

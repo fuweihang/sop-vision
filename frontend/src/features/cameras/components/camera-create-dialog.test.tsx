@@ -11,6 +11,7 @@ import { expect, test, vi } from "vitest";
 
 // 通过真实 `/cameras` Route 验证 Dialog 组合，避免拆分后只验证孤立子组件。
 
+import type { CameraCreateRequest } from "@/features/cameras/api/cameras-api";
 import { apiBaseUrl } from "@/lib/api-client";
 import { queryClient } from "@/lib/query-client";
 import {
@@ -88,6 +89,12 @@ test("页面保留已加载列表，并由唯一主操作打开 shadcn Dialog", 
     within(dialog).getByRole("button", { name: "删除视频源 1" }),
   ).toBeDisabled();
   expect(
+    within(dialog).getByRole("button", { name: "上移视频源 1" }),
+  ).toBeDisabled();
+  expect(
+    within(dialog).getByRole("button", { name: "下移视频源 1" }),
+  ).toBeDisabled();
+  expect(
     within(dialog).getByText("保存设备连接信息和至少一路视频源。"),
   ).toBeInTheDocument();
   expect(within(dialog).queryByText("连接信息", { exact: true })).toBeNull();
@@ -114,7 +121,7 @@ test("Dialog 打开聚焦首个字段，取消后把焦点还给触发按钮", a
   expect(trigger).toHaveFocus();
 });
 
-test("新增、切换默认和删除 Source 保持添加顺序和默认身份", async () => {
+test("新增、切换默认、排序和删除 Source 保持当前视觉顺序与默认身份", async () => {
   const { user, dialog } = await openDialog();
   const firstName = within(dialog).getAllByLabelText("名称")[0]!;
   const firstSuffix = within(dialog).getAllByLabelText("URL 后缀")[0]!;
@@ -132,15 +139,24 @@ test("新增、切换默认和删除 Source 保持添加顺序和默认身份", 
   expect(
     within(dialog).getByRole("radio", { name: /视频源 2.*当前默认/ }),
   ).toBeChecked();
-  expect(
-    within(dialog).queryByRole("button", { name: /上移视频源/ }),
-  ).toBeNull();
-  expect(
-    within(dialog).queryByRole("button", { name: /下移视频源/ }),
-  ).toBeNull();
 
   await user.click(
-    within(dialog).getByRole("button", { name: "删除视频源 2" }),
+    within(dialog).getByRole("button", { name: "上移视频源 2" }),
+  );
+  expect(within(dialog).getAllByLabelText("名称")[0]).toHaveValue("子码流");
+  expect(within(dialog).getAllByLabelText("名称")[1]).toHaveValue("主码流");
+  expect(
+    within(dialog).getByRole("radio", { name: /视频源 1.*当前默认/ }),
+  ).toBeChecked();
+  expect(
+    within(dialog).getByRole("button", { name: "上移视频源 1" }),
+  ).toBeDisabled();
+  expect(
+    within(dialog).getByRole("button", { name: "下移视频源 2" }),
+  ).toBeDisabled();
+
+  await user.click(
+    within(dialog).getByRole("button", { name: "删除视频源 1" }),
   );
   expect(within(dialog).getAllByTestId("camera-source-editor")).toHaveLength(1);
   expect(within(dialog).getAllByLabelText("名称")[0]).toHaveValue("主码流");
@@ -149,7 +165,7 @@ test("新增、切换默认和删除 Source 保持添加顺序和默认身份", 
   ).toBeChecked();
 });
 
-test("十路 Source 保持在有界滚动 Body 中且不提供排序操作", async () => {
+test("十路 Source 保持在有界滚动 Body 中且排序按钮边界正确", async () => {
   const { user, dialog } = await openDialog();
   const addButton = within(dialog).getByRole("button", { name: "添加视频源" });
 
@@ -161,12 +177,57 @@ test("十路 Source 保持在有界滚动 Body 中且不提供排序操作", asy
     10,
   );
   expect(
-    within(dialog).queryByRole("button", { name: /上移视频源/ }),
-  ).toBeNull();
+    within(dialog).getByRole("button", { name: "上移视频源 1" }),
+  ).toBeDisabled();
   expect(
-    within(dialog).queryByRole("button", { name: /下移视频源/ }),
-  ).toBeNull();
+    within(dialog).getByRole("button", { name: "上移视频源 10" }),
+  ).toBeEnabled();
+  expect(
+    within(dialog).getByRole("button", { name: "下移视频源 1" }),
+  ).toBeEnabled();
+  expect(
+    within(dialog).getByRole("button", { name: "下移视频源 10" }),
+  ).toBeDisabled();
   expect(dialog.querySelector('[data-slot="scroll-area"]')).toBeInTheDocument();
+});
+
+test("重排 Source 后按当前视觉顺序和默认选择提交 POST", async () => {
+  let requestBody: CameraCreateRequest | undefined;
+  mockServer.use(
+    http.post(camerasUrl, async ({ request }) => {
+      requestBody = (await request.json()) as CameraCreateRequest;
+      // 本用例只验证写请求顺序；返回网络失败可让 Dialog 保持打开，也不会留下成功 Toast 影响后续用例。
+      return HttpResponse.error();
+    }),
+  );
+  const { user, dialog } = await openDialog();
+  await fillValidCamera(user);
+  await user.click(within(dialog).getByRole("button", { name: "添加视频源" }));
+  await user.type(within(dialog).getAllByLabelText("名称")[1]!, "子码流");
+  await user.type(
+    within(dialog).getAllByLabelText("URL 后缀")[1]!,
+    "Streaming/Channels/102",
+  );
+  await user.click(
+    within(dialog).getByRole("button", { name: "上移视频源 2" }),
+  );
+  await user.click(within(dialog).getByRole("radio", { name: /视频源 1/ }));
+  await user.click(within(dialog).getByRole("button", { name: "保存摄像头" }));
+
+  await waitFor(() => expect(requestBody).toBeDefined());
+  expect(await within(dialog).findByText("创建结果未知")).toBeInTheDocument();
+  expect(requestBody?.sources).toEqual([
+    {
+      name: "子码流",
+      url_suffix: "Streaming/Channels/102",
+      is_default_preview: true,
+    },
+    {
+      name: "主码流",
+      url_suffix: "Streaming/Channels/101",
+      is_default_preview: false,
+    },
+  ]);
 });
 
 test("提交期间锁定 Dialog、字段和全部写操作，且请求只发送一次", async () => {

@@ -22,21 +22,21 @@ import {
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { fieldErrorMessage } from "@/features/cameras/forms/camera-create-error-mapping";
-import type { CameraCreateFormValues } from "@/features/cameras/forms/camera-create-form";
+import type { CameraEditFormValues } from "@/features/cameras/forms/camera-edit-form";
+import { fieldErrorMessage } from "@/features/cameras/forms/camera-form-errors";
 
-type CameraSourceField = FieldArrayWithId<
-  CameraCreateFormValues,
+type CameraEditSourceField = FieldArrayWithId<
+  CameraEditFormValues,
   "sources",
   "id"
 >;
 
-interface CameraCreateSourceFieldsProps {
+interface CameraEditSourceFieldsProps {
   readonly formId: string;
-  readonly fields: readonly CameraSourceField[];
-  readonly sources: CameraCreateFormValues["sources"];
-  readonly register: UseFormRegister<CameraCreateFormValues>;
-  readonly errors: FieldErrors<CameraCreateFormValues>;
+  readonly fields: readonly CameraEditSourceField[];
+  readonly sources: CameraEditFormValues["sources"];
+  readonly register: UseFormRegister<CameraEditFormValues>;
+  readonly errors: FieldErrors<CameraEditFormValues>;
   readonly defaultSourceFieldId: string | undefined;
   readonly disabled: boolean;
   readonly onAddSource: () => void;
@@ -45,13 +45,8 @@ interface CameraCreateSourceFieldsProps {
   readonly onDefaultSourceChange: (fieldId: string) => void;
 }
 
-/**
- * Source 编辑器只呈现父 Dialog 已拥有的 Field Array。
- *
- * 新增 Source 先追加到列表末尾；上移、下移通过 React Hook Form 的 `move` 调整数组，因此界面顺序
- * 会直接成为最终 POST 顺序，同时默认 Source 身份会跟随整行移动。
- */
-export function CameraCreateSourceFields({
+/** 完整编辑使用稳定 Backend ID，排序按钮只移动 Field Array 行，不重建 Source 身份。 */
+export function CameraEditSourceFields({
   formId,
   fields,
   sources,
@@ -63,7 +58,7 @@ export function CameraCreateSourceFields({
   onRemoveSource,
   onMoveSource,
   onDefaultSourceChange,
-}: CameraCreateSourceFieldsProps) {
+}: CameraEditSourceFieldsProps) {
   const sourceRootError = fieldErrorMessage(errors.sources?.message);
 
   return (
@@ -105,12 +100,15 @@ export function CameraCreateSourceFields({
           const defaultError = fieldErrorMessage(
             sourceErrors?.is_default_preview?.message,
           );
+          const sourceIdError = fieldErrorMessage(
+            sourceErrors?.source_id?.message,
+          );
 
           return (
             <FieldSet
               key={sourceField.id}
               className="grid min-w-0 grid-cols-[1.25rem_minmax(0,1fr)_auto] items-start gap-2 sm:grid-cols-[1.25rem_minmax(9rem,0.7fr)_minmax(12rem,1.3fr)_auto]"
-              data-testid="camera-source-editor"
+              data-testid="camera-edit-source-editor"
             >
               <FieldLegend className="sr-only">
                 视频源 {index + 1} 配置
@@ -123,12 +121,18 @@ export function CameraCreateSourceFields({
                   sources[index]?.is_default_preview ? "（当前默认）" : ""
                 }`}
                 aria-invalid={defaultError !== undefined}
-                data-camera-create-field={`sources.${index}.is_default_preview`}
+                data-camera-edit-field={`sources.${index}.is_default_preview`}
               />
               <input
                 type="hidden"
                 {...register(`sources.${index}.is_default_preview`)}
               />
+              {sourceField.source_id === undefined ? null : (
+                <input
+                  type="hidden"
+                  {...register(`sources.${index}.source_id`)}
+                />
+              )}
 
               <Field
                 className="col-start-2 row-start-1 min-w-0"
@@ -147,7 +151,7 @@ export function CameraCreateSourceFields({
                   autoComplete="off"
                   disabled={disabled}
                   aria-invalid={sourceErrors?.name !== undefined}
-                  data-camera-create-field={`sources.${index}.name`}
+                  data-camera-edit-field={`sources.${index}.name`}
                   {...register(`sources.${index}.name`)}
                 />
                 <FieldError>
@@ -172,7 +176,7 @@ export function CameraCreateSourceFields({
                   autoComplete="off"
                   disabled={disabled}
                   aria-invalid={sourceErrors?.url_suffix !== undefined}
-                  data-camera-create-field={`sources.${index}.url_suffix`}
+                  data-camera-edit-field={`sources.${index}.url_suffix`}
                   {...register(`sources.${index}.url_suffix`)}
                 />
                 <FieldError>
@@ -227,6 +231,11 @@ export function CameraCreateSourceFields({
               {defaultError === undefined ? null : (
                 <FieldError className="col-span-full">
                   {defaultError}
+                </FieldError>
+              )}
+              {sourceIdError === undefined ? null : (
+                <FieldError className="col-span-full">
+                  {sourceIdError}
                 </FieldError>
               )}
             </FieldSet>

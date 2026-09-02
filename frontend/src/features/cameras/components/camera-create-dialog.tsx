@@ -8,7 +8,7 @@ import { useFieldArray, useForm, useWatch } from "react-hook-form";
 import { toast } from "sonner";
 
 import { createCamera } from "@/features/cameras/api/cameras-api";
-import { CameraCreateConnectionFields } from "@/features/cameras/components/camera-create-connection-fields";
+import { CameraConnectionFields } from "@/features/cameras/components/camera-connection-fields";
 import { CameraCreateSourceFields } from "@/features/cameras/components/camera-create-source-fields";
 import {
   mapCameraCreateFailure,
@@ -23,6 +23,7 @@ import {
   type CameraCreateFormValues,
   type ValidatedCameraCreateFormValues,
 } from "@/features/cameras/forms/camera-create-form";
+import { fieldErrorMessage } from "@/features/cameras/forms/camera-form-errors";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
@@ -57,7 +58,7 @@ export function CameraCreateDialog({ apiClient }: CameraCreateDialogProps) {
     resolver: zodResolver(cameraCreateFormSchema),
     defaultValues: CAMERA_CREATE_DEFAULT_VALUES,
   });
-  const { fields, append, remove } = useFieldArray({
+  const { fields, append, remove, move } = useFieldArray({
     control: form.control,
     name: "sources",
   });
@@ -134,7 +135,7 @@ export function CameraCreateDialog({ apiClient }: CameraCreateDialogProps) {
   function focusMappedField(fieldName: CameraCreateFieldName) {
     requestAnimationFrame(() => {
       const target = document.querySelector<HTMLElement>(
-        `[data-camera-create-field="${fieldName}"]`,
+        `[data-camera-form-field="${fieldName}"], [data-camera-create-field="${fieldName}"]`,
       );
       target?.focus();
     });
@@ -235,11 +236,34 @@ export function CameraCreateDialog({ apiClient }: CameraCreateDialogProps) {
               </Alert>
             )}
 
-            <CameraCreateConnectionFields
+            <CameraConnectionFields
               formId={formId}
-              register={form.register}
-              errors={form.formState.errors}
+              registrations={{
+                name: form.register("name"),
+                ip_address: form.register("ip_address"),
+                rtsp_port: form.register("rtsp_port", {
+                  valueAsNumber: true,
+                }),
+                username: form.register("username"),
+                password: form.register("password"),
+              }}
+              errors={{
+                name: fieldErrorMessage(form.formState.errors.name?.message),
+                ip_address: fieldErrorMessage(
+                  form.formState.errors.ip_address?.message,
+                ),
+                rtsp_port: fieldErrorMessage(
+                  form.formState.errors.rtsp_port?.message,
+                ),
+                username: fieldErrorMessage(
+                  form.formState.errors.username?.message,
+                ),
+                password: fieldErrorMessage(
+                  form.formState.errors.password?.message,
+                ),
+              }}
               disabled={isSubmitting}
+              passwordAutoComplete="new-password"
             />
 
             <Separator />
@@ -254,6 +278,7 @@ export function CameraCreateDialog({ apiClient }: CameraCreateDialogProps) {
               disabled={isSubmitting}
               onAddSource={() => append(createEmptyCameraSource(false))}
               onRemoveSource={removeSource}
+              onMoveSource={move}
               onDefaultSourceChange={setDefaultSource}
             />
           </form>

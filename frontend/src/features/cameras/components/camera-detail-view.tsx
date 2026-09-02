@@ -1,6 +1,7 @@
 import { AlertCircleIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { useState } from "react";
+import type { AxiosInstance } from "axios";
 
 import { PageContainer } from "@/components/layout/page-container";
 import { PageHeader } from "@/components/layout/page-header";
@@ -19,13 +20,16 @@ import {
   type CameraPreviewSelection,
 } from "@/features/cameras/components/camera-preview-selection";
 import { CameraSources } from "@/features/cameras/components/camera-sources";
+import { apiClient as defaultApiClient } from "@/lib/api-client";
 
 /** 当前页独立保存开始/停止意图和临时 Source，详情刷新不会覆盖这两类用户选择。 */
 function CameraDetailContent({
   camera,
+  apiClient,
   defaultSource,
 }: {
   camera: CameraDetail;
+  apiClient: AxiosInstance;
   defaultSource: CameraSourceDetail;
 }) {
   const [previewRequested, setPreviewRequested] = useState(true);
@@ -50,6 +54,8 @@ function CameraDetailContent({
         description="摄像头连接信息与实时预览"
         actions={
           <CameraDetailActions
+            camera={camera}
+            apiClient={apiClient}
             available={preview.source !== null}
             previewRequested={previewRequested}
             onPreviewRequestedChange={setPreviewRequested}
@@ -82,7 +88,13 @@ function CameraDetailContent({
  * Camera 详情组合入口管理默认 Source 校验、预览意图和当前页临时 Source。连接信息、Source 表格、
  * 页面 actions 与删除区域各自在相邻组件中维护。
  */
-export function CameraDetailView({ camera }: { camera: CameraDetail }) {
+export function CameraDetailView({
+  camera,
+  apiClient = defaultApiClient,
+}: {
+  camera: CameraDetail;
+  apiClient?: AxiosInstance;
+}) {
   const defaultSource = findCameraDefaultSource(camera);
 
   if (defaultSource === undefined) {
@@ -109,6 +121,7 @@ export function CameraDetailView({ camera }: { camera: CameraDetail }) {
     <CameraDetailContent
       key={camera.camera_id}
       camera={camera}
+      apiClient={apiClient}
       defaultSource={defaultSource}
     />
   );

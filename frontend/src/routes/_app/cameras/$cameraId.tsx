@@ -76,7 +76,7 @@ function CameraDetailPage() {
     cameraDetailQueryOptions(cameraId, apiClient),
   );
 
-  return <CameraDetailView camera={camera} />;
+  return <CameraDetailView camera={camera} apiClient={apiClient} />;
 }
 
 function CameraNotFound() {

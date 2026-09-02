@@ -1,4 +1,4 @@
-import type { FieldErrors, UseFormRegister } from "react-hook-form";
+import type { UseFormRegisterReturn } from "react-hook-form";
 
 import {
   Field,
@@ -7,28 +7,41 @@ import {
   FieldLabel,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { fieldErrorMessage } from "@/features/cameras/forms/camera-create-error-mapping";
-import type { CameraCreateFormValues } from "@/features/cameras/forms/camera-create-form";
 
-interface CameraCreateConnectionFieldsProps {
+type CameraConnectionFieldName =
+  "name" | "ip_address" | "rtsp_port" | "username" | "password";
+
+type CameraConnectionRegistrations = {
+  readonly name: UseFormRegisterReturn<"name">;
+  readonly ip_address: UseFormRegisterReturn<"ip_address">;
+  readonly rtsp_port: UseFormRegisterReturn<"rtsp_port">;
+  readonly username: UseFormRegisterReturn<"username">;
+  readonly password: UseFormRegisterReturn<"password">;
+};
+
+interface CameraConnectionFieldsProps {
   readonly formId: string;
-  readonly register: UseFormRegister<CameraCreateFormValues>;
-  readonly errors: FieldErrors<CameraCreateFormValues>;
+  readonly registrations: CameraConnectionRegistrations;
+  readonly errors: Readonly<
+    Record<CameraConnectionFieldName, string | undefined>
+  >;
   readonly disabled: boolean;
+  readonly passwordAutoComplete: "current-password" | "new-password";
 }
 
 /**
- * Camera 连接字段只负责渲染和注册控件。
+ * 创建和编辑共用的连接字段视图。
  *
- * 表单生命周期、提交和错误分类仍由父 Dialog 管理；这里接收显式依赖，避免子组件创建第二份表单
- * 状态。凭据字段保持原 autocomplete 和错误展示方式，不在组件内读取或复制用户输入。
+ * 调用方传入已经绑定到自己 DTO 的注册结果，因此该组件不会让 Create 表单接受 Update Source 字段，
+ * 也不会创建第二份 React Hook Form 状态。
  */
-export function CameraCreateConnectionFields({
+export function CameraConnectionFields({
   formId,
-  register,
+  registrations,
   errors,
   disabled,
-}: CameraCreateConnectionFieldsProps) {
+  passwordAutoComplete,
+}: CameraConnectionFieldsProps) {
   return (
     <FieldGroup className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2">
       <Field
@@ -43,10 +56,10 @@ export function CameraCreateConnectionFields({
           autoComplete="off"
           disabled={disabled}
           aria-invalid={errors.name !== undefined}
-          data-camera-create-field="name"
-          {...register("name")}
+          data-camera-form-field="name"
+          {...registrations.name}
         />
-        <FieldError>{fieldErrorMessage(errors.name?.message)}</FieldError>
+        <FieldError>{errors.name}</FieldError>
       </Field>
 
       <Field
@@ -60,10 +73,10 @@ export function CameraCreateConnectionFields({
           autoComplete="off"
           disabled={disabled}
           aria-invalid={errors.ip_address !== undefined}
-          data-camera-create-field="ip_address"
-          {...register("ip_address")}
+          data-camera-form-field="ip_address"
+          {...registrations.ip_address}
         />
-        <FieldError>{fieldErrorMessage(errors.ip_address?.message)}</FieldError>
+        <FieldError>{errors.ip_address}</FieldError>
       </Field>
 
       <Field
@@ -80,10 +93,10 @@ export function CameraCreateConnectionFields({
           autoComplete="off"
           disabled={disabled}
           aria-invalid={errors.rtsp_port !== undefined}
-          data-camera-create-field="rtsp_port"
-          {...register("rtsp_port", { valueAsNumber: true })}
+          data-camera-form-field="rtsp_port"
+          {...registrations.rtsp_port}
         />
-        <FieldError>{fieldErrorMessage(errors.rtsp_port?.message)}</FieldError>
+        <FieldError>{errors.rtsp_port}</FieldError>
       </Field>
 
       <Field
@@ -96,10 +109,10 @@ export function CameraCreateConnectionFields({
           autoComplete="username"
           disabled={disabled}
           aria-invalid={errors.username !== undefined}
-          data-camera-create-field="username"
-          {...register("username")}
+          data-camera-form-field="username"
+          {...registrations.username}
         />
-        <FieldError>{fieldErrorMessage(errors.username?.message)}</FieldError>
+        <FieldError>{errors.username}</FieldError>
       </Field>
 
       <Field
@@ -110,13 +123,13 @@ export function CameraCreateConnectionFields({
         <Input
           id={`${formId}-password`}
           type="password"
-          autoComplete="new-password"
+          autoComplete={passwordAutoComplete}
           disabled={disabled}
           aria-invalid={errors.password !== undefined}
-          data-camera-create-field="password"
-          {...register("password")}
+          data-camera-form-field="password"
+          {...registrations.password}
         />
-        <FieldError>{fieldErrorMessage(errors.password?.message)}</FieldError>
+        <FieldError>{errors.password}</FieldError>
       </Field>
     </FieldGroup>
   );

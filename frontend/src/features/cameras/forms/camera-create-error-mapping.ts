@@ -1,6 +1,7 @@
 import type { FieldPath } from "react-hook-form";
 
 import type { CameraCreateFormValues } from "@/features/cameras/forms/camera-create-form";
+import { fieldErrorMessage } from "@/features/cameras/forms/camera-form-errors";
 import {
   ApiProblemError,
   ApiTransportError,
@@ -95,10 +96,7 @@ function unknownResultAlert(): CameraCreateFormAlert {
   };
 }
 
-/** React Hook Form 的错误消息类型较宽；UI 只显示经过验证的文本。 */
-export function fieldErrorMessage(message: unknown) {
-  return typeof message === "string" ? message : undefined;
-}
+export { fieldErrorMessage };
 
 /**
  * 把已经脱敏的 API 错误转换为创建表单可以安全消费的结果。
