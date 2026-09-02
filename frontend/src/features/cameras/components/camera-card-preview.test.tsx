@@ -3,6 +3,7 @@ import { expect, test, vi } from "vitest";
 
 import type { CameraDefaultPreviewSource } from "@/features/cameras/api/cameras-api";
 import { CameraCardPreview } from "@/features/cameras/components/camera-card-preview";
+import { CameraDetailPlayer } from "@/features/cameras/components/camera-detail-player";
 import { renderWithStreamSession } from "@/features/cameras/testing/render-with-stream-session";
 import {
   buildCameraDetail,
@@ -126,7 +127,7 @@ test("首帧等待十秒后停止 loading 并显示画面超时", async () => {
   }
 });
 
-test("非媒体字段刷新保留 Lease，URL 改变或变空时切换并释放", async () => {
+test("非媒体字段刷新保留 Lease，ID、URL 改变或变空时切换并释放", async () => {
   const initialSource = buildPreviewSource();
   const result = renderWithStreamSession(
     <CameraCardPreview source={initialSource} />,
@@ -151,12 +152,76 @@ test("非媒体字段刷新保留 Lease，URL 改变或变空时切换并释放"
   expect(result.fakeStreamSessions[0]?.closeCount).toBe(1);
   expect(result.streamSessionManager.activeSessionCount).toBe(1);
 
+  const changedIdSource: CameraDefaultPreviewSource = {
+    ...changedUrlSource,
+    source_id: "91b74192-2d6b-4f24-8d31-7706421f8751",
+  };
+  result.rerender(<CameraCardPreview source={changedIdSource} />);
+  await waitFor(() => expect(result.fakeStreamSessions).toHaveLength(3));
+  expect(result.fakeStreamSessions[1]?.closeCount).toBe(1);
+  expect(result.streamSessionManager.activeSessionCount).toBe(1);
+
   result.rerender(
-    <CameraCardPreview source={{ ...changedUrlSource, whep_url: null }} />,
+    <CameraCardPreview source={{ ...changedIdSource, whep_url: null }} />,
   );
   expect(screen.queryByLabelText("实时视频")).toBeNull();
   await act(() => Promise.resolve());
-  expect(result.fakeStreamSessions[1]?.closeCount).toBe(1);
+  expect(result.fakeStreamSessions[2]?.closeCount).toBe(1);
+  expect(result.streamSessionManager.activeSessionCount).toBe(0);
+});
+
+test("Card 与 Detail 同源时共享 Session，逐个释放后才关闭", async () => {
+  installMediaElementMocks();
+  const camera = buildCameraDetail({ sources: [{ status: "ONLINE" }] });
+  const source = (() => {
+    const firstSource = camera.sources[0];
+    if (firstSource === undefined) {
+      throw new Error("测试 Camera 缺少默认 Source。");
+    }
+    return firstSource;
+  })();
+  const summarySource = buildCameraSummary(camera).default_preview_source;
+
+  function SharedConsumers({
+    showCard,
+    showDetail,
+  }: {
+    showCard: boolean;
+    showDetail: boolean;
+  }) {
+    return (
+      <>
+        {showCard ? (
+          <CameraCardPreview key="card" source={summarySource} />
+        ) : null}
+        {showDetail ? (
+          <CameraDetailPlayer
+            key="detail"
+            sources={camera.sources}
+            source={source}
+            previewRequested
+            onSourceChange={vi.fn()}
+          />
+        ) : null}
+      </>
+    );
+  }
+
+  const result = renderWithStreamSession(
+    <SharedConsumers showCard showDetail />,
+  );
+  await waitFor(() => expect(result.fakeStreamSessions).toHaveLength(1));
+  expect(screen.getAllByLabelText("实时视频")).toHaveLength(2);
+  expect(result.streamSessionManager.activeSessionCount).toBe(1);
+
+  result.rerender(<SharedConsumers showCard={false} showDetail />);
+  await act(() => Promise.resolve());
+  expect(result.fakeStreamSessions[0]?.closeCount).toBe(0);
+  expect(result.streamSessionManager.activeSessionCount).toBe(1);
+
+  result.rerender(<SharedConsumers showCard={false} showDetail={false} />);
+  await act(() => Promise.resolve());
+  expect(result.fakeStreamSessions[0]?.closeCount).toBe(1);
   expect(result.streamSessionManager.activeSessionCount).toBe(0);
 });
 

@@ -135,6 +135,31 @@ test("whep-player 场景为两路 Source 提供固定且不同的浏览器播放
   ]);
 });
 
+test("默认源 PATCH 后列表与详情 GET 都投影场景闭包中的最新默认 ID", async () => {
+  useScenario("success");
+
+  await setDefaultPreviewSource(CAMERA_FIXTURE_IDS.primaryCamera, {
+    source_id: CAMERA_FIXTURE_IDS.secondarySource,
+  });
+  const [page, detail] = await Promise.all([
+    listCameras(),
+    getCamera(CAMERA_FIXTURE_IDS.primaryCamera),
+  ]);
+
+  expect(page.items[0]?.default_preview_source).toMatchObject({
+    source_id: CAMERA_FIXTURE_IDS.secondarySource,
+    whep_url: null,
+  });
+  expect(detail.default_preview_source_id).toBe(
+    CAMERA_FIXTURE_IDS.secondarySource,
+  );
+  expect(
+    detail.sources.find(
+      (source) => source.source_id === CAMERA_FIXTURE_IDS.secondarySource,
+    )?.is_default_preview,
+  ).toBe(true);
+});
+
 test("嵌套 422 保留字段路径并通过 Client 严格 Problem 边界", async () => {
   useScenario("nested-validation-error");
   const error = await captureProblem(createCamera(buildCameraCreateRequest()));

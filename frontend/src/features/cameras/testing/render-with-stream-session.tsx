@@ -1,3 +1,4 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, type RenderOptions } from "@testing-library/react";
 import { type ReactNode, StrictMode } from "react";
 
@@ -19,6 +20,12 @@ export function renderWithStreamSession(
   const { strict = false, ...renderOptions } = options ?? {};
   const fakeStreamSessions: FakeStreamSession[] = [];
   const acquiredWhepUrls: string[] = [];
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: { retry: false },
+      mutations: { retry: false },
+    },
+  });
   const streamSessionManager = new StreamSessionManager((whepUrl) => {
     acquiredWhepUrls.push(whepUrl);
     const session = new FakeStreamSession();
@@ -27,9 +34,11 @@ export function renderWithStreamSession(
   });
   function StreamSessionTestWrapper({ children }: { children: ReactNode }) {
     const content = (
-      <StreamSessionProvider manager={streamSessionManager}>
-        <TooltipProvider>{children}</TooltipProvider>
-      </StreamSessionProvider>
+      <QueryClientProvider client={queryClient}>
+        <StreamSessionProvider manager={streamSessionManager}>
+          <TooltipProvider>{children}</TooltipProvider>
+        </StreamSessionProvider>
+      </QueryClientProvider>
     );
     return strict ? <StrictMode>{content}</StrictMode> : content;
   }
@@ -43,6 +52,7 @@ export function renderWithStreamSession(
     ...result,
     acquiredWhepUrls,
     fakeStreamSessions,
+    queryClient,
     streamSessionManager,
   };
 }

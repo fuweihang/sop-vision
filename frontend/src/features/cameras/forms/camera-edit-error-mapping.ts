@@ -1,10 +1,8 @@
 import type { FieldPath } from "react-hook-form";
 
 import type { CameraEditFormValues } from "@/features/cameras/forms/camera-edit-form";
+import { classifyCameraWriteFailure } from "@/features/cameras/api/camera-write-failure";
 import {
-  ApiProblemError,
-  ApiTransportError,
-  ApiUnexpectedResponseError,
   mapProblemFieldErrors,
   type ParsedProblemFieldPath,
   type ProblemFieldError,
@@ -123,19 +121,14 @@ export function mapCameraEditFailure(
   error: unknown,
   sourceCount: number,
 ): CameraEditFailure {
-  if (
-    error instanceof ApiTransportError ||
-    error instanceof ApiUnexpectedResponseError
-  ) {
+  const classification = classifyCameraWriteFailure(error);
+
+  if (classification.kind === "unknown") {
     return { kind: "alert", formAlert: unknownResultAlert() };
   }
 
-  if (
-    error instanceof ApiProblemError &&
-    error.problem.status === 422 &&
-    error.problem.code === "VALIDATION_ERROR"
-  ) {
-    const mapping = mapProblemFieldErrors(error.problem);
+  if (classification.kind === "validation") {
+    const mapping = mapProblemFieldErrors(classification.problem);
     const formMessages = mapping.form.map((item) => item.detail);
     const fieldErrors: CameraEditFieldError[] = [];
 
@@ -158,34 +151,17 @@ export function mapCameraEditFailure(
     };
   }
 
-  if (
-    error instanceof ApiProblemError &&
-    error.problem.status === 404 &&
-    error.problem.code === "CAMERA_NOT_FOUND"
-  ) {
+  if (classification.kind === "camera-not-found") {
     return {
       kind: "alert",
       formAlert: problemAlert("未能更新摄像头", ["该摄像头不存在或已被删除。"]),
     };
   }
 
-  if (
-    error instanceof ApiProblemError &&
-    error.problem.status === 500 &&
-    error.problem.code === "CAMERA_AGGREGATE_INVALID"
-  ) {
-    return {
-      kind: "alert",
-      formAlert: problemAlert("未能更新摄像头", [
-        "当前摄像头配置无效，请联系管理员检查服务端数据。",
-      ]),
-    };
-  }
-
-  if (error instanceof ApiProblemError) {
-    // 除三类确定失败外，可信 Problem 也不能证明数据库没有提交；未知 4xx 同样属于操作契约之外。
-    return { kind: "alert", formAlert: unknownResultAlert() };
-  }
-
-  throw error;
+  return {
+    kind: "alert",
+    formAlert: problemAlert("未能更新摄像头", [
+      "当前摄像头配置无效，请联系管理员检查服务端数据。",
+    ]),
+  };
 }

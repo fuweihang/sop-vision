@@ -198,3 +198,32 @@ test("whep_url 缺失时不 acquire，入口恢复后按现有预览意图开始
   expect(result.streamSessionManager.activeSessionCount).toBe(1);
   expect(screen.getByRole("toolbar", { name: "视频操作" })).toBeInTheDocument();
 });
+
+test("只有 Source ID 或 WHEP URL 变化才切换详情 Lease", async () => {
+  const source = getDefaultSource();
+  const result = renderWithStreamSession(player(source, true));
+  await waitFor(() => expect(result.fakeStreamSessions).toHaveLength(1));
+
+  const renamedSource = { ...source, name: "刷新后的显示名称" };
+  result.rerender(player(renamedSource, true));
+  await act(() => Promise.resolve());
+  expect(result.fakeStreamSessions).toHaveLength(1);
+  expect(result.fakeStreamSessions[0]?.closeCount).toBe(0);
+
+  const changedUrlSource = {
+    ...renamedSource,
+    whep_url: "https://media.example.invalid/detail-changed/whep",
+  };
+  result.rerender(player(changedUrlSource, true));
+  await waitFor(() => expect(result.fakeStreamSessions).toHaveLength(2));
+  expect(result.fakeStreamSessions[0]?.closeCount).toBe(1);
+
+  const changedIdSource = {
+    ...changedUrlSource,
+    source_id: "91b74192-2d6b-4f24-8d31-7706421f8751",
+  };
+  result.rerender(player(changedIdSource, true));
+  await waitFor(() => expect(result.fakeStreamSessions).toHaveLength(3));
+  expect(result.fakeStreamSessions[1]?.closeCount).toBe(1);
+  expect(result.streamSessionManager.activeSessionCount).toBe(1);
+});

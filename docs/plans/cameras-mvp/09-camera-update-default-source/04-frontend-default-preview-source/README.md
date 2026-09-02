@@ -18,6 +18,12 @@
   `resolveCameraPreviewSource` 已区分 `{kind: "default"}` 与 `{kind: "temporary"}`，详情和
   Card 已通过 `source_id+whep_url` 使用共享 Stream Session Manager。
 - `setDefaultPreviewSource` Client 和响应类型已存在；任务 02 已交付真实 Backend handler。
+- 任务 03 当前只有表单专用的 `mapCameraEditFailure`，尚无可直接供 PATCH 使用的公共分类函数。本任务
+  可以提取一个只区分 `camera-not-found/validation/aggregate-invalid/unknown` 的 Camera 写错误纯函数，
+  并让 PUT/PATCH 映射共同使用；不得把表单提示、字段定位或 Mutation 生命周期抽成通用写框架。
+- 现有 Cameras MSW 场景的 GET 返回固定 Fixture，PATCH 成功不会改变后续列表和详情响应；
+  `whep-player` 的两路 Source 也都在线。浏览器冒烟前必须在现有场景闭包内补齐最小默认 ID 状态，
+  分别用 `whep-player` 验证双路画面、用 `success` 的既有离线 Source 验证不可预览，不新增媒体源。
 
 ## 实施范围
 
@@ -26,13 +32,17 @@
 - 启用 Source 表格 RadioGroup。在线、离线或没有 `whep_url` 的 Source 都可选，因为默认配置不依赖
   当前媒体状态。
 - 单选不做乐观更新；发请求后继续显示提交前的默认 ID，并禁用全部单选项，防止并发 PATCH。
-- Mutation `retry=false`。成功后显示可感知反馈，并失效 `cameras` 前缀与当前 `camera`，由最新
-  列表和详情响应决定最终 UI。
+- Mutation `retry=false`、`gcTime=0`，Mutation function 不向状态返回 PATCH 响应，结束后立即 reset。
+  成功后显示成功 Toast，并以 `refetchType: "all"` 失效 `cameras` 前缀与当前 `camera`，确保详情页
+  inactive 的列表分页也重新读取；最终 UI 只由最新列表和详情响应决定。
 - `404 CAMERA_NOT_FOUND`、`422 VALIDATION_ERROR` 和
   `500 CAMERA_AGGREGATE_INVALID` 作为确定失败，恢复可操作状态并继续显示旧默认 ID。
 - Transport、意外/不符合契约的响应、`503 DATABASE_UNAVAILABLE` 和其他服务端 `5xx` 作为结果
   未知。不自动重发、不保留错误的乐观结果；立即失效并重新获取列表和当前详情，用服务端最新读取
-  结果确认默认 ID。重新读取失败时持续显示结果未知。
+  结果确认默认 ID。当前详情重新读取成功后清除结果未知提示；详情重新读取失败时持续显示结果未知，
+  不因列表重新读取成功而误报已确认。
+- PATCH 请求结束后恢复单选操作。结果未知仍未解除时，用户再次选择是一次新的显式目标状态写入，
+  可以直接发送新的 PATCH，不增加 PUT 完整覆盖才需要的再次保存确认框。
 - Mutation 状态不得持久化或记录请求/响应；错误提示只使用稳定 status/code 和固定中文文本。
 
 ### 列表、详情和 Lease
@@ -51,7 +61,8 @@
 
 ## 明确不做
 
-- 不修改 Camera 编辑 Dialog、PUT 请求、Source 配置或排序。
+- 不修改 Camera 编辑 Dialog 的交互或 PUT 请求行为；只允许把任务 03 已验证的写错误分类提取为无 UI
+  状态的纯函数。其余 Source 配置和排序保持不变。
 - 不修改 Backend PATCH、MediaMTX Path、Stream Gateway 或对账。
 - 不让 Card 请求详情、选择备用 Source、显示 Detail controls 或发送 PATCH。
 - 不为结果未知增加自动重试、轮询协议、幂等键或乐观回滚框架。
@@ -63,14 +74,16 @@
 
 ## 实施步骤
 
-1. 为默认源 PATCH 新增窄用途 Mutation 状态和确定失败/结果未知映射，复用任务 03 已存在且行为完全
-   相同的纯分类逻辑；不建立通用写框架。
+1. 从任务 03 表单错误映射中提取窄用途 Camera 写错误分类纯函数，保持 PUT 现有行为不变；为默认源
+   PATCH 新增独立固定中文提示和 Mutation 状态，不建立通用写框架。
 2. 启用 `CameraSources` RadioGroup，接通提交禁用、错误反馈和列表/详情 Query 失效。
 3. 扩展详情组合状态测试，覆盖默认选择、临时选择、停止预览、离线默认源和全部不可播放。
 4. 扩展 Card 与详情组件测试，证明只在实际 Source ID 或 URL 变化时切换 Lease。
 5. 扩展 Stream Session 集成测试，验证 Card+Detail 同源共享、逐个 release 和最后引用清理。
-6. 使用现有双路 synthetic WHEP Source 做浏览器冒烟，确认默认源切换、临时选择保留、离线默认源和
-   两路画面/Session 变化。
+6. 让现有 Cameras MSW 场景在各自闭包内保存默认 ID，并由 GET 列表/详情投影最新默认源；不持久化到
+   浏览器，也不建立通用可变 Mock Store。
+7. 使用 `whep-player` 的现有双路 synthetic WHEP Source 确认默认源切换、临时选择保留、停止预览和
+   两路画面/Session 变化；再使用 `success` 场景的既有离线 Source 确认离线默认源和 Card 不 acquire。
 
 ## 验证方式
 
@@ -87,9 +100,10 @@ pnpm format:check
 pnpm build
 ```
 
-浏览器冒烟使用 [WHEP 浏览器播放](../../../../modules/cameras/whep-player.md)已有的双路 synthetic
-Source。至少检查默认选择切换、离线默认源、临时选择不变、停止预览不自启、Card/Detail 同源共享和
-最后一个 Lease 释放。
+浏览器冒烟先使用 [WHEP 浏览器播放](../../../../modules/cameras/whep-player.md)已有的 `whep-player`
+双路 synthetic Source，检查默认选择切换、临时选择不变、停止预览不自启、Card/Detail 同源共享和
+最后一个 Lease 释放；再切换到 `success` 场景，使用其中既有的离线 Source 检查离线默认源与 Card
+不 acquire。两个场景都必须在 PATCH 后从重新读取的 GET 响应显示新默认 ID。
 
 ## 完成标准
 

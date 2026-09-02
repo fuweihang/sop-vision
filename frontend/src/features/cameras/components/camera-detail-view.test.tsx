@@ -212,9 +212,29 @@ test("临时切源释放旧 Session，刷新时保留，Source 失效后回到�
     screen.getByRole("combobox", { name: "切换预览源" }),
   ).toHaveTextContent("子码流");
 
-  const temporaryUnavailable = {
+  const offlineSource = camera.sources[2];
+  if (offlineSource === undefined) {
+    throw new Error("测试 Camera 缺少离线 Source。");
+  }
+  const changedBackendDefault = {
     ...camera,
-    sources: camera.sources.map((source) =>
+    default_preview_source_id: offlineSource.source_id,
+    sources: camera.sources.map((source) => ({
+      ...source,
+      is_default_preview: source.source_id === offlineSource.source_id,
+    })),
+  };
+  result.rerender(<CameraDetailView camera={changedBackendDefault} />);
+  await act(() => Promise.resolve());
+  expect(result.fakeStreamSessions).toHaveLength(2);
+  expect(result.fakeStreamSessions[1]?.closeCount).toBe(0);
+  expect(
+    screen.getByRole("combobox", { name: "切换预览源" }),
+  ).toHaveTextContent("子码流");
+
+  const temporaryUnavailable = {
+    ...changedBackendDefault,
+    sources: changedBackendDefault.sources.map((source) =>
       source.source_id === temporarySource.source_id
         ? { ...source, status: "OFFLINE" as const, whep_url: null }
         : source,

@@ -78,7 +78,7 @@ function CameraDetailContent({
           defaultSource={defaultSource}
         />
       </div>
-      <CameraSources camera={camera} />
+      <CameraSources camera={camera} apiClient={apiClient} />
       <CameraDestructiveSection />
     </PageContainer>
   );

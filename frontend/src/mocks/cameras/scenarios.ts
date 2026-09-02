@@ -115,7 +115,7 @@ export function createCamerasMswScenario(
 ): RequestHandler[] {
   let listRequestCount = 0;
   let detailRequestCount = 0;
-  const detail =
+  const initialDetail =
     scenario === "whep-player"
       ? buildCameraDetail({
           sources: [
@@ -132,9 +132,28 @@ export function createCamerasMswScenario(
           ],
         })
       : buildCameraDetail();
-  // 列表摘要必须由同一份 Detail Fixture 投影。尤其是 whep-player 场景，Card 和 Detail 只有拿到
-  // 相同 source_id+whep_url，浏览器冒烟测试才能真实验证路由切换时复用 Session。
-  const page = buildCameraPage({ items: [buildCameraSummary(detail)] });
+  let defaultPreviewSourceId = initialDetail.default_preview_source_id;
+
+  /**
+   * PATCH 只改变当前场景闭包中的默认 ID。后续 GET 每次重新投影 Detail 和列表摘要，既能模拟
+   * 服务端最终读取结果，又不会把可变状态扩散到其他测试、localStorage 或通用 Mock Store。
+   */
+  function currentDetail() {
+    return {
+      ...initialDetail,
+      default_preview_source_id: defaultPreviewSourceId,
+      sources: initialDetail.sources.map((source) => ({
+        ...source,
+        is_default_preview: source.source_id === defaultPreviewSourceId,
+      })),
+    };
+  }
+
+  function currentPage() {
+    // 列表摘要必须由同一份 Detail 投影。尤其是 whep-player 场景，Card 和 Detail 只有拿到
+    // 相同 source_id+whep_url，浏览器冒烟测试才能真实验证路由切换时复用 Session。
+    return buildCameraPage({ items: [buildCameraSummary(currentDetail())] });
+  }
   const secondarySummary = buildCameraSummary(
     buildCameraDetail({
       cameraId: CAMERA_FIXTURE_IDS.secondaryCamera,
@@ -196,7 +215,7 @@ export function createCamerasMswScenario(
           buildCameraPage({
             items:
               requestedPage === 1
-                ? page.items
+                ? currentPage().items
                 : requestedPage === 2
                   ? [secondarySummary]
                   : [],
@@ -217,7 +236,7 @@ export function createCamerasMswScenario(
           }),
         );
       }
-      return jsonResponse(page);
+      return jsonResponse(currentPage());
     }),
 
     http.post(camerasUrl, ({ request }) => {
@@ -247,6 +266,7 @@ export function createCamerasMswScenario(
           }),
         );
       }
+      const detail = currentDetail();
       return jsonResponse(detail, 201, {
         "Cache-Control": "no-store",
         Location: `/api/v1/cameras/${detail.camera_id}`,
@@ -276,7 +296,9 @@ export function createCamerasMswScenario(
           }),
         );
       }
-      return jsonResponse(detail, 200, { "Cache-Control": "no-store" });
+      return jsonResponse(currentDetail(), 200, {
+        "Cache-Control": "no-store",
+      });
     }),
 
     http.put(cameraUrl, ({ request }) => {
@@ -311,7 +333,9 @@ export function createCamerasMswScenario(
           }),
         );
       }
-      return jsonResponse(detail, 200, { "Cache-Control": "no-store" });
+      return jsonResponse(currentDetail(), 200, {
+        "Cache-Control": "no-store",
+      });
     }),
 
     http.patch(defaultSourceUrl, async ({ request }) => {
@@ -359,7 +383,9 @@ export function createCamerasMswScenario(
 
       const body = (await request.json()) as SetDefaultPreviewSourceRequest;
       if (
-        !detail.sources.some((source) => source.source_id === body.source_id)
+        !initialDetail.sources.some(
+          (source) => source.source_id === body.source_id,
+        )
       ) {
         return problemResponse(
           buildProblem({
@@ -377,8 +403,9 @@ export function createCamerasMswScenario(
           }),
         );
       }
+      defaultPreviewSourceId = body.source_id;
       return jsonResponse(
-        buildDefaultPreviewSourceResponse(detail, body.source_id),
+        buildDefaultPreviewSourceResponse(currentDetail(), body.source_id),
       );
     }),
 

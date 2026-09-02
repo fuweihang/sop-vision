@@ -1,12 +1,29 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, within } from "@testing-library/react";
 import { expect, test } from "vitest";
 
+import type { CameraDetail } from "@/features/cameras/api/cameras-api";
 import { CameraSources } from "@/features/cameras/components/camera-sources";
+import { apiClient } from "@/lib/api-client";
 import { buildCameraDetail } from "@/mocks/cameras/fixtures";
+
+function renderCameraSources(camera: CameraDetail) {
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: { retry: false },
+      mutations: { retry: false },
+    },
+  });
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <CameraSources camera={camera} apiClient={apiClient} />
+    </QueryClientProvider>,
+  );
+}
 
 test("按响应顺序展示完整 Source 表格和只读默认源", () => {
   const camera = buildCameraDetail();
-  const { container } = render(<CameraSources camera={camera} />);
+  const { container } = renderCameraSources(camera);
 
   expect(screen.getByRole("heading", { name: "摄像头视频源" })).toBeVisible();
   expect(screen.getByRole("columnheader", { name: "预览" })).toBeVisible();
@@ -22,9 +39,7 @@ test("按响应顺序展示完整 Source 表格和只读默认源", () => {
 
   const radios = screen.getAllByRole("radio");
   expect(radios).toHaveLength(camera.sources.length);
-  radios.forEach((radio) =>
-    expect(radio).toHaveAttribute("aria-disabled", "true"),
-  );
+  radios.forEach((radio) => expect(radio).toBeEnabled());
   expect(radios[0]).toBeChecked();
   expect(radios[1]).not.toBeChecked();
 
@@ -46,7 +61,7 @@ test("RTSP URL 保持可换行等宽文本，窄容器只让表格区域横向�
       },
     ],
   });
-  const { container } = render(<CameraSources camera={camera} />);
+  const { container } = renderCameraSources(camera);
 
   const table = container.querySelector("table");
   expect(table).toHaveClass("min-w-3xl");
