@@ -108,6 +108,18 @@
       "source": [
         {
           "paths": [
+            "backend/tests/conftest.py",
+            "backend/tests/support/__init__.py",
+            "backend/tests/support/application.py"
+          ],
+          "level": "module"
+        },
+        {
+          "paths": ["backend/tests/support/database.py"],
+          "level": "integration"
+        },
+        {
+          "paths": [
             "backend/src/app/__init__.py",
             "backend/src/app/modules/__init__.py",
             "backend/src/app/core/**",
@@ -155,6 +167,12 @@
     },
     "backend-cameras": {
       "source": [
+        {"paths": ["backend/tests/support/cameras/**"], "level": "integration"},
+        {"paths": ["backend/tests/support/database.py"], "level": "integration"},
+        {
+          "paths": ["backend/scripts/check_camera_placeholders.py"],
+          "level": "unit"
+        },
         {"paths": ["backend/src/app/modules/cameras/**"], "level": "unit"},
         {
           "paths": [
@@ -166,8 +184,7 @@
         {
           "paths": [
             "backend/src/app/modules/cameras/persistence/**",
-            "backend/migrations/**",
-            "backend/scripts/check_camera_placeholders.py"
+            "backend/migrations/**"
           ],
           "level": "integration"
         }
@@ -175,18 +192,20 @@
       "tests": [
         {"paths": ["backend/tests/unit/cameras/**"], "level": "unit"},
         {
-          "paths": ["backend/tests/module/cameras/**", "backend/tests/contract/cameras/**"],
+          "paths": ["backend/tests/module/cameras/**"],
           "level": "module"
         },
         {"paths": ["backend/tests/integration/cameras/**"], "level": "integration"}
       ],
       "commands": {
-        "unit": ["cd backend && uv run pytest tests/unit/cameras"],
+        "unit": [
+          "cd backend && uv run pytest tests/unit/cameras"
+        ],
         "module": [
-          "cd backend && uv run pytest tests/unit/cameras tests/module/cameras tests/contract/cameras"
+          "cd backend && uv run pytest tests/unit/cameras tests/module/cameras"
         ],
         "integration": [
-          "cd backend && if [[ -f .env.local ]]; then uv run --env-file .env.local pytest tests/unit/cameras tests/module/cameras tests/contract/cameras tests/integration/cameras; elif [[ -n \"${TEST_DATABASE_URL:-}\" ]]; then uv run pytest tests/unit/cameras tests/module/cameras tests/contract/cameras tests/integration/cameras; else echo 'Cameras integration 需要 backend/.env.local 或 TEST_DATABASE_URL' >&2; exit 2; fi"
+          "cd backend && if [[ -f .env.local ]]; then uv run --env-file .env.local pytest tests/unit/cameras tests/module/cameras tests/integration/cameras; elif [[ -n \"${TEST_DATABASE_URL:-}\" ]]; then uv run pytest tests/unit/cameras tests/module/cameras tests/integration/cameras; else echo 'Cameras integration 需要 backend/.env.local 或 TEST_DATABASE_URL' >&2; exit 2; fi"
         ]
       }
     },
@@ -207,6 +226,10 @@
         }
       ],
       "tests": [
+        {
+          "paths": ["backend/tests/modules/stream_gateway/**"],
+          "level": "integration"
+        },
         {"paths": ["backend/tests/unit/stream_gateway/**"], "level": "unit"},
         {
           "paths": [
@@ -222,17 +245,21 @@
       ],
       "impacts": ["backend-cameras"],
       "commands": {
-        "unit": ["cd backend && uv run pytest tests/unit/stream_gateway"],
-        "module": [
-          "cd backend && uv run pytest tests/unit/stream_gateway tests/module/stream_gateway tests/contract/stream_gateway"
-        ],
-        "integration": [
-          "cd backend && uv run pytest tests/unit/stream_gateway tests/module/stream_gateway tests/contract/stream_gateway tests/integration/stream_gateway"
-        ]
+        "unit": ["cd backend && uv run pytest tests/modules/stream_gateway"],
+        "module": ["cd backend && uv run pytest tests/modules/stream_gateway"],
+        "integration": ["cd backend && uv run pytest tests/modules/stream_gateway"]
       }
     },
     "api-contract": {
       "source": [
+        {
+          "paths": [
+            "backend/tests/conftest.py",
+            "backend/tests/support/__init__.py",
+            "backend/tests/support/application.py"
+          ],
+          "level": "module"
+        },
         {
           "paths": [
             "backend/src/app/modules/cameras/api/**",
@@ -257,10 +284,20 @@
       ],
       "impacts": ["backend-cameras", "frontend-cameras"],
       "commands": {
-        "unit": ["bash scripts/check-cameras-contracts.sh"],
-        "module": ["bash scripts/check-cameras-contracts.sh"],
+        "unit": [
+          "cd backend && uv run pytest tests/contract/api_contract",
+          "bash scripts/check-cameras-contracts.sh",
+          "bash scripts/check-cameras-sensitive-data.sh"
+        ],
+        "module": [
+          "cd backend && uv run pytest tests/contract/api_contract",
+          "bash scripts/check-cameras-contracts.sh",
+          "bash scripts/check-cameras-sensitive-data.sh"
+        ],
         "integration": [
-          "bash scripts/check-cameras-contracts.sh && bash scripts/check-cameras-sensitive-data.sh"
+          "cd backend && uv run pytest tests/contract/api_contract",
+          "bash scripts/check-cameras-contracts.sh",
+          "bash scripts/check-cameras-sensitive-data.sh"
         ]
       }
     },
@@ -378,12 +415,14 @@
         {"paths": ["frontend/tests/integration/cameras/**"], "level": "integration"}
       ],
       "commands": {
-        "unit": ["cd frontend && pnpm exec vitest run tests/unit/cameras"],
+        "unit": [
+          "cd frontend && pnpm exec vitest run src/features/cameras src/mocks/cameras src/routes/_app/cameras src/test/cameras-contract-security.test.ts"
+        ],
         "module": [
-          "cd frontend && pnpm exec vitest run tests/unit/cameras tests/component/cameras tests/contract/cameras"
+          "cd frontend && pnpm exec vitest run src/features/cameras src/mocks/cameras src/routes/_app/cameras src/test/cameras-contract-security.test.ts"
         ],
         "integration": [
-          "cd frontend && pnpm exec vitest run tests/unit/cameras tests/component/cameras tests/contract/cameras tests/integration/cameras"
+          "cd frontend && pnpm exec vitest run src/features/cameras src/mocks/cameras src/routes/_app/cameras src/test/cameras-contract-security.test.ts"
         ]
       }
     },

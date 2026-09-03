@@ -72,6 +72,173 @@ class SelectionTests(unittest.TestCase):
         self.assertEqual(modules, ["backend-cameras"])
         self.assertEqual(unmatched, [])
 
+    def test_Backend公共应用Fixture改动验证全部使用者(self) -> None:
+        """共享应用 Fixture 变化必须运行 Core、业务模块和 API Contract。"""
+
+        level, modules, unmatched = test_changed.select_verification(
+            self.config,
+            ["backend/tests/support/application.py"],
+        )
+
+        # 该 Fixture 同时影响 Core 和 API Contract，两者向下传播后达到
+        # integration 的跨模块阈值。这里固定最终选择结果，避免只检查初始规则。
+        self.assertEqual(level, "integration")
+        self.assertEqual(
+            modules,
+            [
+                "api-contract",
+                "backend-cameras",
+                "backend-core",
+                "backend-stream-gateway",
+                "frontend-cameras",
+            ],
+        )
+        self.assertEqual(unmatched, [])
+
+    def test_Backend公共数据库Support改动运行Core和Cameras集成测试(self) -> None:
+        """建库、迁移或清理辅助代码变化不能只运行不访问 PostgreSQL 的 module 测试。"""
+
+        level, modules, unmatched = test_changed.select_verification(
+            self.config,
+            ["backend/tests/support/database.py"],
+        )
+
+        self.assertEqual(level, "integration")
+        self.assertEqual(
+            modules,
+            ["backend-cameras", "backend-core", "backend-stream-gateway"],
+        )
+        self.assertEqual(unmatched, [])
+        commands = "\n".join(
+            command
+            for _, command in test_changed.commands_for(self.config, modules, level)
+        )
+        self.assertIn("tests/integration/cameras", commands)
+        self.assertIn("tests/integration/core", commands)
+
+    def test_Cameras专用Fixture按Integration级只选择Cameras模块(self) -> None:
+        """领域专用 Fixture 可影响真实数据库，因此必须执行 Cameras 完整验证链。"""
+
+        level, modules, unmatched = test_changed.select_verification(
+            self.config,
+            ["backend/tests/support/cameras/builders.py"],
+        )
+
+        self.assertEqual(level, "integration")
+        self.assertEqual(modules, ["backend-cameras"])
+        self.assertEqual(unmatched, [])
+
+    def test_Cameras模块测试按Module级选择Cameras模块(self) -> None:
+        """迁移后的查询流程测试必须按新目录触发 Cameras module 级验证。"""
+
+        level, modules, unmatched = test_changed.select_verification(
+            self.config,
+            ["backend/tests/module/cameras/test_camera_detail.py"],
+        )
+
+        self.assertEqual(level, "module")
+        self.assertEqual(modules, ["backend-cameras"])
+        self.assertEqual(unmatched, [])
+
+    def test_Cameras集成测试按Integration级选择Cameras模块(self) -> None:
+        """真实数据库测试变化必须执行完整 Cameras integration 验证链。"""
+
+        level, modules, unmatched = test_changed.select_verification(
+            self.config,
+            ["backend/tests/integration/cameras/test_repository_behavior.py"],
+        )
+
+        self.assertEqual(level, "integration")
+        self.assertEqual(modules, ["backend-cameras"])
+        self.assertEqual(unmatched, [])
+
+    def test_APIContract测试按Module级选择跨端相关模块(self) -> None:
+        """公共契约测试变化必须复验生成物及 Backend、Frontend 的契约使用方。"""
+
+        level, modules, unmatched = test_changed.select_verification(
+            self.config,
+            ["backend/tests/contract/api_contract/test_cameras_openapi.py"],
+        )
+
+        self.assertEqual(level, "module")
+        self.assertEqual(
+            modules,
+            ["api-contract", "backend-cameras", "frontend-cameras"],
+        )
+        self.assertEqual(unmatched, [])
+
+    def test_APIContract各级命令都运行测试与生成物安全门禁(self) -> None:
+        """无论选择器因规模提升到哪一级，都不能漏跑契约测试或专项脚本。"""
+
+        required_fragments = {
+            "pytest tests/contract/api_contract",
+            "check-cameras-contracts.sh",
+            "check-cameras-sensitive-data.sh",
+        }
+        for level in self.config["levels"]:
+            commands = self.config["modules"]["api-contract"]["commands"][level]
+            joined = "\n".join(commands)
+            for fragment in required_fragments:
+                self.assertIn(fragment, joined)
+
+    def test_Cameras最终命令按风险逐层增加新目录(self) -> None:
+        """02g 后 Cameras 不再执行 legacy 或公共 API Contract 目录。"""
+
+        commands = self.config["modules"]["backend-cameras"]["commands"]
+        unit = "\n".join(commands["unit"])
+        module = "\n".join(commands["module"])
+        integration = "\n".join(commands["integration"])
+
+        self.assertIn("pytest tests/unit/cameras", unit)
+        self.assertNotIn("tests/module/cameras", unit)
+        self.assertIn("tests/unit/cameras tests/module/cameras", module)
+        self.assertNotIn("tests/integration/cameras", module)
+        self.assertIn(
+            "tests/unit/cameras tests/module/cameras tests/integration/cameras",
+            integration,
+        )
+        for joined in (unit, module, integration):
+            self.assertNotIn("tests/modules/cameras", joined)
+            self.assertNotIn("tests/contract/api_contract", joined)
+
+    def test_StreamGateway变更继续影响Cameras且使用最终命令(self) -> None:
+        """任务 3 前 Stream Gateway 源码变化仍需带上已迁移的 Cameras 测试。"""
+
+        level, modules, unmatched = test_changed.select_verification(
+            self.config,
+            ["backend/src/app/modules/stream_gateway/api/dependencies.py"],
+        )
+
+        self.assertEqual(level, "module")
+        self.assertEqual(modules, ["backend-cameras", "backend-stream-gateway"])
+        self.assertEqual(unmatched, [])
+        cameras_command = "\n".join(
+            self.config["modules"]["backend-cameras"]["commands"][level]
+        )
+        self.assertIn("tests/unit/cameras tests/module/cameras", cameras_command)
+        self.assertNotIn("tests/modules/cameras", cameras_command)
+
+    def test_StreamGateway未迁移时继续运行旧测试目录(self) -> None:
+        """Cameras 先迁移时，Stream Gateway 不能提前引用尚不存在的新目录。"""
+
+        for level in self.config["levels"]:
+            commands = self.config["modules"]["backend-stream-gateway"]["commands"][level]
+            joined = "\n".join(commands)
+            self.assertIn("tests/modules/stream_gateway", joined)
+            self.assertNotIn("tests/unit/stream_gateway", joined)
+
+    def test_FrontendCameras未迁移时继续运行共置测试(self) -> None:
+        """API Contract 影响 Frontend 时，任务 04 前必须运行当前存在的共置测试。"""
+
+        for level in self.config["levels"]:
+            commands = self.config["modules"]["frontend-cameras"]["commands"][level]
+            joined = "\n".join(commands)
+            self.assertIn("src/features/cameras", joined)
+            self.assertIn("src/mocks/cameras", joined)
+            self.assertIn("src/routes/_app/cameras", joined)
+            self.assertIn("src/test/cameras-contract-security.test.ts", joined)
+            self.assertNotIn("tests/unit/cameras", joined)
+
     def test_单模块大范围改动也提升到集成测试(self) -> None:
         paths = [
             f"backend/src/app/modules/cameras/domain/generated_{index}.py"
@@ -97,7 +264,7 @@ class SelectionTests(unittest.TestCase):
     def test_允许删除尚未迁移的旧测试路径(self) -> None:
         level, modules, unmatched = test_changed.select_verification(
             self.config,
-            ["backend/tests/modules/cameras/test_legacy.py"],
+            ["backend/tests/legacy/cameras/test_legacy.py"],
         )
 
         self.assertEqual(level, "unit")

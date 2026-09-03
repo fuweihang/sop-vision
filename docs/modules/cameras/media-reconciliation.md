@@ -112,10 +112,10 @@ ensure/release 0。Adapter 单次 I/O 使用 `stream_gateway.io` DEBUG，默认�
 
 ```bash
 cd backend
-uv run pytest tests/modules/cameras/test_media.py \
-  tests/modules/cameras/test_media_reconciliation.py \
-  tests/modules/cameras/test_reconciliation_persistence.py \
-  tests/test_config.py tests/test_main.py
+uv run --env-file .env.local pytest tests/unit/cameras/test_media.py \
+  tests/module/cameras/test_media_reconciliation.py \
+  tests/integration/cameras/test_reconciliation.py \
+  tests/unit/core/test_config.py tests/unit/core/test_application_tasks.py
 ```
 
 PostgreSQL 集成测试要求独立的 `TEST_DATABASE_URL`；跳过这些测试不等于锁和 Reader 已通过验证。

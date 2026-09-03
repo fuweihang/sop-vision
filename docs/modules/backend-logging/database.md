@@ -36,10 +36,10 @@ SQLAlchemy `echo`，而是控制统一配置中的 `sqlalchemy.engine` Logger：
 cd backend
 uv run --env-file .env.local alembic current
 DATABASE_ECHO=true uv run --env-file .env.local alembic current
-uv run pytest tests/core/test_logging.py \
-  tests/core/database/test_engine.py \
-  tests/core/database/test_migrations.py
+uv run --env-file .env.local pytest tests/unit/core/test_logging.py \
+  tests/unit/core/database/test_engine.py \
+  tests/integration/core/test_migrations.py
 ```
 
-`tests/core/database/test_migrations.py` 的 PostgreSQL 路径要求独立、尚不存在且名称以 `_test` 结尾的
-`TEST_DATABASE_URL`。未配置时相关测试会跳过。
+`tests/integration/core/test_migrations.py` 的 PostgreSQL 路径要求独立、尚不存在且名称以 `_test`
+结尾的 `TEST_DATABASE_URL`。未配置时集成测试会明确失败，避免把未验证误报为通过。

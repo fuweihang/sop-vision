@@ -107,8 +107,8 @@ Alembic CLI 使用与 Backend Runtime 相同的日志格式；独立 CLI 和嵌�
 
 ```bash
 uv run --env-file .env.local pytest \
-  tests/core/database/test_migrations.py \
-  tests/modules/cameras/test_repository.py
+  tests/integration/core/test_migrations.py \
+  tests/integration/cameras
 ```
 
 ## OpenAPI 跨端契约

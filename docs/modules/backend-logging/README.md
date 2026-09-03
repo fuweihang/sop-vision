@@ -109,11 +109,11 @@ console 的时间不加方括号并使用 ANSI 灰色弱化；级别沿用不同
 
 ```bash
 cd backend
-uv run pytest tests/core/test_logging.py \
-  tests/core/http/test_http_foundation.py \
-  tests/core/database/test_engine.py \
-  tests/core/database/test_migrations.py \
-  tests/test_server.py tests/test_config.py
+uv run --env-file .env.local pytest tests/unit/core/test_logging.py \
+  tests/contract/core/test_http_foundation.py \
+  tests/unit/core/database/test_engine.py \
+  tests/integration/core/test_migrations.py \
+  tests/unit/core/test_server.py tests/unit/core/test_config.py
 uv run ruff check .
 uv run ruff format --check .
 ```

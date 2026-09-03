@@ -34,7 +34,9 @@ Filter 从请求上下文补充的 `trace_id`。
 
 ```bash
 cd backend
-uv run pytest tests/core/http/test_http_foundation.py tests/api/test_health.py tests/test_server.py
+uv run pytest tests/contract/core/test_http_foundation.py \
+  tests/module/core/test_health.py \
+  tests/unit/core/test_server.py
 ```
 
 测试覆盖普通响应、4xx/5xx、响应头前异常、流式中断、正文完成后异常、query 脱敏、控制字符单行
