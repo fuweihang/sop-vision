@@ -115,6 +115,15 @@ corepack enable
 pnpm install --frozen-lockfile
 ```
 
+首次克隆仓库后启用项目 Git hooks：
+
+```bash
+./scripts/install-git-hooks.sh
+```
+
+`pre-commit` 会使用 Ruff 和 Prettier 格式化已暂存的 Backend Python 文件与 Frontend 文件，并将
+格式化结果重新暂存。若文件同时含有未暂存改动，钩子只更新暂存内容，不覆盖工作区文件。
+
 分别启动 Backend 和 Frontend：
 
 ```bash

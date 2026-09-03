@@ -46,7 +46,10 @@
             "scripts/test-policy-check.sh",
             "scripts/test_changed.py",
             "scripts/test_policy_check.py",
+            "scripts/format-staged.sh",
+            "scripts/install-git-hooks.sh",
             "scripts/verify-changed.sh",
+            ".githooks/**",
             "test-impact.json"
           ],
           "level": "unit"
