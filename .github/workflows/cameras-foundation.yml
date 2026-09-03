@@ -40,9 +40,11 @@ jobs:
           --health-timeout 5s
           --health-retries 5
 
-    # 应用库只用于配置隔离比较；集成测试会自行创建并最终删除独立的 *_test 数据库。
+    # 应用库只用于配置隔离比较；集成测试会基于 TEST_DATABASE_URL 创建并最终删除独立的
+    # *_test 数据库。两个 URL 放在 job 级别，确保完整 pytest 收集到 integration 测试时可用。
     env:
       DATABASE_URL: postgresql+psycopg://sop_vision:sop_vision@127.0.0.1:5432/sop_vision
+      TEST_DATABASE_URL: postgresql+psycopg://sop_vision:sop_vision@127.0.0.1:5432/sop_vision_test
 
     steps:
       - name: 检出仓库
@@ -75,21 +77,12 @@ jobs:
         working-directory: frontend
         run: pnpm install --frozen-lockfile
 
-      - name: Backend 单元测试与静态检查
+      - name: Backend integration 级别测试与静态检查
         working-directory: backend
         run: |
           uv run pytest
           uv run ruff check .
           uv run ruff format --check .
-
-      - name: PostgreSQL 迁移与 Repository 验收
-        working-directory: backend
-        env:
-          TEST_DATABASE_URL: postgresql+psycopg://sop_vision:sop_vision@127.0.0.1:5432/sop_vision_test
-        run: >-
-          uv run pytest
-          tests/core/database/test_migrations.py
-          tests/modules/cameras/test_repository.py
 
       - name: 重新生成 OpenAPI 与 TypeScript 并检查漂移
         run: bash scripts/check-cameras-contracts.sh
