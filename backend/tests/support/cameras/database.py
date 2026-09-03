@@ -44,9 +44,7 @@ def migrated_cameras_database(
     cameras_url = configured_url.set(database=f"{database_stem}_cameras_integration_test")
 
     alembic_config = Config(str(BACKEND_ROOT / "alembic.ini"))
-    alembic_config.attributes["database_url"] = cameras_url.render_as_string(
-        hide_password=False
-    )
+    alembic_config.attributes["database_url"] = cameras_url.render_as_string(hide_password=False)
     with temporary_database(cameras_url):
         command.upgrade(alembic_config, "head")
         yield cameras_url

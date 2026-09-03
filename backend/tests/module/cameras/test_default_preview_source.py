@@ -46,9 +46,7 @@ def command_for(camera: Camera, source_index: int) -> SetDefaultPreviewSourceCom
     )
 
 
-async def test_设置默认预览源保存完整聚合且不依赖运行时状态() -> (
-    None
-):
+async def test_设置默认预览源保存完整聚合且不依赖运行时状态() -> None:
     """任意所属 Source 都能切换；用例只执行锁定读取、完整保存和提交。"""
 
     camera = CameraBuilder().build(source_count=2)

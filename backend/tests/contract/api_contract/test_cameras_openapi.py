@@ -57,15 +57,11 @@ def test_OpenAPI使用问题详情媒体类型和必需协议响应头(
             if int(status_code) >= 400:
                 assert set(response["content"]) == {PROBLEM_MEDIA_TYPE}
                 problem_content = response["content"][PROBLEM_MEDIA_TYPE]
-                assert problem_content["schema"] == {
-                    "$ref": "#/components/schemas/ProblemDetails"
-                }
+                assert problem_content["schema"] == {"$ref": "#/components/schemas/ProblemDetails"}
                 assert problem_content["example"]["status"] == int(status_code)
                 ProblemDetails.model_validate(problem_content["example"])
 
-    create_headers = openapi["paths"]["/api/v1/cameras"]["post"]["responses"]["201"][
-        "headers"
-    ]
+    create_headers = openapi["paths"]["/api/v1/cameras"]["post"]["responses"]["201"]["headers"]
     assert {"Location", "Cache-Control"}.issubset(create_headers)
     for method in ("get", "put"):
         detail_headers = openapi["paths"]["/api/v1/cameras/{camera_id}"][method]["responses"][
@@ -82,9 +78,9 @@ def test_问题详情示例有效且OpenAPI导出结果逐字节稳定(tmp_path:
     """导出不得依赖 lifespan，同一文档连续生成及写盘必须得到相同 UTF-8 字节。"""
 
     schema = build_openapi_document()
-    problem_example = schema["paths"]["/api/v1/cameras"]["get"]["responses"]["422"][
-        "content"
-    ][PROBLEM_MEDIA_TYPE]["example"]
+    problem_example = schema["paths"]["/api/v1/cameras"]["get"]["responses"]["422"]["content"][
+        PROBLEM_MEDIA_TYPE
+    ]["example"]
     ProblemDetails.model_validate(problem_example)
 
     first = serialize_openapi(build_openapi_document())

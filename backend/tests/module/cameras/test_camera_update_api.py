@@ -165,6 +165,6 @@ async def test_更新接口将视频源归属错误映射为问题详情(
     response = await client.put(f"/api/v1/cameras/{camera.camera_id}", json=payload)
 
     assert response.status_code == 422
-    assert [
-        (item["field"], item["code"]) for item in response.json()["errors"]
-    ] == [("sources[0].source_id", "SOURCE_NOT_OWNED_BY_CAMERA")]
+    assert [(item["field"], item["code"]) for item in response.json()["errors"]] == [
+        ("sources[0].source_id", "SOURCE_NOT_OWNED_BY_CAMERA")
+    ]

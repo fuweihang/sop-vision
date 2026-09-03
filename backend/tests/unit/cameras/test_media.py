@@ -135,14 +135,10 @@ def test_任一连接字段变化时媒体差异确保所有现有视频源(conn
     camera = CameraBuilder().build(source_count=2)
     updated = camera.update_configuration(
         name=camera.name,
-        ip_address=(
-            "192.0.2.99" if connection_field == "ip_address" else camera.ip_address
-        ),
+        ip_address=("192.0.2.99" if connection_field == "ip_address" else camera.ip_address),
         rtsp_port=8554 if connection_field == "rtsp_port" else camera.rtsp_port,
         username=(
-            "new-operator"
-            if connection_field == "username"
-            else camera.credentials.username
+            "new-operator" if connection_field == "username" else camera.credentials.username
         ),
         password=(
             "new-password"

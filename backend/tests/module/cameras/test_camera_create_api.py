@@ -205,9 +205,9 @@ async def test_创建接口将领域字段错误映射为问题详情(
     response = await client.post("/api/v1/cameras", json=payload)
 
     assert response.status_code == 422
-    assert [
-        (item["field"], item["code"]) for item in response.json()["errors"]
-    ] == [("sources[1].is_default_preview", "MULTIPLE_DEFAULT_SOURCES")]
+    assert [(item["field"], item["code"]) for item in response.json()["errors"]] == [
+        ("sources[1].is_default_preview", "MULTIPLE_DEFAULT_SOURCES")
+    ]
 
 
 @pytest.mark.sensitive_data

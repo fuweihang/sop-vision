@@ -85,8 +85,7 @@ async def test_详情接口返回敏感详情并禁止缓存(
     body = response.json()
     assert body["password"] == CAMERA_LEAK_SENTINEL
     assert body["sources"][0]["rtsp_url"] == (
-        f"rtsp://operator%20name:{CAMERA_LEAK_SENTINEL}@"
-        "192.168.1.64:554/Streaming/Channels/001"
+        f"rtsp://operator%20name:{CAMERA_LEAK_SENTINEL}@192.168.1.64:554/Streaming/Channels/001"
     )
 
 

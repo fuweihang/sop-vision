@@ -242,9 +242,7 @@ async def test_更新Camera不将服务器时钟错误误报为持久化数据�
     assert gateway.runtime_snapshot_count == 0
 
 
-async def test_更新Camera遇到缺失或损坏聚合时结束事务且不调用媒体网关() -> (
-    None
-):
+async def test_更新Camera遇到缺失或损坏聚合时结束事务且不调用媒体网关() -> None:
     """不存在与损坏聚合分别转换 404/500，并都在媒体边界前停止。"""
 
     missing_id = uuid4_from_index(777)

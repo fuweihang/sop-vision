@@ -7,7 +7,10 @@ import { CAMERA_FIXTURE_IDS } from "@/mocks/cameras/fixtures";
 import { createCamerasMswScenario } from "@/mocks/cameras/scenarios";
 import { mockServer } from "@/mocks/node";
 import { setViewportWidth } from "../../support/browser-mocks";
-import { renderAppRoute, type AppTestRouter } from "../../support/render-router";
+import {
+  renderAppRoute,
+  type AppTestRouter,
+} from "../../support/render-router";
 
 const CAMERA_DETAIL_PATH = `/cameras/${CAMERA_FIXTURE_IDS.primaryCamera}`;
 
