@@ -140,6 +140,34 @@ pnpm dev
 不会把跳过当作通过。完整规则、日志位置和单项排障命令见
 [测试基础设施](docs/modules/test-infrastructure/README.md)。
 
+### 手动执行全量测试
+
+需要排查按变更验证之外的问题时，可以分别执行前后端全量测试。Backend 测试前应先按“宿主机开发”
+章节启动 PostgreSQL，并确保 `backend/.env.local` 同时配置了 `DATABASE_URL` 和独立的
+`TEST_DATABASE_URL`。
+
+Backend 的 unit、module、contract 和 integration 测试：
+
+```bash
+cd backend
+uv run --env-file .env.local pytest
+```
+
+Frontend 的 unit、component、contract 和 integration 测试：
+
+```bash
+cd frontend
+pnpm test
+```
+
+如需同时检查仓库级测试选择和目录规则，在仓库根目录执行：
+
+```bash
+python3 -m unittest discover \
+  -s tests/unit/test_infrastructure \
+  -p 'test_*.py'
+```
+
 ## 文档
 
 从 [文档入口](docs/README.md) 开始阅读。核心文档包括：
