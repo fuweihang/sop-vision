@@ -29,6 +29,10 @@ class TestPathPolicyTests(unittest.TestCase):
                     "frontend/tests/component/cameras/card.test.tsx",
                     "frontend/tests/contract/cameras/api.test.ts",
                     "frontend/tests/integration/cameras/routes.test.tsx",
+                    "frontend/tests/unit/video/geometry.test.ts",
+                    "frontend/tests/component/video/controls.test.tsx",
+                    "frontend/tests/contract/video/whep-session.test.ts",
+                    "frontend/tests/integration/video/session.test.tsx",
                 ],
             )
 

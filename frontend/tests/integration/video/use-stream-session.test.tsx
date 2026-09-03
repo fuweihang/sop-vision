@@ -5,7 +5,7 @@ import { expect, test } from "vitest";
 import { StreamSessionManagerContext } from "@/features/video/stream-session/stream-session-manager-context";
 import { StreamSessionManager } from "@/features/video/stream-session/stream-session-manager";
 import { useStreamSession } from "@/features/video/stream-session/use-stream-session";
-import { FakeStreamSession } from "@/features/video/testing/fakes";
+import { FakeStreamSession } from "../../support/video/fake-stream-session";
 
 function createManagerFixture() {
   const sessions: FakeStreamSession[] = [];

@@ -38,7 +38,7 @@
 2. [Backend Cameras 测试重构](./02-backend-cameras.md)
 3. [Backend Stream Gateway 测试重构](./03-backend-stream-gateway.md)
 4. [Frontend Cameras 测试重构（04a～04h）](./04-frontend-cameras.md)
-5. [Frontend Video 测试重构](./05-frontend-video.md)
+5. [Frontend Video 测试重构（05a～05d）](./05-frontend-video.md)
 6. [Frontend Shared 与 App Shell 测试重构](./06-frontend-shared-app-shell.md)
 7. [跨端契约与迁移验收](./07-cross-platform-contract-and-acceptance.md)
 

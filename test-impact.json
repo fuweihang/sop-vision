@@ -440,6 +440,7 @@
     },
     "frontend-video": {
       "source": [
+        {"paths": ["frontend/tests/support/video/**"], "level": "integration"},
         {"paths": ["frontend/src/features/video/**"], "level": "unit"},
         {
           "paths": [
@@ -469,12 +470,15 @@
       ],
       "impacts": ["frontend-cameras"],
       "commands": {
-        "unit": ["cd frontend && pnpm exec vitest run src/features/video"],
+        "unit": [
+          "cd frontend && pnpm exec vitest run tests/unit/video"
+        ],
         "module": [
-          "cd frontend && pnpm exec vitest run src/features/video"
+          "cd frontend && pnpm exec vitest run tests/unit/video tests/component/video tests/contract/video"
         ],
         "integration": [
-          "cd frontend && pnpm exec vitest run src/features/video"
+          "cd frontend && pnpm exec vitest run tests/unit/video tests/component/video tests/contract/video tests/integration/video",
+          "cd frontend && pnpm vendor:check"
         ]
       }
     }

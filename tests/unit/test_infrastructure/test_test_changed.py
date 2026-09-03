@@ -325,7 +325,6 @@ class SelectionTests(unittest.TestCase):
                 "src/components/route-state",
                 "src/routes",
             ],
-            "frontend-video": ["src/features/video"],
         }
         for module, paths in expected_paths.items():
             with self.subTest(module=module):
@@ -336,6 +335,35 @@ class SelectionTests(unittest.TestCase):
                     for path in paths:
                         self.assertIn(path, joined)
                     self.assertNotIn("frontend/tests/", joined)
+
+    def test_Video最终命令按风险逐层增加标准目录和Reader校验(self) -> None:
+        """05d 后 Video 只运行标准目录，真实媒体源仍保持手工启动。"""
+
+        commands = self.config["modules"]["frontend-video"]["commands"]
+        unit = "\n".join(commands["unit"])
+        module = "\n".join(commands["module"])
+        integration = "\n".join(commands["integration"])
+
+        self.assertIn("vitest run tests/unit/video", unit)
+        self.assertNotIn("tests/component/video", unit)
+        self.assertNotIn("tests/contract/video", unit)
+        self.assertIn(
+            "vitest run tests/unit/video tests/component/video tests/contract/video",
+            module,
+        )
+        self.assertNotIn("tests/integration/video", module)
+        self.assertIn(
+            "vitest run tests/unit/video tests/component/video tests/contract/video "
+            "tests/integration/video",
+            integration,
+        )
+        self.assertNotIn("vendor:check", unit)
+        self.assertNotIn("vendor:check", module)
+        self.assertIn("pnpm vendor:check", integration)
+
+        for joined in (unit, module, integration):
+            self.assertNotIn("src/features/video", joined)
+            self.assertNotIn("whep:test-source", joined)
 
     def test_FrontendCameras最终命令按风险逐层增加新目录(self) -> None:
         """04h 后 Cameras 只运行标准目录，不再执行共置测试或公共 Contract。"""
@@ -425,6 +453,43 @@ class SelectionTests(unittest.TestCase):
                 self.assertEqual(level, expected_level)
                 self.assertEqual(modules, ["frontend-cameras"])
                 self.assertEqual(unmatched, [])
+
+    def test_Video四层标准目录按风险选择Video及其影响模块(self) -> None:
+        """Video 测试按目录定级，并继续验证依赖 Video 的 Cameras。"""
+
+        cases = [
+            # Video 会影响 Cameras，因此单元测试也至少提升到跨模块验证。
+            ("frontend/tests/unit/video/geometry.test.ts", "module"),
+            ("frontend/tests/component/video/controls.test.tsx", "module"),
+            ("frontend/tests/contract/video/whep-session.test.ts", "module"),
+            ("frontend/tests/integration/video/session.test.tsx", "integration"),
+        ]
+        for path, expected_level in cases:
+            with self.subTest(path=path):
+                level, modules, unmatched = test_changed.select_verification(
+                    self.config,
+                    [path],
+                )
+
+                self.assertEqual(level, expected_level)
+                self.assertEqual(modules, ["frontend-cameras", "frontend-video"])
+                self.assertEqual(unmatched, [])
+
+    def test_Video专用Support选择Video和Cameras集成测试(self) -> None:
+        """共享 Session Fake 变化必须覆盖 Video 及当前 Cameras 使用方。"""
+
+        level, modules, unmatched = test_changed.select_verification(
+            self.config,
+            ["frontend/tests/support/video/fake-stream-session.ts"],
+        )
+
+        self.assertEqual(level, "integration")
+        self.assertEqual(modules, ["frontend-cameras", "frontend-video"])
+        self.assertEqual(unmatched, [])
+        cameras_command = "\n".join(
+            self.config["modules"]["frontend-cameras"]["commands"][level]
+        )
+        self.assertIn("tests/integration/cameras", cameras_command)
 
     def test_Cameras专用Support按Module级选择Cameras模块(self) -> None:
         """Session 渲染工具只服务 Cameras 组件测试，不应扩大到全部 Frontend 模块。"""

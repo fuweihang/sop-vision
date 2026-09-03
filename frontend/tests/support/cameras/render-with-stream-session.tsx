@@ -7,7 +7,7 @@ import {
   StreamSessionManager,
   StreamSessionProvider,
 } from "@/features/video/stream-session";
-import { FakeStreamSession } from "@/features/video/testing/fakes";
+import { FakeStreamSession } from "../video/fake-stream-session";
 
 /**
  * Camera 组件测试只注入确定的 Session Fake 和 Tooltip 上下文，不复制 Router、Query 或 App Shell。

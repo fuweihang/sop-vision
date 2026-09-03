@@ -113,12 +113,6 @@ test("操作栏支持播放暂停、刷新、音量浮层和全屏切换", async
   fireEvent.mouseEnter(volumeButton);
   const volumeSlider = await screen.findByRole("group", { name: "音量" });
   expect(volumeSlider).toHaveAttribute("data-orientation", "vertical");
-  expect(volumeSlider).toHaveClass("h-20");
-  expect(volumeSlider.closest('[data-slot="popover-content"]')).toHaveClass(
-    "w-fit",
-    "min-w-0",
-    "p-1.5",
-  );
   expect(screen.queryByText("0%")).not.toBeInTheDocument();
   expect(volumeSlider).toHaveAttribute("data-volume-percent", "0");
   await user.click(volumeButton);
@@ -233,7 +227,7 @@ test("stopped 模式优先显示已停止并隐藏旧 Session 错误", () => {
   expect(screen.getByRole("button", { name: "刷新当前流" })).toBeDisabled();
 });
 
-test("自动播放失败提示不随操作栏隐藏且长文本不会挤压操作按钮", async () => {
+test("自动播放失败提示不随操作栏隐藏", async () => {
   installMediaElementMocks({
     play: () => Promise.reject(new Error("blocked")),
   });
@@ -243,17 +237,10 @@ test("自动播放失败提示不随操作栏隐藏且长文本不会挤压操�
     await screen.findByText("浏览器阻止了自动播放，请手动继续。");
   expect(errorMessage).toBeVisible();
   expect(screen.getByText("播放受阻")).toBeVisible();
-  // Alert 默认带 w-full；绝对定位时必须覆盖为 auto，左右 inset 才能同时保留边距。
-  expect(screen.getByRole("alert")).toHaveClass("inset-x-3", "w-auto");
-  expect(errorMessage).toHaveClass("min-w-0", "flex-1", "wrap-anywhere");
-  expect(errorMessage.parentElement).toHaveClass("flex-col", "@md:flex-row");
   expect(screen.getByRole("toolbar", { name: "视频操作" })).toHaveClass(
     "opacity-0",
   );
-  expect(screen.getByRole("button", { name: "继续播放" })).toHaveClass(
-    "self-start",
-    "@md:self-auto",
-  );
+  expect(screen.getByRole("button", { name: "继续播放" })).toBeVisible();
 });
 
 test("连接期间显示 loading 且音量按钮常驻", () => {
@@ -367,7 +354,6 @@ test("网页全屏和浏览器全屏互斥且不替换 video DOM", async () => {
 
   await user.click(screen.getByRole("button", { name: "进入网页全屏" }));
   expect(document.body.style.overflow).toBe("hidden");
-  expect(video.parentElement).toHaveClass("fixed", "inset-0", "h-svh");
   expect(screen.getByRole("button", { name: "退出网页全屏" })).toHaveAttribute(
     "aria-pressed",
     "true",

@@ -1,7 +1,7 @@
 import { expect, test } from "vitest";
 
 import { StreamSessionManager } from "@/features/video/stream-session/stream-session-manager";
-import { FakeStreamSession } from "@/features/video/testing/fakes";
+import { FakeStreamSession } from "../../support/video/fake-stream-session";
 
 test("同一 Source 共享 Session，最后一个 Lease release 后才关闭", async () => {
   const sessions: FakeStreamSession[] = [];

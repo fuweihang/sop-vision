@@ -11,8 +11,8 @@
 
 现有测试分布在 `frontend/src/lib/`、`components/app-shell/`、`components/page-state/`、
 `components/route-state/`、`routes/` 和 `frontend/src/test/`。新目录使用
-`frontend/tests/<layer>/shared/` 与 `frontend/tests/<layer>/app_shell/`。任务 4 和任务 5 必须完成；
-Shared 的影响传播会触发 Shell、Cameras 和 Video。
+`frontend/tests/<layer>/shared/` 与 `frontend/tests/<layer>/app_shell/`。任务 4 和任务 5（05a～05d）
+必须完成；Shared 的影响传播会触发 Shell、Cameras 和 Video。
 
 ### 实施范围
 
@@ -46,5 +46,6 @@ Frontend 公共 Setup 和 Support 不再位于生产源码目录；Shared、Shel
 
 ## 导航
 
+- [上一任务：05d Stream Session 集成与迁移收尾](./05d-video-integration-and-finalization.md)
 - [返回总计划](./README.md)
 - [下一任务](./07-cross-platform-contract-and-acceptance.md)

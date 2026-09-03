@@ -4,7 +4,7 @@ import { expect, test, vi } from "vitest";
 
 import { StreamSessionManager } from "@/features/video/stream-session/stream-session-manager";
 import { StreamSessionProvider } from "@/features/video/stream-session/stream-session-provider";
-import { FakeStreamSession } from "@/features/video/testing/fakes";
+import { FakeStreamSession } from "../../support/video/fake-stream-session";
 
 test("Strict Mode 紧邻 cleanup/remount 不关闭注入的 Manager", async () => {
   vi.useFakeTimers();

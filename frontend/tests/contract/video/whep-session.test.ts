@@ -55,6 +55,11 @@ test("reader 工厂在 connect 前不加载，异步加载完成后才创建连�
   expect(readerFactoryLoader).toHaveBeenCalledOnce();
   expect(harness.configurations).toHaveLength(0);
   await vi.waitFor(() => expect(harness.configurations).toHaveLength(1));
+  expect(harness.configurations[0]).toMatchObject({
+    url: "https://media.example.invalid/live/whep",
+    onError: expect.any(Function),
+    onTrack: expect.any(Function),
+  });
 });
 
 test("组装音视频 Track，并把官方重试和最终失败转换成脱敏状态", () => {
