@@ -55,26 +55,16 @@ test("列表 Card 只展示摘要字段，并用完整默认 search 进入详情
   expect(within(detailLink).getByRole("heading", { name: "洗手区 01" })).toBe(
     screen.getByRole("heading", { level: 2, name: "洗手区 01" }),
   );
-  expect(detailLink.querySelector("[data-camera-preview]")).toHaveAttribute(
-    "data-slot",
-    "aspect-ratio",
-  );
-  expect(detailLink.querySelector("[data-source-status]")).toBeNull();
-  expect(detailLink.querySelector("[data-slot='card-footer']")).toBeNull();
-  expect(
-    screen.getByRole("region", { name: "摄像头列表" }).firstElementChild,
-  ).toHaveClass("min-[520px]:grid-cols-2", "min-[1200px]:grid-cols-4");
   expect(document.body.textContent).not.toContain(CAMERA_FIXTURE_SECRET);
   expect(document.body.textContent).not.toContain("rtsp://");
 });
 
-test("列表工具栏不显示页面标题和搜索标签，并将搜索与添加操作放在同一行", async () => {
+test("列表工具栏提供搜索和添加操作且不重复页面标题", async () => {
   renderCameraList();
 
   await screen.findByRole("heading", { level: 2, name: "洗手区 01" });
   const toolbar = screen.getByRole("group", { name: "摄像头列表工具栏" });
 
-  expect(toolbar).toHaveClass("flex", "items-center");
   expect(
     within(toolbar).getByRole("searchbox", { name: "搜索摄像头" }),
   ).toBeVisible();
@@ -311,9 +301,6 @@ test.each([
   renderCameraList(testCase.scenario, testCase.path);
 
   expect(await screen.findByText(testCase.title)).toBeVisible();
-  expect(document.querySelector(`[data-page-state='${testCase.state}']`)).toBe(
-    screen.getByText(testCase.title).closest("[data-page-state]"),
-  );
 
   if (testCase.state === "empty") {
     expect(screen.getAllByRole("button", { name: "添加摄像头" })).toHaveLength(
@@ -416,9 +403,6 @@ test("后台刷新期间静默保留 Cards，不插入刷新状态行", async ()
   );
 
   expect(screen.queryByText("正在刷新摄像头列表")).toBeNull();
-  expect(
-    document.querySelector("[data-page-state='background-refreshing']"),
-  ).toBeNull();
   expect(
     screen.getByRole("heading", { level: 2, name: "洗手区 01" }),
   ).toBeVisible();

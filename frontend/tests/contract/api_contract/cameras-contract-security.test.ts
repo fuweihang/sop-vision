@@ -9,7 +9,7 @@ import { CAMERA_FIXTURE_SECRET } from "@/mocks/cameras/fixtures";
 
 // jsdom 会把 import.meta.url 表示为浏览器 URL，不能直接交给 node:fs。Vitest 保留的
 // import.meta.dirname 是本地测试文件目录，因此从它解析仓库路径不会依赖调用命令的 cwd。
-const repositoryRoot = resolve(import.meta.dirname, "../../..");
+const repositoryRoot = resolve(import.meta.dirname, "../../../..");
 const openapiSource = readFileSync(
   resolve(repositoryRoot, "contracts/openapi.json"),
   "utf8",

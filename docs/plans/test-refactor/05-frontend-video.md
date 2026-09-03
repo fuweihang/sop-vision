@@ -41,5 +41,6 @@ Shared 会触发 Shell、Cameras 和 Video，任务 6 开始前 Video 新目录�
 
 ## 导航
 
+- [上一任务：04h Cameras 迁移收尾](./04h-cameras-finalization.md)
 - [返回总计划](./README.md)
 - [下一任务](./06-frontend-shared-app-shell.md)

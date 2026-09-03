@@ -24,6 +24,11 @@ class TestPathPolicyTests(unittest.TestCase):
                     "backend/tests/module/cameras/test_camera_detail.py",
                     "backend/tests/integration/cameras/test_repository_behavior.py",
                     "backend/tests/contract/api_contract/test_cameras_openapi.py",
+                    "frontend/tests/contract/api_contract/cameras-contract-security.test.ts",
+                    "frontend/tests/unit/cameras/query-keys.test.ts",
+                    "frontend/tests/component/cameras/card.test.tsx",
+                    "frontend/tests/contract/cameras/api.test.ts",
+                    "frontend/tests/integration/cameras/routes.test.tsx",
                 ],
             )
 

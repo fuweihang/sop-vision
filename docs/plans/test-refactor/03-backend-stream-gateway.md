@@ -118,4 +118,5 @@ Frontend Cameras 测试迁移。
 ## 导航
 
 - [返回总计划](./README.md)
-- [下一任务](./04-frontend-cameras.md)
+- [下一阶段总说明](./04-frontend-cameras.md)
+- [下一任务：04a Frontend 迁移期选择规则](./04a-frontend-transition-rules.md)

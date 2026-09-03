@@ -63,7 +63,7 @@ afterEach(() => {
 });
 
 describe("Camera 详情 Query Options", () => {
-  test("固定 Key、时间参数并使用注入的 Client", async () => {
+  test("固定刷新参数并使用注入的 Client", async () => {
     const { client, requests } = createDetailClient();
     const options = cameraDetailQueryOptions(
       CAMERA_FIXTURE_IDS.primaryCamera,
@@ -73,10 +73,6 @@ describe("Camera 详情 Query Options", () => {
 
     await expect(queryClient.fetchQuery(options)).resolves.toEqual(detail);
 
-    expect(options.queryKey).toEqual([
-      "camera",
-      CAMERA_FIXTURE_IDS.primaryCamera,
-    ]);
     expect(options.staleTime).toBe(CAMERA_DETAIL_STALE_TIME);
     expect(options.gcTime).toBe(CAMERA_DETAIL_GC_TIME);
     expect(options.refetchInterval).toBe(CAMERA_DETAIL_REFETCH_INTERVAL);

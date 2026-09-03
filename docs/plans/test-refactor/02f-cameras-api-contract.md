@@ -12,15 +12,17 @@
 
 02a～02e 已完成。当前 `test_api_contract.py` 混合了 Cameras 请求/响应 Schema、OpenAPI、Core 健康
 接口 operation id、占位实现检查和 OpenAPI 导出稳定性。`test_placeholder_gate.py` 也覆盖占位检查。
-`test-impact.json` 已存在 `api-contract` 模块及 Backend/Frontend contract 标准路径。
+`test-impact.json` 已存在 `api-contract` 模块及 Backend/Frontend contract 标准路径。Backend 任务只整理
+Backend Contract 和跨端检查脚本；当前仍与 Frontend 源码共置的敏感数据生成物测试继续由脚本执行，
+并在 Frontend Cameras 任务 04c 中迁入 `frontend/tests/contract/api_contract/`。
 
 ### 实施范围
 
 - Cameras 公共请求/响应 Schema、载荷、错误媒体类型、协议 Header、路径、operation id 和敏感字段约束。
 - OpenAPI 导出稳定性，以及现有脚本对 `contracts/openapi.json` 与
   `frontend/src/generated/openapi.ts` 的检查。
-- `backend/tests/contract/api_contract/`；如现有跨端检查确需测试文件，可使用
-  `frontend/tests/contract/api_contract/`。
+- `backend/tests/contract/api_contract/`，以及未来 Frontend 公共检查必须使用的
+  `frontend/tests/contract/api_contract/` 归属规则；本 Backend 任务不提前移动 Frontend 测试文件。
 - 混合文件中 Core 健康接口检查的正确归属，以及与占位 gate 重复场景的处理。
 - `api-contract` 和 `backend-cameras` 的过渡命令、影响关系及选择器回归测试。
 
@@ -39,7 +41,8 @@
 3. 将占位 handler 检查与 `test_placeholder_gate.py` 对照，只保留能够防止实际发布风险的一份；其最终
    层级按检查是否需要真实脚本/文件边界决定，不把它伪装成公共 API Contract。
 4. 使用现有 `scripts/check-cameras-contracts.sh` 和敏感数据脚本检查生成 OpenAPI 与 Frontend 类型；只有
-   当前脚本无法被 `api-contract` 命令执行时才最小调整命令或脚本，并补选择器回归测试。
+   当前脚本无法被 `api-contract` 命令执行时才最小调整命令或脚本，并补选择器回归测试。Frontend
+   共置敏感数据测试在任务 04c 迁移前继续由现有路径执行。
 5. 更新 `test-impact.json`，确保 `api-contract` 命令会执行 contract 测试目录和现有检查脚本，且
    Cameras API 源码变更能选择 `api-contract` 与 `backend-cameras`。仍未迁移的 persistence legacy
    必须继续由 `backend-cameras` 执行。
@@ -56,7 +59,8 @@
 - 公共 Cameras Schema、OpenAPI、生成类型和跨端载荷直接归入 `api_contract`，没有中间
   `contract/cameras` 副本。
 - Core 与占位检查有明确且唯一的最终归属。
-- 任务 7 只需复核选择结果，不需再次搬运本阶段测试。
+- Frontend Cameras 任务 04c 会把现有共置敏感数据测试直接迁入 `contract/api_contract`；任务 7 只需
+  复核选择结果，不需再次搬运。
 - 已迁移契约不再留在 legacy，统一验证入口通过。
 
 ### 与下一任务的衔接

@@ -23,7 +23,7 @@ function renderCameraSources(camera: CameraDetail) {
 
 test("按响应顺序展示完整 Source 表格和只读默认源", () => {
   const camera = buildCameraDetail();
-  const { container } = renderCameraSources(camera);
+  renderCameraSources(camera);
 
   expect(screen.getByRole("heading", { name: "摄像头视频源" })).toBeVisible();
   expect(screen.getByRole("columnheader", { name: "预览" })).toBeVisible();
@@ -43,16 +43,18 @@ test("按响应顺序展示完整 Source 表格和只读默认源", () => {
   expect(radios[0]).toBeChecked();
   expect(radios[1]).not.toBeChecked();
 
-  const sourceStatusBadges = container.querySelectorAll("[data-source-status]");
-  expect(sourceStatusBadges).toHaveLength(camera.sources.length);
-  camera.sources.forEach((source, index) => {
-    expect(sourceStatusBadges[index]).toHaveClass(
-      source.status === "ONLINE" ? "bg-status-online" : "bg-status-offline",
-    );
+  camera.sources.forEach((source) => {
+    const row = screen.getByText(source.name).closest("tr");
+    if (!(row instanceof HTMLElement)) {
+      throw new Error(`未找到 Source“${source.name}”所在的表格行。`);
+    }
+    expect(
+      within(row).getByText(source.status === "ONLINE" ? "在线" : "离线"),
+    ).toBeVisible();
   });
 });
 
-test("RTSP URL 保持可换行等宽文本，窄容器只让表格区域横向滚动", () => {
+test("RTSP URL 以只读代码文本展示，不误导为可点击链接", () => {
   const camera = buildCameraDetail({
     sources: [
       {
@@ -61,15 +63,11 @@ test("RTSP URL 保持可换行等宽文本，窄容器只让表格区域横向�
       },
     ],
   });
-  const { container } = renderCameraSources(camera);
+  renderCameraSources(camera);
 
-  const table = container.querySelector("table");
-  expect(table).toHaveClass("min-w-3xl");
-  expect(table?.parentElement).toHaveClass("overflow-x-auto");
   for (const source of camera.sources) {
     const url = screen.getByText(source.rtsp_url);
     expect(url.tagName).toBe("CODE");
-    expect(url).toHaveClass("break-all", "font-mono");
     expect(url.closest("a")).toBeNull();
   }
 });

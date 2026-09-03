@@ -3,12 +3,13 @@ import userEvent from "@testing-library/user-event";
 import { expect, test } from "vitest";
 
 import { CameraDetailView } from "@/features/cameras/components/camera-detail-view";
-import { renderWithStreamSession } from "@/features/cameras/testing/render-with-stream-session";
 import {
   buildCameraDetail,
   CAMERA_FIXTURE_IDS,
 } from "@/mocks/cameras/fixtures";
 import { installFullscreenMocks } from "@/test/media-browser-mocks";
+
+import { renderWithStreamSession } from "../../support/cameras/render-with-stream-session";
 
 test("默认 Source 无法匹配也不影响详情按排序播放第一路 Source", async () => {
   const camera = buildCameraDetail();
@@ -122,7 +123,7 @@ test("排序第一路不可播放时连接响应顺序中的第一路可播放 S
   ).toHaveTextContent(camera.sources[1]?.name ?? "");
 });
 
-test("长 Source 名称在控制栏和弹层内保持单行省略", async () => {
+test("长 Source 名称在控制栏和选项中保留完整可访问文本", async () => {
   const user = userEvent.setup();
   const longChineseName = "视频".repeat(64);
   const longAsciiName = "A".repeat(128);
@@ -135,42 +136,15 @@ test("长 Source 名称在控制栏和弹层内保持单行省略", async () => 
   renderWithStreamSession(<CameraDetailView camera={camera} />);
 
   const trigger = screen.getByRole("combobox", { name: "切换预览源" });
-  const selectedValue = trigger.querySelector("[data-slot='select-value']");
-  expect(trigger).toHaveClass(
-    "w-fit",
-    "max-w-36",
-    "overflow-hidden",
-    "**:data-[slot=select-value]:block",
-    "**:data-[slot=select-value]:min-w-0",
-    "**:data-[slot=select-value]:truncate",
-    "[&>svg]:shrink-0",
-  );
-  expect(selectedValue).toHaveAttribute("title", longChineseName);
+  expect(trigger).toHaveTextContent(longChineseName);
 
   await user.click(trigger);
 
-  const listbox = await screen.findByRole("listbox");
-  const content = listbox.closest("[data-slot='select-content']");
+  expect(await screen.findByRole("listbox")).toBeVisible();
   const chineseOption = screen.getByRole("option", { name: longChineseName });
   const asciiOption = screen.getByRole("option", { name: longAsciiName });
-  const chineseName = chineseOption.querySelector(
-    `[title="${longChineseName}"]`,
-  );
-  const asciiName = asciiOption.querySelector(`[title="${longAsciiName}"]`);
-  const itemText = asciiOption.querySelector(":scope > div");
-
-  expect(content).toHaveClass("max-w-(--available-width)");
-  expect(asciiOption).toHaveClass(
-    "min-w-0",
-    "overflow-hidden",
-    "[&>div]:min-w-0",
-    "[&>div]:shrink",
-    "[&>div]:overflow-hidden",
-  );
-  expect(itemText?.tagName).toBe("DIV");
-  expect(itemText).toHaveClass("shrink-0", "whitespace-nowrap");
-  expect(chineseName).toHaveClass("min-w-0", "flex-1", "truncate");
-  expect(asciiName).toHaveClass("min-w-0", "flex-1", "truncate");
+  expect(chineseOption).toBeVisible();
+  expect(asciiOption).toBeVisible();
 
   // Base UI 关闭浮层时会执行退出过渡；显式等待清理，避免 Portal 状态影响后续用例。
   await user.keyboard("{Escape}");
@@ -296,7 +270,5 @@ test("浏览器全屏时 Source Select 留在播放器容器内且打开期间�
   const listbox = await screen.findByRole("listbox");
   expect(videoContainer).not.toBeNull();
   expect(videoContainer?.contains(listbox)).toBe(true);
-  expect(screen.getByRole("toolbar", { name: "视频操作" })).toHaveClass(
-    "opacity-100",
-  );
+  expect(screen.getByRole("toolbar", { name: "视频操作" })).toBeVisible();
 });

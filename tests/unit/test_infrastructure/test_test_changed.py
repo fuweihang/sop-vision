@@ -155,17 +155,23 @@ class SelectionTests(unittest.TestCase):
     def test_APIContract测试按Module级选择跨端相关模块(self) -> None:
         """公共契约测试变化必须复验生成物及 Backend、Frontend 的契约使用方。"""
 
-        level, modules, unmatched = test_changed.select_verification(
-            self.config,
-            ["backend/tests/contract/api_contract/test_cameras_openapi.py"],
-        )
+        paths = [
+            "backend/tests/contract/api_contract/test_cameras_openapi.py",
+            "frontend/tests/contract/api_contract/cameras-contract-security.test.ts",
+        ]
+        for path in paths:
+            with self.subTest(path=path):
+                level, modules, unmatched = test_changed.select_verification(
+                    self.config,
+                    [path],
+                )
 
-        self.assertEqual(level, "module")
-        self.assertEqual(
-            modules,
-            ["api-contract", "backend-cameras", "frontend-cameras"],
-        )
-        self.assertEqual(unmatched, [])
+                self.assertEqual(level, "module")
+                self.assertEqual(
+                    modules,
+                    ["api-contract", "backend-cameras", "frontend-cameras"],
+                )
+                self.assertEqual(unmatched, [])
 
     def test_APIContract各级命令都运行测试与生成物安全门禁(self) -> None:
         """无论选择器因规模提升到哪一级，都不能漏跑契约测试或专项脚本。"""
@@ -308,17 +314,129 @@ class SelectionTests(unittest.TestCase):
             self.assertNotIn("tests/modules/stream_gateway", joined)
             self.assertNotIn("tests/module/stream_gateway", joined)
 
-    def test_FrontendCameras未迁移时继续运行共置测试(self) -> None:
-        """API Contract 影响 Frontend 时，任务 04 前必须运行当前存在的共置测试。"""
+    def test_Frontend未迁移模块暂时运行当前共置测试(self) -> None:
+        """过渡命令必须指向当前真实测试，不能提前切到尚不存在的新目录。"""
 
-        for level in self.config["levels"]:
-            commands = self.config["modules"]["frontend-cameras"]["commands"][level]
-            joined = "\n".join(commands)
-            self.assertIn("src/features/cameras", joined)
-            self.assertIn("src/mocks/cameras", joined)
-            self.assertIn("src/routes/_app/cameras", joined)
-            self.assertIn("src/test/cameras-contract-security.test.ts", joined)
-            self.assertNotIn("tests/unit/cameras", joined)
+        expected_paths = {
+            "frontend-shared": ["src/lib"],
+            "frontend-shell": [
+                "src/components/app-shell",
+                "src/components/page-state",
+                "src/components/route-state",
+                "src/routes",
+            ],
+            "frontend-video": ["src/features/video"],
+        }
+        for module, paths in expected_paths.items():
+            with self.subTest(module=module):
+                for level in self.config["levels"]:
+                    joined = "\n".join(
+                        self.config["modules"][module]["commands"][level]
+                    )
+                    for path in paths:
+                        self.assertIn(path, joined)
+                    self.assertNotIn("frontend/tests/", joined)
+
+    def test_FrontendCameras最终命令按风险逐层增加新目录(self) -> None:
+        """04h 后 Cameras 只运行标准目录，不再执行共置测试或公共 Contract。"""
+
+        commands = self.config["modules"]["frontend-cameras"]["commands"]
+        unit = "\n".join(commands["unit"])
+        module = "\n".join(commands["module"])
+        integration = "\n".join(commands["integration"])
+
+        self.assertIn("tests/unit/cameras", unit)
+        self.assertNotIn("tests/component/cameras", unit)
+        self.assertIn(
+            "tests/unit/cameras tests/component/cameras tests/contract/cameras",
+            module,
+        )
+        self.assertNotIn("tests/integration/cameras", module)
+        self.assertIn(
+            "tests/unit/cameras tests/component/cameras tests/contract/cameras "
+            "tests/integration/cameras",
+            integration,
+        )
+
+        legacy_paths = [
+            "src/features/cameras",
+            "src/mocks/cameras",
+            "src/routes/_app/cameras",
+            "src/test/cameras-contract-security.test.ts",
+            "tests/contract/api_contract",
+        ]
+        for level, joined in (
+            ("unit", unit),
+            ("module", module),
+            ("integration", integration),
+        ):
+            with self.subTest(level=level):
+                for path in legacy_paths:
+                    self.assertNotIn(path, joined)
+
+    def test_Cameras路由变化同时选择Shell与Cameras集成测试(self) -> None:
+        """业务路由既属于 App Shell 的路由树，也包含 Cameras 的页面流程。"""
+
+        level, modules, unmatched = test_changed.select_verification(
+            self.config,
+            ["frontend/src/routes/_app/cameras/$cameraId.tsx"],
+        )
+
+        self.assertEqual(level, "integration")
+        self.assertEqual(modules, ["frontend-cameras", "frontend-shell"])
+        self.assertEqual(unmatched, [])
+
+    def test_Video变化继续使用Cameras最终命令(self) -> None:
+        """Video 的既有影响关系必须调用 Cameras 标准目录，不能带回旧过滤路径。"""
+
+        level, modules, unmatched = test_changed.select_verification(
+            self.config,
+            ["frontend/src/features/video/components/video-surface/video-surface.tsx"],
+        )
+
+        self.assertEqual(level, "module")
+        self.assertEqual(modules, ["frontend-cameras", "frontend-video"])
+        self.assertEqual(unmatched, [])
+        cameras_command = "\n".join(
+            self.config["modules"]["frontend-cameras"]["commands"][level]
+        )
+        self.assertIn(
+            "tests/unit/cameras tests/component/cameras tests/contract/cameras",
+            cameras_command,
+        )
+        self.assertNotIn("src/features/cameras", cameras_command)
+
+    def test_Frontend四层标准目录按风险选择Cameras模块(self) -> None:
+        """每个新目录必须选择唯一模块，并从最低有效层级开始验证。"""
+
+        cases = [
+            ("frontend/tests/unit/cameras/query-keys.test.ts", "unit"),
+            ("frontend/tests/component/cameras/card.test.tsx", "module"),
+            ("frontend/tests/contract/cameras/api.test.ts", "module"),
+            ("frontend/tests/integration/cameras/routes.test.tsx", "integration"),
+        ]
+        for path, expected_level in cases:
+            with self.subTest(path=path):
+                level, modules, unmatched = test_changed.select_verification(
+                    self.config,
+                    [path],
+                )
+
+                self.assertEqual(level, expected_level)
+                self.assertEqual(modules, ["frontend-cameras"])
+                self.assertEqual(unmatched, [])
+
+    def test_Cameras专用Support按Module级选择Cameras模块(self) -> None:
+        """Session 渲染工具只服务 Cameras 组件测试，不应扩大到全部 Frontend 模块。"""
+
+        level, modules, unmatched = test_changed.select_verification(
+            self.config,
+            ["frontend/tests/support/cameras/render-with-stream-session.tsx"],
+        )
+
+        self.assertEqual(level, "module")
+        self.assertEqual(modules, ["frontend-cameras"])
+        self.assertEqual(unmatched, [])
 
     def test_单模块大范围改动也提升到集成测试(self) -> None:
         paths = [

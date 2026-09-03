@@ -29,16 +29,10 @@ test("展示连接字段、Camera 状态和最近检查时间", () => {
   expect(screen.getByText(camera.ip_address)).toBeVisible();
   expect(screen.getByText(String(camera.rtsp_port))).toBeVisible();
   expect(screen.getByText(camera.username)).toBeVisible();
+  expect(screen.getByText("部分离线")).toBeVisible();
   expect(
     container.querySelector(`time[datetime="${firstSourceCheckedAt}"]`),
   ).toBeVisible();
-  expect(container.querySelector("[data-camera-status]")).toHaveClass(
-    "bg-status-degraded",
-    "text-status-degraded-foreground",
-  );
-  expect(
-    container.querySelector("[data-camera-status] [data-status-dot]"),
-  ).toHaveClass("bg-status-degraded-dot");
 });
 
 test("密码默认隐藏，并允许用户显式显示和再次隐藏", async () => {

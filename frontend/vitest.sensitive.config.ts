@@ -13,9 +13,9 @@ export default mergeConfig(
       include: [
         "src/lib/api-client.test.ts",
         "src/lib/api-errors.test.ts",
-        "src/mocks/cameras/fixtures.test.ts",
-        "src/mocks/cameras/scenarios.test.ts",
-        "src/test/cameras-contract-security.test.ts",
+        "tests/unit/cameras/fixtures.test.ts",
+        "tests/integration/cameras/scenarios.test.ts",
+        "tests/contract/api_contract/cameras-contract-security.test.ts",
       ],
     },
   }),

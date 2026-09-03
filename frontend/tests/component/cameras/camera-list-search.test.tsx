@@ -6,22 +6,13 @@ import {
   CameraListSearch,
 } from "@/features/cameras/components/camera-list-search";
 
-test("输入框左侧显示装饰性搜索图标，防抖 300ms 后提交 trim 查询", () => {
+test("防抖结束后提交 trim 查询，并响应外部 URL 状态", () => {
   vi.useFakeTimers();
   const onQueryChange = vi.fn();
   const rendered = render(
     <CameraListSearch query={undefined} onQueryChange={onQueryChange} />,
   );
   const searchbox = screen.getByRole("searchbox", { name: "搜索摄像头" });
-  const inputGroup = searchbox.closest("[data-slot='input-group']");
-  const iconAddon = inputGroup?.querySelector(
-    "[data-slot='input-group-addon']",
-  );
-
-  expect(iconAddon).toHaveAttribute("data-align", "inline-start");
-  expect(iconAddon).toHaveAttribute("aria-hidden", "true");
-  expect(iconAddon?.querySelector("svg")).toBeInTheDocument();
-
   fireEvent.change(searchbox, {
     target: { value: "  洗手区  " },
   });

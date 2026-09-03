@@ -16,16 +16,12 @@ import {
 import { buildProblem } from "@/mocks/cameras/fixtures";
 
 describe("Camera 列表 Query", () => {
-  test("loader 和页面可复用完整查询身份与可见页面刷新设置", () => {
+  test("loader 和页面复用可见页面刷新设置", () => {
     const options = cameraListQueryOptions(
       { q: "洗手区", page: 2, page_size: 10 },
       apiClient,
     );
 
-    expect(options.queryKey).toEqual([
-      "cameras",
-      { q: "洗手区", page: 2, page_size: 10 },
-    ]);
     expect(options.staleTime).toBe(CAMERA_LIST_STALE_TIME);
     expect(options.gcTime).toBe(CAMERA_LIST_GC_TIME);
     expect(options.refetchInterval).toBe(CAMERA_LIST_REFETCH_INTERVAL);

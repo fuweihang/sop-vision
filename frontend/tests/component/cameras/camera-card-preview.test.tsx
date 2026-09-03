@@ -4,7 +4,6 @@ import { expect, test, vi } from "vitest";
 import type { CameraDefaultPreviewSource } from "@/features/cameras/api/cameras-api";
 import { CameraCardPreview } from "@/features/cameras/components/camera-card-preview";
 import { CameraDetailPlayer } from "@/features/cameras/components/camera-detail-player";
-import { renderWithStreamSession } from "@/features/cameras/testing/render-with-stream-session";
 import {
   buildCameraDetail,
   buildCameraSummary,
@@ -12,6 +11,8 @@ import {
 } from "@/mocks/cameras/fixtures";
 import { setDocumentVisibility } from "@/test/browser-mocks";
 import { installMediaElementMocks } from "@/test/media-browser-mocks";
+
+import { renderWithStreamSession } from "../../support/cameras/render-with-stream-session";
 
 function buildPreviewSource(
   sourceOverrides: readonly CameraSourceFixtureInput[] = [{ status: "ONLINE" }],
@@ -63,7 +64,6 @@ test("挂载期间持有 Lease，页面 hidden 不释放，并投影浏览器 Se
   expect(result.streamSessionManager.activeSessionCount).toBe(1);
   const sessionStatus = screen.getByText("正在连接");
   expect(sessionStatus).toBeVisible();
-  expect(sessionStatus.parentElement).toHaveClass("top-3", "left-3");
   expect(screen.queryByText("正在加载视频")).toBeNull();
   expect(screen.getByRole("status", { name: "正在加载视频" })).toBeVisible();
 

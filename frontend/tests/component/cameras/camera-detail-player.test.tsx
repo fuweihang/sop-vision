@@ -3,10 +3,11 @@ import userEvent from "@testing-library/user-event";
 import { expect, test, vi } from "vitest";
 
 import { CameraDetailPlayer } from "@/features/cameras/components/camera-detail-player";
-import { renderWithStreamSession } from "@/features/cameras/testing/render-with-stream-session";
 import { buildCameraDetail } from "@/mocks/cameras/fixtures";
 import { setDocumentVisibility } from "@/test/browser-mocks";
 import { installPlayingMediaElementMocks } from "@/test/media-browser-mocks";
+
+import { renderWithStreamSession } from "../../support/cameras/render-with-stream-session";
 
 function createPlaybackStream() {
   const audioTrack = {

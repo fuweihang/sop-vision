@@ -346,12 +346,12 @@
       ],
       "impacts": ["frontend-shell", "frontend-cameras", "frontend-video"],
       "commands": {
-        "unit": ["cd frontend && pnpm exec vitest run tests/unit/shared"],
+        "unit": ["cd frontend && pnpm exec vitest run src/lib"],
         "module": [
-          "cd frontend && pnpm exec vitest run tests/unit/shared tests/component/shared tests/contract/shared"
+          "cd frontend && pnpm exec vitest run src/lib"
         ],
         "integration": [
-          "cd frontend && pnpm exec vitest run tests/unit/shared tests/component/shared tests/contract/shared tests/integration/shared"
+          "cd frontend && pnpm exec vitest run src/lib"
         ]
       }
     },
@@ -385,17 +385,23 @@
         {"paths": ["frontend/tests/integration/app_shell/**"], "level": "integration"}
       ],
       "commands": {
-        "unit": ["cd frontend && pnpm exec vitest run tests/unit/app_shell"],
+        "unit": [
+          "cd frontend && pnpm exec vitest run src/components/app-shell src/components/page-state src/components/route-state src/routes"
+        ],
         "module": [
-          "cd frontend && pnpm exec vitest run tests/unit/app_shell tests/component/app_shell tests/contract/app_shell"
+          "cd frontend && pnpm exec vitest run src/components/app-shell src/components/page-state src/components/route-state src/routes"
         ],
         "integration": [
-          "cd frontend && pnpm exec vitest run tests/unit/app_shell tests/component/app_shell tests/contract/app_shell tests/integration/app_shell"
+          "cd frontend && pnpm exec vitest run src/components/app-shell src/components/page-state src/components/route-state src/routes"
         ]
       }
     },
     "frontend-cameras": {
       "source": [
+        {
+          "paths": ["frontend/tests/support/cameras/**"],
+          "level": "module"
+        },
         {
           "paths": ["frontend/src/features/cameras/**", "frontend/src/mocks/**"],
           "level": "unit"
@@ -406,6 +412,10 @@
             "frontend/src/features/cameras/components/**"
           ],
           "level": "module"
+        },
+        {
+          "paths": ["frontend/src/routes/_app/cameras/**"],
+          "level": "integration"
         }
       ],
       "tests": [
@@ -418,13 +428,13 @@
       ],
       "commands": {
         "unit": [
-          "cd frontend && pnpm exec vitest run src/features/cameras src/mocks/cameras src/routes/_app/cameras src/test/cameras-contract-security.test.ts"
+          "cd frontend && pnpm exec vitest run tests/unit/cameras"
         ],
         "module": [
-          "cd frontend && pnpm exec vitest run src/features/cameras src/mocks/cameras src/routes/_app/cameras src/test/cameras-contract-security.test.ts"
+          "cd frontend && pnpm exec vitest run tests/unit/cameras tests/component/cameras tests/contract/cameras"
         ],
         "integration": [
-          "cd frontend && pnpm exec vitest run src/features/cameras src/mocks/cameras src/routes/_app/cameras src/test/cameras-contract-security.test.ts"
+          "cd frontend && pnpm exec vitest run tests/unit/cameras tests/component/cameras tests/contract/cameras tests/integration/cameras"
         ]
       }
     },
@@ -459,12 +469,12 @@
       ],
       "impacts": ["frontend-cameras"],
       "commands": {
-        "unit": ["cd frontend && pnpm exec vitest run tests/unit/video"],
+        "unit": ["cd frontend && pnpm exec vitest run src/features/video"],
         "module": [
-          "cd frontend && pnpm exec vitest run tests/unit/video tests/component/video tests/contract/video"
+          "cd frontend && pnpm exec vitest run src/features/video"
         ],
         "integration": [
-          "cd frontend && pnpm exec vitest run tests/unit/video tests/component/video tests/contract/video tests/integration/video"
+          "cd frontend && pnpm exec vitest run src/features/video"
         ]
       }
     }
