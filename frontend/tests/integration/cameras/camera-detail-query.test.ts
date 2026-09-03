@@ -23,7 +23,7 @@ import {
   buildCameraDetail,
   CAMERA_FIXTURE_IDS,
 } from "@/mocks/cameras/fixtures";
-import { setDocumentVisibility } from "@/test/browser-mocks";
+import { setDocumentVisibility } from "../../support/browser-mocks";
 
 const detail = buildCameraDetail();
 

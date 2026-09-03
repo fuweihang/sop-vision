@@ -7,7 +7,7 @@ import {
   buildCameraDetail,
   CAMERA_FIXTURE_IDS,
 } from "@/mocks/cameras/fixtures";
-import { installFullscreenMocks } from "@/test/media-browser-mocks";
+import { installFullscreenMocks } from "../../support/media-browser-mocks";
 
 import { renderWithStreamSession } from "../../support/cameras/render-with-stream-session";
 

@@ -13,7 +13,7 @@ import {
   StreamSessionManager,
   StreamSessionProvider,
 } from "@/features/video/stream-session";
-import { FakeStreamSession } from "../../tests/support/video/fake-stream-session";
+import { FakeStreamSession } from "./video/fake-stream-session";
 import { apiClient } from "@/lib/api-client";
 import { queryClient } from "@/lib/query-client";
 import { ThemeProvider } from "@/providers/theme-provider";

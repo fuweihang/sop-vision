@@ -20,7 +20,7 @@ import {
   installFullscreenMocks,
   installMediaElementMocks,
   installPlayingMediaElementMocks,
-} from "@/test/media-browser-mocks";
+} from "../../support/media-browser-mocks";
 
 function createPlaybackStream() {
   const audioTrack = {

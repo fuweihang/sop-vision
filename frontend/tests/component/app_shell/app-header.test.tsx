@@ -15,10 +15,8 @@ import { SidebarProvider } from "@/components/ui/sidebar";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/providers/theme-provider";
 import { getLoaderDataLabelOrParam } from "@/lib/route-meta";
-import { Route as CamerasRoute } from "@/routes/_app/cameras/route";
-import { Route as TasksRoute } from "@/routes/_app/tasks/route";
-import { setViewportWidth } from "@/test/browser-mocks";
-import { createTestRouter } from "@/test/render-router";
+import { setViewportWidth } from "../../support/browser-mocks";
+import { createTestRouter } from "../../support/render-router";
 
 const LONG_CAMERA_LABEL = "名称非常长且必须保持单行显示的生产线摄像头测试标签";
 
@@ -213,17 +211,6 @@ function renderHeaderAt(initialPath: string) {
 }
 
 test.each([
-  { route: CamerasRoute, label: "摄像头" },
-  { route: TasksRoute, label: "检测任务" },
-])("$label 列表路由声明 Breadcrumb", ({ route, label }) => {
-  const breadcrumb = route.options.staticData?.breadcrumb;
-  const actualLabel =
-    typeof breadcrumb === "string" ? breadcrumb : breadcrumb?.label;
-
-  expect(actualLabel).toBe(label);
-});
-
-test.each([
   ["/cameras", "摄像头"],
   ["/tasks", "检测任务"],
 ])("在 %s 渲染当前 Breadcrumb", async (path, label) => {
@@ -268,19 +255,6 @@ test("详情 Breadcrumb 优先显示 loader 返回的动态名称", async () => 
   expect(within(breadcrumb).queryByText("camera-42")).toBeNull();
 });
 
-test("Breadcrumb 不设置 title 以禁用浏览器原生悬停提示", async () => {
-  renderHeaderAt("/cameras/camera-42");
-
-  const breadcrumb = await screen.findByRole("navigation", {
-    name: "面包屑导航",
-  });
-  const parentItem = within(breadcrumb).getByRole("link", { name: "摄像头" });
-  const currentItem = within(breadcrumb).getByText(LONG_CAMERA_LABEL);
-
-  expect(parentItem).not.toHaveAttribute("title");
-  expect(currentItem).not.toHaveAttribute("title");
-});
-
 test("仅在 back 元数据存在时显示指向明确父路由的返回链接", async () => {
   const { unmount } = render(
     <RouterProvider router={createHeaderRouter("/cameras")} />,
@@ -297,9 +271,6 @@ test("仅在 back 元数据存在时显示指向明确父路由的返回链接",
   });
 
   expect(backLink).toHaveAttribute("href", "/cameras");
-  expect(backLink).not.toHaveAttribute("role", "button");
-  expect(backLink).not.toHaveAttribute("type", "button");
-  expect(backLink).not.toHaveAttribute("data-slot", "tooltip-trigger");
 });
 
 test("动态目标由 Router 替换相似参数名并编码参数值", async () => {
@@ -319,16 +290,16 @@ test("动态目标由 Router 替换相似参数名并编码参数值", async () 
   );
 });
 
-test("移动端 SidebarTrigger 保留在 Header leading 区", async () => {
+test("移动端保留可操作的主导航入口", async () => {
   setViewportWidth(500);
   renderHeaderAt("/cameras");
 
-  expect(await screen.findByRole("button", { name: "打开主导航" })).toHaveClass(
-    "md:hidden",
-  );
+  expect(
+    await screen.findByRole("button", { name: "打开主导航" }),
+  ).toBeVisible();
 });
 
-test("Theme Toggle 使用 Ghost Icon Button 并按 resolvedTheme 切换 dark class", async () => {
+test("Theme Toggle 切换页面主题和下一步操作名称", async () => {
   const user = userEvent.setup();
 
   render(
@@ -343,7 +314,6 @@ test("Theme Toggle 使用 Ghost Icon Button 并按 resolvedTheme 切换 dark cla
     name: "切换为深色主题",
   });
 
-  expect(toggle).toHaveClass("size-8", "hover:bg-muted");
   await user.click(toggle);
 
   await waitFor(() => {

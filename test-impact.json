@@ -27,7 +27,6 @@
     ".gitignore",
     "**/.gitignore",
     "frontend/.prettierignore",
-    "frontend/src/test/**",
     "detector/.gitkeep",
     "AGENTS.md",
     "README.md",
@@ -269,6 +268,7 @@
             "backend/scripts/export_openapi.py",
             "contracts/openapi.json",
             "frontend/src/generated/openapi.ts",
+            "frontend/vitest.sensitive.config.ts",
             "scripts/check-cameras-contracts.sh",
             "scripts/check-cameras-sensitive-data.sh"
           ],
@@ -307,6 +307,15 @@
       "source": [
         {
           "paths": [
+            "frontend/tests/setup.ts",
+            "frontend/tests/support/browser-mocks.ts",
+            "frontend/tests/support/media-browser-mocks.ts",
+            "frontend/tests/support/render-router.tsx"
+          ],
+          "level": "integration"
+        },
+        {
+          "paths": [
             "frontend/src/components/ui/**",
             "frontend/src/lib/**",
             "frontend/src/hooks/**",
@@ -319,6 +328,13 @@
           "level": "unit"
         },
         {"paths": ["frontend/src/components/ui/**", "frontend/src/providers/**"], "level": "module"},
+        {
+          "paths": [
+            "frontend/src/lib/api-client.ts",
+            "frontend/src/lib/api-errors.ts"
+          ],
+          "level": "module"
+        },
         {
           "paths": [
             "frontend/package.json",
@@ -346,12 +362,12 @@
       ],
       "impacts": ["frontend-shell", "frontend-cameras", "frontend-video"],
       "commands": {
-        "unit": ["cd frontend && pnpm exec vitest run src/lib"],
+        "unit": ["cd frontend && pnpm exec vitest run tests/unit/shared"],
         "module": [
-          "cd frontend && pnpm exec vitest run src/lib"
+          "cd frontend && pnpm exec vitest run tests/unit/shared tests/component/shared tests/contract/shared"
         ],
         "integration": [
-          "cd frontend && pnpm exec vitest run src/lib"
+          "cd frontend && pnpm exec vitest run tests/unit/shared tests/component/shared tests/contract/shared tests/integration/shared"
         ]
       }
     },
@@ -359,18 +375,23 @@
       "source": [
         {
           "paths": [
-            "frontend/src/App.tsx",
             "frontend/index.html",
             "frontend/public/brand/**",
             "frontend/public/favicon.ico",
             "frontend/src/components/app-shell/**",
             "frontend/src/components/layout/**",
             "frontend/src/components/page-state/**",
-            "frontend/src/components/route-state/**",
+            "frontend/src/components/route-state/**"
+          ],
+          "level": "module"
+        },
+        {
+          "paths": [
+            "frontend/src/App.tsx",
             "frontend/src/routes/**",
             "frontend/src/routeTree.gen.ts"
           ],
-          "level": "module"
+          "level": "integration"
         }
       ],
       "tests": [
@@ -386,13 +407,13 @@
       ],
       "commands": {
         "unit": [
-          "cd frontend && pnpm exec vitest run src/components/app-shell src/components/page-state src/components/route-state src/routes"
+          "cd frontend && pnpm exec vitest run tests/unit/app_shell"
         ],
         "module": [
-          "cd frontend && pnpm exec vitest run src/components/app-shell src/components/page-state src/components/route-state src/routes"
+          "cd frontend && pnpm exec vitest run tests/unit/app_shell tests/component/app_shell tests/contract/app_shell"
         ],
         "integration": [
-          "cd frontend && pnpm exec vitest run src/components/app-shell src/components/page-state src/components/route-state src/routes"
+          "cd frontend && pnpm exec vitest run tests/unit/app_shell tests/component/app_shell tests/contract/app_shell tests/integration/app_shell"
         ]
       }
     },

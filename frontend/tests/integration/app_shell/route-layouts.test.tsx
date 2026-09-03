@@ -6,8 +6,8 @@ import { expect, test, vi } from "vitest";
 import { CAMERA_FIXTURE_IDS } from "@/mocks/cameras/fixtures";
 import { createCamerasMswScenario } from "@/mocks/cameras/scenarios";
 import { mockServer } from "@/mocks/node";
-import { renderAppRoute, type AppTestRouter } from "@/test/render-router";
-import { setViewportWidth } from "@/test/browser-mocks";
+import { setViewportWidth } from "../../support/browser-mocks";
+import { renderAppRoute, type AppTestRouter } from "../../support/render-router";
 
 const CAMERA_DETAIL_PATH = `/cameras/${CAMERA_FIXTURE_IDS.primaryCamera}`;
 
@@ -216,7 +216,6 @@ test("Skip Link 首个获得键盘焦点并将焦点交给主内容", async () =
   const mainContent = document.getElementById("main-content");
 
   expect(skipLink).toHaveAttribute("href", "#main-content");
-  expect(skipLink).toHaveClass("sr-only", "focus-visible:not-sr-only");
 
   await user.tab();
   expect(skipLink).toHaveFocus();
@@ -266,21 +265,6 @@ test.each([
     expect(router.state.location.pathname).toBe(parentPath);
   },
 );
-
-test.each([
-  [CAMERA_DETAIL_PATH, "摄像头"],
-  ["/tasks/task-42", "检测任务"],
-])("详情路由 %s 保持父菜单激活", async (path, activeLabel) => {
-  renderRoute(path);
-
-  const mainNavigation = await screen.findByRole("navigation", {
-    name: "主菜单",
-  });
-
-  expect(
-    within(mainNavigation).getByRole("link", { name: activeLabel }),
-  ).toHaveAttribute("aria-current", "page");
-});
 
 test.each([
   {

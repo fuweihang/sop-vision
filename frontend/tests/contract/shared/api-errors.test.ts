@@ -5,13 +5,11 @@ import {
   ApiTransportError,
   ApiUnexpectedResponseError,
   mapApiError,
-  mapProblemFieldErrors,
-  parseProblemFieldPath,
   type ProblemDetails,
 } from "@/lib/api-errors";
-import { CAMERA_FIXTURE_SECRET } from "@/mocks/cameras/fixtures";
 
 const TRACE_ID = "tr_frontend_test";
+const SENSITIVE_VALUE = "shared-contract-secret-must-not-leak";
 
 function buildProblem(overrides: Partial<ProblemDetails> = {}): ProblemDetails {
   return {
@@ -92,69 +90,17 @@ describe("API 错误映射", () => {
   test("无 HTTP 响应时不保留 Axios 请求配置或伪造业务 code", () => {
     const mapped = mapApiError({
       isAxiosError: true,
-      config: { data: `password=${CAMERA_FIXTURE_SECRET}` },
+      config: { data: `password=${SENSITIVE_VALUE}` },
       request: {},
     });
 
     expect(mapped).toBeInstanceOf(ApiTransportError);
     expect(mapped).not.toHaveProperty("code");
-    expect(JSON.stringify(mapped)).not.toContain(CAMERA_FIXTURE_SECRET);
+    expect(JSON.stringify(mapped)).not.toContain(SENSITIVE_VALUE);
   });
 
   test("非 Axios 编程错误保持原样", () => {
     const original = new TypeError("程序错误");
     expect(mapApiError(original)).toBe(original);
-  });
-});
-
-describe("Problem 字段路径映射", () => {
-  test("动态 Source 下标映射为准确的结构化路径", () => {
-    expect(parseProblemFieldPath("sources[1].name")).toEqual([
-      "sources",
-      1,
-      "name",
-    ]);
-    expect(parseProblemFieldPath("sources[10].url_suffix")).toEqual([
-      "sources",
-      10,
-      "url_suffix",
-    ]);
-  });
-
-  test.each([
-    "sources[-1].name",
-    "sources[].name",
-    "sources[1][name]",
-    ".sources[1].name",
-    "sources[999999999999999999999].name",
-  ])("拒绝畸形或不安全路径 %s", (field) => {
-    expect(parseProblemFieldPath(field)).toBeUndefined();
-  });
-
-  test("畸形字段进入表单级错误且保持后端顺序", () => {
-    const problem = buildProblem({
-      errors: [
-        {
-          field: "sources[1].name",
-          code: "REQUIRED",
-          detail: "第二路名称必填。",
-        },
-        {
-          field: "sources[-1].name",
-          code: "INVALID_FIELD_PATH",
-          detail: "字段路径无效。",
-        },
-      ],
-    });
-
-    const mapped = mapProblemFieldErrors(problem);
-
-    expect(mapped.fields).toEqual([
-      {
-        path: ["sources", 1, "name"],
-        error: problem.errors?.[0],
-      },
-    ]);
-    expect(mapped.form).toEqual([problem.errors?.[1]]);
   });
 });

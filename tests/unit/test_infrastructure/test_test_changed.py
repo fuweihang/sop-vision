@@ -314,27 +314,179 @@ class SelectionTests(unittest.TestCase):
             self.assertNotIn("tests/modules/stream_gateway", joined)
             self.assertNotIn("tests/module/stream_gateway", joined)
 
-    def test_Frontend未迁移模块暂时运行当前共置测试(self) -> None:
-        """过渡命令必须指向当前真实测试，不能提前切到尚不存在的新目录。"""
+    def test_FrontendShared最终命令逐层增加标准目录(self) -> None:
+        """Shared 收尾后不再运行 src/lib，并按风险逐层增加标准目录。"""
 
-        expected_paths = {
-            "frontend-shared": ["src/lib"],
-            "frontend-shell": [
-                "src/components/app-shell",
-                "src/components/page-state",
-                "src/components/route-state",
-                "src/routes",
-            ],
-        }
-        for module, paths in expected_paths.items():
-            with self.subTest(module=module):
-                for level in self.config["levels"]:
-                    joined = "\n".join(
-                        self.config["modules"][module]["commands"][level]
-                    )
-                    for path in paths:
-                        self.assertIn(path, joined)
-                    self.assertNotIn("frontend/tests/", joined)
+        commands = self.config["modules"]["frontend-shared"]["commands"]
+        unit = "\n".join(commands["unit"])
+        module = "\n".join(commands["module"])
+        integration = "\n".join(commands["integration"])
+
+        self.assertIn("vitest run tests/unit/shared", unit)
+        self.assertNotIn("tests/component/shared", unit)
+        self.assertNotIn("tests/contract/shared", unit)
+        self.assertIn("tests/component/shared", module)
+        self.assertIn("tests/contract/shared", module)
+        self.assertNotIn("tests/integration/shared", module)
+        self.assertIn("tests/integration/shared", integration)
+        for joined in (unit, module, integration):
+            self.assertNotIn("src/lib", joined)
+
+    def test_APIClient和Error变化从Shared模块测试开始验证(self) -> None:
+        """公共 HTTP 边界变化不能只运行纯规则单元测试。"""
+
+        shared_modules = [
+            "frontend-cameras",
+            "frontend-shared",
+            "frontend-shell",
+            "frontend-video",
+        ]
+        for path in (
+            "frontend/src/lib/api-client.ts",
+            "frontend/src/lib/api-errors.ts",
+        ):
+            with self.subTest(path=path):
+                level, modules, unmatched = test_changed.select_verification(
+                    self.config,
+                    [path],
+                )
+
+                self.assertEqual(level, "module")
+                self.assertEqual(modules, shared_modules)
+                self.assertEqual(unmatched, [])
+
+    def test_敏感数据配置变化运行现有APIContract专项脚本(self) -> None:
+        """专项配置变化必须继续执行唯一的敏感数据检查入口。"""
+
+        level, modules, unmatched = test_changed.select_verification(
+            self.config,
+            ["frontend/vitest.sensitive.config.ts"],
+        )
+
+        self.assertEqual(level, "integration")
+        self.assertIn("api-contract", modules)
+        self.assertEqual(unmatched, [])
+        api_contract_commands = "\n".join(
+            self.config["modules"]["api-contract"]["commands"][level]
+        )
+        self.assertIn("check-cameras-sensitive-data.sh", api_contract_commands)
+
+    def test_FrontendShell最终命令逐层增加标准目录(self) -> None:
+        """Shell 收尾后不再运行共置测试，并按风险逐层增加标准目录。"""
+
+        commands = self.config["modules"]["frontend-shell"]["commands"]
+        unit = "\n".join(commands["unit"])
+        module = "\n".join(commands["module"])
+        integration = "\n".join(commands["integration"])
+
+        self.assertIn("vitest run tests/unit/app_shell", unit)
+        self.assertNotIn("tests/component/app_shell", unit)
+        self.assertIn(
+            "tests/unit/app_shell tests/component/app_shell "
+            "tests/contract/app_shell",
+            module,
+        )
+        self.assertNotIn("tests/integration/app_shell", module)
+        self.assertIn(
+            "tests/unit/app_shell tests/component/app_shell "
+            "tests/contract/app_shell tests/integration/app_shell",
+            integration,
+        )
+        legacy_paths = [
+            "src/components/app-shell",
+            "src/components/page-state",
+            "src/components/route-state",
+            "src/routes",
+        ]
+        for joined in (unit, module, integration):
+            for path in legacy_paths:
+                self.assertNotIn(path, joined)
+
+    def test_Shared和Shell四层标准目录按风险选择对应模块(self) -> None:
+        """每个新目录必须有唯一模块，并从该层级开始执行测试。"""
+
+        shared_modules = [
+            "frontend-cameras",
+            "frontend-shared",
+            "frontend-shell",
+            "frontend-video",
+        ]
+        cases = [
+            ("frontend/tests/unit/shared/route-meta.test.ts", "module", shared_modules),
+            (
+                "frontend/tests/component/shared/button.test.tsx",
+                "module",
+                shared_modules,
+            ),
+            (
+                "frontend/tests/contract/shared/api-client.test.ts",
+                "module",
+                shared_modules,
+            ),
+            (
+                "frontend/tests/integration/shared/providers.test.tsx",
+                "integration",
+                shared_modules,
+            ),
+            (
+                "frontend/tests/unit/app_shell/navigation.test.ts",
+                "unit",
+                ["frontend-shell"],
+            ),
+            (
+                "frontend/tests/component/app_shell/header.test.tsx",
+                "module",
+                ["frontend-shell"],
+            ),
+            (
+                "frontend/tests/contract/app_shell/routes.test.ts",
+                "module",
+                ["frontend-shell"],
+            ),
+            (
+                "frontend/tests/integration/app_shell/layout.test.tsx",
+                "integration",
+                ["frontend-shell"],
+            ),
+        ]
+        for path, expected_level, expected_modules in cases:
+            with self.subTest(path=path):
+                level, modules, unmatched = test_changed.select_verification(
+                    self.config,
+                    [path],
+                )
+
+                self.assertEqual(level, expected_level)
+                self.assertEqual(modules, expected_modules)
+                self.assertEqual(unmatched, [])
+
+    def test_Frontend公共Setup和Support变化验证全部使用模块(self) -> None:
+        """公共测试基础变化必须执行所有 Frontend 使用方的 integration 测试。"""
+
+        paths = [
+            "frontend/tests/setup.ts",
+            "frontend/tests/support/browser-mocks.ts",
+            "frontend/tests/support/media-browser-mocks.ts",
+            "frontend/tests/support/render-router.tsx",
+        ]
+        for path in paths:
+            with self.subTest(path=path):
+                level, modules, unmatched = test_changed.select_verification(
+                    self.config,
+                    [path],
+                )
+
+                self.assertEqual(level, "integration")
+                self.assertEqual(
+                    modules,
+                    [
+                        "frontend-cameras",
+                        "frontend-shared",
+                        "frontend-shell",
+                        "frontend-video",
+                    ],
+                )
+                self.assertEqual(unmatched, [])
 
     def test_Video最终命令按风险逐层增加标准目录和Reader校验(self) -> None:
         """05d 后 Video 只运行标准目录，真实媒体源仍保持手工启动。"""
@@ -413,6 +565,25 @@ class SelectionTests(unittest.TestCase):
         self.assertEqual(level, "integration")
         self.assertEqual(modules, ["frontend-cameras", "frontend-shell"])
         self.assertEqual(unmatched, [])
+
+    def test_Shell入口和普通路由变化执行Shell集成测试(self) -> None:
+        """应用入口、生成路由树和非 Cameras 路由都必须覆盖完整导航流程。"""
+
+        paths = [
+            "frontend/src/App.tsx",
+            "frontend/src/routes/_app/tasks/index.tsx",
+            "frontend/src/routeTree.gen.ts",
+        ]
+        for path in paths:
+            with self.subTest(path=path):
+                level, modules, unmatched = test_changed.select_verification(
+                    self.config,
+                    [path],
+                )
+
+                self.assertEqual(level, "integration")
+                self.assertEqual(modules, ["frontend-shell"])
+                self.assertEqual(unmatched, [])
 
     def test_Video变化继续使用Cameras最终命令(self) -> None:
         """Video 的既有影响关系必须调用 Cameras 标准目录，不能带回旧过滤路径。"""
@@ -524,6 +695,32 @@ class SelectionTests(unittest.TestCase):
         self.assertEqual(level, "unit")
         self.assertEqual(modules, [])
         self.assertEqual(unmatched, ["backend/src/app/modules/detectors/service.py"])
+
+    def test_Frontend旧测试工具路径重新出现时不能被忽略(self) -> None:
+        """删除临时豁免后，生产源码目录不能重新混入测试基础文件。"""
+
+        with patch.object(test_changed.Path, "exists", return_value=True):
+            level, modules, unmatched = test_changed.select_verification(
+                self.config,
+                ["frontend/src/test/setup.ts"],
+            )
+
+        self.assertEqual(level, "unit")
+        self.assertEqual(modules, [])
+        self.assertEqual(unmatched, ["frontend/src/test/setup.ts"])
+
+    def test_允许删除未登记的旧测试工具路径(self) -> None:
+        """迁移删除源码旁旧工具时，不应要求为已经消失的文件保留影响规则。"""
+
+        with patch.object(test_changed.Path, "exists", return_value=False):
+            level, modules, unmatched = test_changed.select_verification(
+                self.config,
+                ["frontend/src/test/setup.ts"],
+            )
+
+        self.assertEqual(level, "unit")
+        self.assertEqual(modules, [])
+        self.assertEqual(unmatched, [])
 
     def test_允许删除尚未迁移的旧测试路径(self) -> None:
         level, modules, unmatched = test_changed.select_verification(

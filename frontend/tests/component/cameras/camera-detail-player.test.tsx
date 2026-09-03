@@ -4,8 +4,8 @@ import { expect, test, vi } from "vitest";
 
 import { CameraDetailPlayer } from "@/features/cameras/components/camera-detail-player";
 import { buildCameraDetail } from "@/mocks/cameras/fixtures";
-import { setDocumentVisibility } from "@/test/browser-mocks";
-import { installPlayingMediaElementMocks } from "@/test/media-browser-mocks";
+import { setDocumentVisibility } from "../../support/browser-mocks";
+import { installPlayingMediaElementMocks } from "../../support/media-browser-mocks";
 
 import { renderWithStreamSession } from "../../support/cameras/render-with-stream-session";
 

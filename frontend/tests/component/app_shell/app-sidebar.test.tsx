@@ -17,8 +17,8 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { setViewportWidth } from "@/test/browser-mocks";
-import { createTestRouter } from "@/test/render-router";
+import { setViewportWidth } from "../../support/browser-mocks";
+import { createTestRouter } from "../../support/render-router";
 
 function SidebarStateProbe() {
   const { isMobile, open, openMobile } = useSidebar();

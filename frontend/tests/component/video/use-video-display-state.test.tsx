@@ -4,7 +4,7 @@ import { expect, test, vi } from "vitest";
 import { VideoSurface } from "@/features/video/components/video-surface";
 import { useVideoSurface } from "@/features/video/components/video-surface";
 import { useVideoDisplayState } from "@/features/video/display-state";
-import { installPlayingMediaElementMocks } from "@/test/media-browser-mocks";
+import { installPlayingMediaElementMocks } from "../../support/media-browser-mocks";
 
 function createPlaybackStream() {
   const videoTrack = {

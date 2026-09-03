@@ -12,8 +12,8 @@ import {
 } from "@/mocks/cameras/fixtures";
 import { createCamerasMswScenario } from "@/mocks/cameras/scenarios";
 import { mockServer } from "@/mocks/node";
-import { setViewportWidth } from "@/test/browser-mocks";
-import { renderAppRoute } from "@/test/render-router";
+import { setViewportWidth } from "../../support/browser-mocks";
+import { renderAppRoute } from "../../support/render-router";
 
 function renderCameraList(
   scenario: Parameters<typeof createCamerasMswScenario>[0] = "success",

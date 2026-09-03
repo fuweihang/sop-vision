@@ -9,8 +9,8 @@ import {
   buildCameraSummary,
   type CameraSourceFixtureInput,
 } from "@/mocks/cameras/fixtures";
-import { setDocumentVisibility } from "@/test/browser-mocks";
-import { installMediaElementMocks } from "@/test/media-browser-mocks";
+import { setDocumentVisibility } from "../../support/browser-mocks";
+import { installMediaElementMocks } from "../../support/media-browser-mocks";
 
 import { renderWithStreamSession } from "../../support/cameras/render-with-stream-session";
 

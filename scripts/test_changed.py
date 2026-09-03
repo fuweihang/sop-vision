@@ -170,15 +170,18 @@ def select_verification(
                         selected[name] = _raise_level(previous, rule["level"], levels)
                         path_matched = True
 
-        # 旧目录中的测试在迁移删除时尚未登记到新规则。删除动作本身应被允许；新路径
-        # 仍然存在，会继续要求唯一模块归属。已登记测试即使被删除也会在上方命中并执行测试。
-        deleted_legacy_test = (
+        # 迁移可能删除尚未登记的旧源码旁测试或测试工具。只对可识别的测试路径放行删除，
+        # 避免把拼错或遗漏登记的普通生产源码误判成已删除旧文件。同一路径只要仍然存在，
+        # 就必须命中模块或 ignored_paths；已登记路径即使被删除也会在上方触发对应模块。
+        path_parts = Path(path).parts
+        deleted_unregistered_test = not (ROOT / path).exists() and (
             is_below_root(path, config.get("test_roots", []))
-            and not (ROOT / path).exists()
+            or "test" in path_parts
+            or Path(path).name.endswith((".test.ts", ".test.tsx", "_test.py"))
         )
         if (
             not path_matched
-            and not deleted_legacy_test
+            and not deleted_unregistered_test
             and not matches(path, config.get("ignored_paths", []))
         ):
             unmatched.append(path)

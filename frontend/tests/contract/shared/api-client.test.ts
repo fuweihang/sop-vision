@@ -3,11 +3,8 @@ import { afterEach, describe, expect, test, vi } from "vitest";
 
 import { apiClient } from "@/lib/api-client";
 import { ApiTransportError } from "@/lib/api-errors";
-import {
-  createCamera,
-  type CameraCreateRequest,
-} from "@/features/cameras/api/cameras-api";
-import { CAMERA_FIXTURE_SECRET } from "@/mocks/cameras/fixtures";
+
+const SENSITIVE_VALUE = "shared-contract-secret-must-not-leak";
 
 const originalAdapter = apiClient.defaults.adapter;
 
@@ -39,31 +36,21 @@ describe("单一 Axios Client 安全边界", () => {
     };
     apiClient.defaults.adapter = failingAdapter;
 
-    const request: CameraCreateRequest = {
-      name: "安全测试 Camera",
-      ip_address: "192.0.2.10",
-      rtsp_port: 554,
-      username: "test-user",
-      password: CAMERA_FIXTURE_SECRET,
-      sources: [
-        {
-          name: "主码流",
-          url_suffix: "Streaming/Channels/101",
-          is_default_preview: true,
-        },
-      ],
+    const request = {
+      name: "公共 Client 安全测试",
+      password: SENSITIVE_VALUE,
     };
 
     let caught: unknown;
     try {
-      await createCamera(request);
+      await apiClient.post("/security-boundary-test", request);
     } catch (error) {
       caught = error;
     }
 
-    expect(JSON.stringify(originalAxiosError)).toContain(CAMERA_FIXTURE_SECRET);
+    expect(JSON.stringify(originalAxiosError)).toContain(SENSITIVE_VALUE);
     expect(caught).toBeInstanceOf(ApiTransportError);
-    expect(JSON.stringify(caught)).not.toContain(CAMERA_FIXTURE_SECRET);
+    expect(JSON.stringify(caught)).not.toContain(SENSITIVE_VALUE);
     expect(consoleError).not.toHaveBeenCalled();
     expect(consoleLog).not.toHaveBeenCalled();
     expect(localStorage.length).toBe(0);

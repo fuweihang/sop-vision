@@ -4,8 +4,8 @@ import { afterAll, afterEach, beforeAll, beforeEach, vi } from "vitest";
 
 import { queryClient } from "@/lib/query-client";
 import { mockServer } from "@/mocks/node";
-import { resetBrowserState } from "@/test/browser-mocks";
-import { restoreMediaBrowserMocks } from "@/test/media-browser-mocks";
+import { resetBrowserState } from "./support/browser-mocks";
+import { restoreMediaBrowserMocks } from "./support/media-browser-mocks";
 
 beforeAll(() => {
   // 未匹配 handler 必须让测试立即失败；MSW 不得把请求透传到真实 Backend/MediaMTX。

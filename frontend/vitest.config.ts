@@ -7,7 +7,8 @@ export default mergeConfig(
   defineConfig({
     test: {
       environment: "jsdom",
-      setupFiles: ["./src/test/setup.ts"],
+      setupFiles: ["./tests/setup.ts"],
+      include: ["tests/**/*.test.{ts,tsx}"],
       css: true,
       clearMocks: true,
       restoreMocks: true,
@@ -16,11 +17,7 @@ export default mergeConfig(
         reporter: ["text", "html", "lcov"],
         reportsDirectory: "./coverage",
         include: ["src/**/*.{ts,tsx}"],
-        exclude: [
-          "src/**/*.test.{ts,tsx}",
-          "src/test/**",
-          "src/routeTree.gen.ts",
-        ],
+        exclude: ["src/routeTree.gen.ts"],
       },
     },
   }),

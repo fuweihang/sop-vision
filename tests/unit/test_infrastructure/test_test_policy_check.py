@@ -33,6 +33,14 @@ class TestPathPolicyTests(unittest.TestCase):
                     "frontend/tests/component/video/controls.test.tsx",
                     "frontend/tests/contract/video/whep-session.test.ts",
                     "frontend/tests/integration/video/session.test.tsx",
+                    "frontend/tests/unit/shared/route-meta.test.ts",
+                    "frontend/tests/component/shared/button.test.tsx",
+                    "frontend/tests/contract/shared/api-client.test.ts",
+                    "frontend/tests/integration/shared/providers.test.tsx",
+                    "frontend/tests/unit/app_shell/navigation.test.ts",
+                    "frontend/tests/component/app_shell/header.test.tsx",
+                    "frontend/tests/contract/app_shell/routes.test.ts",
+                    "frontend/tests/integration/app_shell/layout.test.tsx",
                 ],
             )
 

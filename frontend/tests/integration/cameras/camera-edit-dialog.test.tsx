@@ -21,7 +21,7 @@ import {
 } from "@/mocks/cameras/fixtures";
 import { createCamerasMswScenario } from "@/mocks/cameras/scenarios";
 import { mockServer } from "@/mocks/node";
-import { renderAppRoute } from "@/test/render-router";
+import { renderAppRoute } from "../../support/render-router";
 
 const cameraDetailPath = `/cameras/${CAMERA_FIXTURE_IDS.primaryCamera}`;
 const camerasUrl = `${apiBaseUrl.replace(/\/$/, "")}/cameras`;

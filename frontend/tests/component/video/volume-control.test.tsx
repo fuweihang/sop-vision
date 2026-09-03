@@ -6,7 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { VideoControlsRoot } from "@/features/video/components/video-controls/controls-visibility";
 import { VolumeControl } from "@/features/video/components/video-controls/volume-control";
 import { VideoSurface } from "@/features/video/components/video-surface";
-import { installMediaElementMocks } from "@/test/media-browser-mocks";
+import { installMediaElementMocks } from "../../support/media-browser-mocks";
 
 function createPlaybackStream() {
   const audioTrack = {

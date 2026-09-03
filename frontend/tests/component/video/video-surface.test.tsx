@@ -11,7 +11,7 @@ import {
   installMediaElementMocks,
   installPlayingMediaElementMocks,
   installVideoFrameCallbackMocks,
-} from "@/test/media-browser-mocks";
+} from "../../support/media-browser-mocks";
 
 function createStream() {
   const stop = vi.fn();
