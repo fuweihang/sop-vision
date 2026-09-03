@@ -202,7 +202,7 @@ class SelectionTests(unittest.TestCase):
             self.assertNotIn("tests/contract/api_contract", joined)
 
     def test_StreamGateway变更继续影响Cameras且使用最终命令(self) -> None:
-        """任务 3 前 Stream Gateway 源码变化仍需带上已迁移的 Cameras 测试。"""
+        """Stream Gateway 源码变化仍需带上已迁移的 Cameras 测试。"""
 
         level, modules, unmatched = test_changed.select_verification(
             self.config,
@@ -218,14 +218,95 @@ class SelectionTests(unittest.TestCase):
         self.assertIn("tests/unit/cameras tests/module/cameras", cameras_command)
         self.assertNotIn("tests/modules/cameras", cameras_command)
 
-    def test_StreamGateway未迁移时继续运行旧测试目录(self) -> None:
-        """Cameras 先迁移时，Stream Gateway 不能提前引用尚不存在的新目录。"""
+    def test_StreamGateway测试目录按层级选择并继续影响Cameras(self) -> None:
+        """三类测试使用各自风险级别，跨模块影响使低层测试至少运行到 module。"""
+
+        cases = [
+            ("backend/tests/unit/stream_gateway/test_ports.py", "module"),
+            (
+                "backend/tests/contract/stream_gateway/test_mediamtx_openapi.py",
+                "module",
+            ),
+            (
+                "backend/tests/integration/stream_gateway/test_mediamtx_adapter.py",
+                "integration",
+            ),
+        ]
+        for path, expected_level in cases:
+            with self.subTest(path=path):
+                level, modules, unmatched = test_changed.select_verification(
+                    self.config,
+                    [path],
+                )
+
+                self.assertEqual(level, expected_level)
+                self.assertEqual(modules, ["backend-cameras", "backend-stream-gateway"])
+                self.assertEqual(unmatched, [])
+
+    def test_StreamGateway外部边界变化选择Integration(self) -> None:
+        """HTTP Adapter、真实门禁与共享 MediaMTX 协议都必须运行 integration。"""
+
+        cases = [
+            (
+                "backend/src/app/modules/stream_gateway/services/mediamtx.py",
+                ["backend-cameras", "backend-stream-gateway"],
+            ),
+            (
+                "backend/scripts/check_mediamtx_contract.py",
+                ["backend-cameras", "backend-stream-gateway"],
+            ),
+            (
+                "backend/scripts/check_mediamtx_adapter.py",
+                ["backend-cameras", "backend-stream-gateway"],
+            ),
+            (
+                "contracts/mediamtx-openapi.json",
+                [
+                    "backend-cameras",
+                    "backend-stream-gateway",
+                    "frontend-cameras",
+                    "frontend-video",
+                ],
+            ),
+        ]
+        for path, expected_modules in cases:
+            with self.subTest(path=path):
+                level, modules, unmatched = test_changed.select_verification(
+                    self.config,
+                    [path],
+                )
+
+                self.assertEqual(level, "integration")
+                self.assertEqual(modules, expected_modules)
+                self.assertEqual(unmatched, [])
+
+    def test_StreamGateway最终命令按风险增加目录和真实门禁(self) -> None:
+        """unit、contract、Adapter 与真实 MediaMTX 门禁按风险逐步加入。"""
+
+        commands = self.config["modules"]["backend-stream-gateway"]["commands"]
+        unit = "\n".join(commands["unit"])
+        module = "\n".join(commands["module"])
+        integration = "\n".join(commands["integration"])
+
+        self.assertIn("pytest tests/unit/stream_gateway", unit)
+        self.assertNotIn("tests/contract/stream_gateway", unit)
+        self.assertIn(
+            "pytest tests/unit/stream_gateway tests/contract/stream_gateway",
+            module,
+        )
+        self.assertNotIn("tests/integration/stream_gateway", module)
+        self.assertIn(
+            "pytest tests/unit/stream_gateway tests/contract/stream_gateway "
+            "tests/integration/stream_gateway",
+            integration,
+        )
+        self.assertIn("scripts/check_mediamtx_contract.py", integration)
+        self.assertIn("scripts/check_mediamtx_adapter.py", integration)
 
         for level in self.config["levels"]:
-            commands = self.config["modules"]["backend-stream-gateway"]["commands"][level]
-            joined = "\n".join(commands)
-            self.assertIn("tests/modules/stream_gateway", joined)
-            self.assertNotIn("tests/unit/stream_gateway", joined)
+            joined = "\n".join(commands[level])
+            self.assertNotIn("tests/modules/stream_gateway", joined)
+            self.assertNotIn("tests/module/stream_gateway", joined)
 
     def test_FrontendCameras未迁移时继续运行共置测试(self) -> None:
         """API Contract 影响 Frontend 时，任务 04 前必须运行当前存在的共置测试。"""

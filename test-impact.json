@@ -220,22 +220,16 @@
           "paths": [
             "backend/src/app/modules/stream_gateway/services/**",
             "backend/scripts/check_mediamtx_adapter.py",
-            "backend/scripts/check_mediamtx_contract.py"
+            "backend/scripts/check_mediamtx_contract.py",
+            "contracts/mediamtx-openapi.json"
           ],
           "level": "integration"
         }
       ],
       "tests": [
-        {
-          "paths": ["backend/tests/modules/stream_gateway/**"],
-          "level": "integration"
-        },
         {"paths": ["backend/tests/unit/stream_gateway/**"], "level": "unit"},
         {
-          "paths": [
-            "backend/tests/module/stream_gateway/**",
-            "backend/tests/contract/stream_gateway/**"
-          ],
+          "paths": ["backend/tests/contract/stream_gateway/**"],
           "level": "module"
         },
         {
@@ -245,9 +239,17 @@
       ],
       "impacts": ["backend-cameras"],
       "commands": {
-        "unit": ["cd backend && uv run pytest tests/modules/stream_gateway"],
-        "module": ["cd backend && uv run pytest tests/modules/stream_gateway"],
-        "integration": ["cd backend && uv run pytest tests/modules/stream_gateway"]
+        "unit": [
+          "cd backend && uv run pytest tests/unit/stream_gateway"
+        ],
+        "module": [
+          "cd backend && uv run pytest tests/unit/stream_gateway tests/contract/stream_gateway"
+        ],
+        "integration": [
+          "cd backend && uv run pytest tests/unit/stream_gateway tests/contract/stream_gateway tests/integration/stream_gateway",
+          "cd backend && uv run python scripts/check_mediamtx_contract.py",
+          "cd backend && uv run python scripts/check_mediamtx_adapter.py"
+        ]
       }
     },
     "api-contract": {

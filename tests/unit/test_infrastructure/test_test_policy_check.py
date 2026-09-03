@@ -72,18 +72,26 @@ class TestPathPolicyTests(unittest.TestCase):
 
         self.assertEqual(errors, [])
 
-    def test_迁移期间只接受StreamGateway旧测试目录(self) -> None:
-        """Cameras 已完成迁移，只有任务 3 尚待处理的旧目录仍在登记中。"""
+    def test_接受StreamGateway新目录并拒绝仍存在的旧目录(self) -> None:
+        """迁移后的三层目录有明确归属，旧 modules 目录不能重新引入。"""
 
         with patch.object(Path, "exists", return_value=True):
             errors = test_policy_check.validate_test_paths(
                 self.config,
                 [
-                    "backend/tests/modules/stream_gateway/test_ports.py",
+                    "backend/tests/unit/stream_gateway/test_ports.py",
+                    "backend/tests/contract/stream_gateway/test_mediamtx_openapi.py",
+                    "backend/tests/integration/stream_gateway/test_mediamtx_adapter.py",
                 ],
+            )
+            legacy_errors = test_policy_check.validate_test_paths(
+                self.config,
+                ["backend/tests/modules/stream_gateway/test_ports.py"],
             )
 
         self.assertEqual(errors, [])
+        self.assertEqual(len(legacy_errors), 1)
+        self.assertIn("不在已登记", legacy_errors[0])
 
     def test_拒绝同时属于多个模块的路径(self) -> None:
         config = copy.deepcopy(self.config)
