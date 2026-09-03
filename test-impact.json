@@ -48,6 +48,7 @@
             "scripts/test_policy_check.py",
             "scripts/format-staged.sh",
             "scripts/install-git-hooks.sh",
+            "scripts/setup-dev.sh",
             "scripts/verify-changed.sh",
             ".githooks/**",
             "test-impact.json"

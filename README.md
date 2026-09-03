@@ -92,33 +92,17 @@ docker compose down
 ## 宿主机开发
 
 要求 Python 3.12、uv、Node.js 24 和 pnpm 11。配置按运行位置拆分，容器服务名不能用于
-宿主机进程：
+宿主机进程。首次克隆后初始化开发环境：
 
 ```bash
-cp .env.example .env
-cp backend/.env.local.example backend/.env.local
-cp frontend/.env.local.example frontend/.env.local
-
-docker compose -f compose.yaml -f compose.dev.yaml \
-  up -d --wait postgres redis mediamtx
+./scripts/setup-dev.sh
 ```
 
-安装依赖并迁移数据库：
+脚本会创建缺失的本地配置、安装前后端依赖、启用 Git hooks，并检查 Compose 配置；不会覆盖已有
+`.env` 文件。需要同时启动 PostgreSQL、Redis、MediaMTX 并执行数据库迁移时使用：
 
 ```bash
-cd backend
-uv sync --locked
-uv run --env-file .env.local alembic upgrade head
-
-cd ../frontend
-corepack enable
-pnpm install --frozen-lockfile
-```
-
-首次克隆仓库后启用项目 Git hooks：
-
-```bash
-./scripts/install-git-hooks.sh
+./scripts/setup-dev.sh --with-services
 ```
 
 `pre-commit` 会使用 Ruff 和 Prettier 格式化已暂存的 Backend Python 文件与 Frontend 文件，并将
