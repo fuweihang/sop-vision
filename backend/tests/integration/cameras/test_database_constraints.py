@@ -11,7 +11,7 @@ from app.modules.cameras.persistence.integrity import (
     ReferenceIntegrityIssueKind,
     scan_reference_integrity,
 )
-from app.modules.cameras.persistence.models import CameraRow, CameraSourceRow
+from app.modules.cameras.persistence.models import CameraSourceRow
 from tests.support.cameras.database import (
     CAMERA_A,
     CAMERA_B,

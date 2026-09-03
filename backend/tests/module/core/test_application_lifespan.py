@@ -1,6 +1,7 @@
 """应用工厂 lifespan 的资源启动与关闭顺序测试。"""
 
 import asyncio
+
 import pytest
 
 from app.core.config import Settings
