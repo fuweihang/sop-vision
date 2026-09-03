@@ -1,4 +1,4 @@
-import { expect, test } from "vitest";
+import { expect, test, vi } from "vitest";
 
 import { apiBaseUrl } from "@/lib/api-client";
 import { ApiProblemError } from "@/lib/api-errors";
@@ -325,7 +325,14 @@ test("首次失败与后台刷新失败按独立计数器返回确定序列", as
 });
 
 test("未处理请求直接失败而不透传到真实网络", async () => {
-  await expect(
-    fetch(`${apiBaseUrl.replace(/\/$/, "")}/unhandled-foundation-probe`),
-  ).rejects.toThrow();
+  // MSW 会先把预期的未匹配请求写入 console.error，再拒绝 fetch。这里只屏蔽本用例主动
+  // 制造的诊断信息，避免成功的安全边界测试在 CI 中产生误导性的 stderr。
+  const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+  try {
+    await expect(
+      fetch(`${apiBaseUrl.replace(/\/$/, "")}/unhandled-foundation-probe`),
+    ).rejects.toThrow();
+  } finally {
+    consoleError.mockRestore();
+  }
 });

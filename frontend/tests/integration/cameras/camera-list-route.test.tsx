@@ -337,6 +337,8 @@ test("自动重试一次可恢复首次失败，不进入页面错误状态", as
 
 test("首次请求和自动重试均失败后，可重置 Query 并重新执行 loader", async () => {
   const user = userEvent.setup();
+  // 路由错误属于本用例的输入；Router 和 React 可能分别使用 warn 与 error 输出它。
+  const consoleWarn = vi.spyOn(console, "warn").mockImplementation(() => {});
   const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
   const { router } = renderCameraList("page-error-recovery");
   const invalidate = vi.spyOn(router, "invalidate");
@@ -350,6 +352,7 @@ test("首次请求和自动重试均失败后，可重置 Query 并重新执行 
   expect(
     await screen.findByRole("heading", { level: 2, name: "洗手区 01" }),
   ).toBeVisible();
+  consoleWarn.mockRestore();
   consoleError.mockRestore();
 });
 

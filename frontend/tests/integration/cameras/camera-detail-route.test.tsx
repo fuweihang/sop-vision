@@ -112,6 +112,9 @@ test("可信 CAMERA_NOT_FOUND 进入 Camera Not Found", async () => {
 });
 
 test("数据库错误进入 Cameras Route Error，后台刷新失败仍保留旧详情", async () => {
+  // TanStack Router 会通过 warn 报告预期的 loader 错误，React 错误边界则可能通过 error
+  // 报告同一次渲染恢复。两个通道都只在本用例内静音，防止掩盖其他测试的意外日志。
+  const consoleWarn = vi.spyOn(console, "warn").mockImplementation(() => {});
   const consoleError = vi
     .spyOn(console, "error")
     .mockImplementation(() => undefined);
@@ -148,5 +151,6 @@ test("数据库错误进入 Cameras Route Error，后台刷新失败仍保留旧
     screen.queryByRole("heading", { name: "无法加载摄像头内容" }),
   ).toBeNull();
 
+  consoleWarn.mockRestore();
   consoleError.mockRestore();
 });

@@ -355,7 +355,10 @@ test.each([
 
 test("Cameras 子路由失败时保留 Shell，并可通过 invalidate 重试", async () => {
   const user = userEvent.setup();
+  // Router 与 React 会通过不同 console 通道报告这里主动抛出的 loader 错误；局部静音可防止
+  // 测试哨兵出现在 CI 日志中，同时让其他用例的意外错误继续可见。
   const consoleWarn = vi.spyOn(console, "warn").mockImplementation(() => {});
+  const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
   let shouldFail = true;
   let restoreRoute = () => {};
 
@@ -410,6 +413,7 @@ test("Cameras 子路由失败时保留 Shell，并可通过 invalidate 重试", 
   } finally {
     restoreRoute();
     consoleWarn.mockRestore();
+    consoleError.mockRestore();
   }
 });
 
