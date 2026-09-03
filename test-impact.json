@@ -12,6 +12,7 @@
   "test_roots": ["tests", "backend/tests", "frontend/tests"],
   "test_support_paths": [
     "tests/support/**",
+    "backend/tests/__init__.py",
     "backend/tests/conftest.py",
     "backend/tests/support/**",
     "backend/tests/**/__init__.py",
@@ -364,10 +365,10 @@
       "commands": {
         "unit": ["cd frontend && pnpm exec vitest run tests/unit/shared"],
         "module": [
-          "cd frontend && pnpm exec vitest run tests/unit/shared tests/component/shared tests/contract/shared"
+          "cd frontend && pnpm exec vitest run tests/unit/shared tests/contract/shared"
         ],
         "integration": [
-          "cd frontend && pnpm exec vitest run tests/unit/shared tests/component/shared tests/contract/shared tests/integration/shared"
+          "cd frontend && pnpm exec vitest run tests/unit/shared tests/contract/shared"
         ]
       }
     },
@@ -407,13 +408,13 @@
       ],
       "commands": {
         "unit": [
-          "cd frontend && pnpm exec vitest run tests/unit/app_shell"
+          "cd frontend && pnpm exec vitest run tests/component/app_shell"
         ],
         "module": [
-          "cd frontend && pnpm exec vitest run tests/unit/app_shell tests/component/app_shell tests/contract/app_shell"
+          "cd frontend && pnpm exec vitest run tests/component/app_shell"
         ],
         "integration": [
-          "cd frontend && pnpm exec vitest run tests/unit/app_shell tests/component/app_shell tests/contract/app_shell tests/integration/app_shell"
+          "cd frontend && pnpm exec vitest run tests/component/app_shell tests/integration/app_shell"
         ]
       }
     },

@@ -52,6 +52,18 @@ def changed_files(base_ref: str) -> list[str]:
     return sorted(files)
 
 
+def repository_files() -> list[str]:
+    """返回仓库中全部现存的已跟踪文件和未忽略的未跟踪文件。"""
+
+    files = set(
+        git_paths("ls-files", "--cached", "--others", "--exclude-standard")
+    )
+    # `git ls-files --cached` 仍会列出工作区已删除但尚未暂存的文件。目录门禁只检查
+    # 当前实际存在的文件，否则删除旧路径反而会被当成违规。暂存删除已经不在 cached 集合中。
+    files.difference_update(git_paths("ls-files", "--deleted"))
+    return sorted(files)
+
+
 def matches(path: str, patterns: list[str]) -> bool:
     """判断仓库相对路径是否命中至少一个配置 glob。"""
 
@@ -179,9 +191,16 @@ def select_verification(
             or "test" in path_parts
             or Path(path).name.endswith((".test.ts", ".test.tsx", "_test.py"))
         )
+        # Python 测试包的空 `__init__.py` 需要位于 test root 才能稳定导入，但它没有
+        # 可执行行为，不应为它虚构模块影响。其他 Support 仍必须通过 source 规则登记使用方。
+        package_file_exception = (
+            Path(path).name == "__init__.py"
+            and matches(path, config.get("test_support_paths", []))
+        )
         if (
             not path_matched
             and not deleted_unregistered_test
+            and not package_file_exception
             and not matches(path, config.get("ignored_paths", []))
         ):
             unmatched.append(path)

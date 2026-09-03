@@ -32,6 +32,9 @@ SQLAlchemy `echo`，而是控制统一配置中的 `sqlalchemy.engine` Logger：
 
 ## 排障与验证
 
+日常交付在仓库根目录运行 `./scripts/verify-changed.sh`。以下命令只用于检查 Alembic 当前状态、打开
+SQL 排障输出，或单独复验 PostgreSQL 迁移环境：
+
 ```bash
 cd backend
 uv run --env-file .env.local alembic current

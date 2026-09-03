@@ -31,6 +31,25 @@ class ChangedFilesTests(unittest.TestCase):
             ["committed.py", "staged.py", "untracked.py", "working.py"],
         )
 
+    def test_仓库文件集合包含已跟踪和未忽略文件但排除工作区删除(self) -> None:
+        """全仓目录检查不能把已删除的旧测试误判成仍然存在。"""
+
+        outputs = {
+            ("ls-files", "--cached", "--others", "--exclude-standard"): [
+                "tracked.py",
+                "deleted.py",
+                "untracked.py",
+            ],
+            ("ls-files", "--deleted"): ["deleted.py"],
+        }
+
+        with patch.object(
+            test_changed, "git_paths", side_effect=lambda *args: outputs[args]
+        ):
+            files = test_changed.repository_files()
+
+        self.assertEqual(files, ["tracked.py", "untracked.py"])
+
 
 class SelectionTests(unittest.TestCase):
     """风险路径、影响传播和变更规模应逐级提高验证范围。"""
@@ -126,6 +145,18 @@ class SelectionTests(unittest.TestCase):
 
         self.assertEqual(level, "integration")
         self.assertEqual(modules, ["backend-cameras"])
+        self.assertEqual(unmatched, [])
+
+    def test_Backend测试根包文件不触发无意义测试(self) -> None:
+        """空的包初始化文件没有运行行为，可作为明确登记的 Support 例外。"""
+
+        level, modules, unmatched = test_changed.select_verification(
+            self.config,
+            ["backend/tests/__init__.py"],
+        )
+
+        self.assertEqual(level, "unit")
+        self.assertEqual(modules, [])
         self.assertEqual(unmatched, [])
 
     def test_Cameras模块测试按Module级选择Cameras模块(self) -> None:
@@ -315,7 +346,7 @@ class SelectionTests(unittest.TestCase):
             self.assertNotIn("tests/module/stream_gateway", joined)
 
     def test_FrontendShared最终命令逐层增加标准目录(self) -> None:
-        """Shared 收尾后不再运行 src/lib，并按风险逐层增加标准目录。"""
+        """Shared 只运行现存标准目录，不用空目录伪装更高测试层级。"""
 
         commands = self.config["modules"]["frontend-shared"]["commands"]
         unit = "\n".join(commands["unit"])
@@ -323,14 +354,12 @@ class SelectionTests(unittest.TestCase):
         integration = "\n".join(commands["integration"])
 
         self.assertIn("vitest run tests/unit/shared", unit)
-        self.assertNotIn("tests/component/shared", unit)
-        self.assertNotIn("tests/contract/shared", unit)
-        self.assertIn("tests/component/shared", module)
         self.assertIn("tests/contract/shared", module)
-        self.assertNotIn("tests/integration/shared", module)
-        self.assertIn("tests/integration/shared", integration)
+        self.assertIn("tests/contract/shared", integration)
         for joined in (unit, module, integration):
             self.assertNotIn("src/lib", joined)
+            self.assertNotIn("tests/component/shared", joined)
+            self.assertNotIn("tests/integration/shared", joined)
 
     def test_APIClient和Error变化从Shared模块测试开始验证(self) -> None:
         """公共 HTTP 边界变化不能只运行纯规则单元测试。"""
@@ -372,24 +401,18 @@ class SelectionTests(unittest.TestCase):
         self.assertIn("check-cameras-sensitive-data.sh", api_contract_commands)
 
     def test_FrontendShell最终命令逐层增加标准目录(self) -> None:
-        """Shell 收尾后不再运行共置测试，并按风险逐层增加标准目录。"""
+        """Shell 从现存 component 开始验证，integration 再增加完整流程。"""
 
         commands = self.config["modules"]["frontend-shell"]["commands"]
         unit = "\n".join(commands["unit"])
         module = "\n".join(commands["module"])
         integration = "\n".join(commands["integration"])
 
-        self.assertIn("vitest run tests/unit/app_shell", unit)
-        self.assertNotIn("tests/component/app_shell", unit)
-        self.assertIn(
-            "tests/unit/app_shell tests/component/app_shell "
-            "tests/contract/app_shell",
-            module,
-        )
+        self.assertIn("vitest run tests/component/app_shell", unit)
+        self.assertIn("vitest run tests/component/app_shell", module)
         self.assertNotIn("tests/integration/app_shell", module)
         self.assertIn(
-            "tests/unit/app_shell tests/component/app_shell "
-            "tests/contract/app_shell tests/integration/app_shell",
+            "tests/component/app_shell tests/integration/app_shell",
             integration,
         )
         legacy_paths = [
@@ -401,6 +424,8 @@ class SelectionTests(unittest.TestCase):
         for joined in (unit, module, integration):
             for path in legacy_paths:
                 self.assertNotIn(path, joined)
+            self.assertNotIn("tests/unit/app_shell", joined)
+            self.assertNotIn("tests/contract/app_shell", joined)
 
     def test_Shared和Shell四层标准目录按风险选择对应模块(self) -> None:
         """每个新目录必须有唯一模块，并从该层级开始执行测试。"""
@@ -686,6 +711,20 @@ class SelectionTests(unittest.TestCase):
         self.assertEqual(modules, ["backend-cameras"])
         self.assertEqual(unmatched, [])
 
+    def test_单模块达到Module文件阈值时提升到模块测试(self) -> None:
+        """多文件领域改动即使没有跨模块影响，也不能只运行零散单元测试。"""
+
+        paths = [
+            f"backend/src/app/modules/cameras/domain/changed_{index}.py"
+            for index in range(self.config["scale"]["module_files"])
+        ]
+
+        level, modules, unmatched = test_changed.select_verification(self.config, paths)
+
+        self.assertEqual(level, "module")
+        self.assertEqual(modules, ["backend-cameras"])
+        self.assertEqual(unmatched, [])
+
     def test_未知源码不能静默跳过(self) -> None:
         level, modules, unmatched = test_changed.select_verification(
             self.config,
@@ -695,6 +734,16 @@ class SelectionTests(unittest.TestCase):
         self.assertEqual(level, "unit")
         self.assertEqual(modules, [])
         self.assertEqual(unmatched, ["backend/src/app/modules/detectors/service.py"])
+
+    def test_Frontend未知源码不能静默跳过(self) -> None:
+        level, modules, unmatched = test_changed.select_verification(
+            self.config,
+            ["frontend/src/features/detectors/service.ts"],
+        )
+
+        self.assertEqual(level, "unit")
+        self.assertEqual(modules, [])
+        self.assertEqual(unmatched, ["frontend/src/features/detectors/service.ts"])
 
     def test_Frontend旧测试工具路径重新出现时不能被忽略(self) -> None:
         """删除临时豁免后，生产源码目录不能重新混入测试基础文件。"""

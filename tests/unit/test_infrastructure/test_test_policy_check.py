@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import copy
+import contextlib
+import io
 import unittest
 from pathlib import Path
 from unittest.mock import patch
@@ -83,8 +85,32 @@ class TestPathPolicyTests(unittest.TestCase):
                 [
                     "backend/tests/conftest.py",
                     "backend/tests/support/cameras/builders.py",
-                    "frontend/tests/support/render.tsx",
+                    "frontend/tests/setup.ts",
+                    "frontend/tests/support/render-router.tsx",
                 ],
+            )
+
+        self.assertEqual(errors, [])
+
+    def test_拒绝没有影响登记的测试支持文件(self) -> None:
+        """Support 不能只靠宽泛目录通配绕过模块选择。"""
+
+        with patch.object(Path, "exists", return_value=True):
+            errors = test_policy_check.validate_test_paths(
+                self.config,
+                ["frontend/tests/support/orphan.ts"],
+            )
+
+        self.assertEqual(len(errors), 1)
+        self.assertIn("没有登记受影响模块", errors[0])
+
+    def test_允许没有运行行为的包初始化文件(self) -> None:
+        """Python 包文件不包含 Fixture 或 Mock，不要求虚构一个使用模块。"""
+
+        with patch.object(Path, "exists", return_value=True):
+            errors = test_policy_check.validate_test_paths(
+                self.config,
+                ["backend/tests/__init__.py"],
             )
 
         self.assertEqual(errors, [])
@@ -125,6 +151,26 @@ class TestPathPolicyTests(unittest.TestCase):
         self.assertEqual(len(errors), 1)
         self.assertIn("同时属于多个测试模块", errors[0])
 
+    def test_拒绝Backend和Frontend源码旁测试(self) -> None:
+        """迁移完成后，常见测试命名和 frontend/src/test 都不能重新出现。"""
+
+        paths = [
+            "backend/src/app/modules/cameras/test_values.py",
+            "backend/src/app/modules/cameras/values_test.py",
+            "frontend/src/features/cameras/card.test.ts",
+            "frontend/src/features/cameras/card.test.tsx",
+            "frontend/src/features/cameras/card.spec.ts",
+            "frontend/src/features/cameras/card.spec.tsx",
+            "frontend/src/test/setup.ts",
+        ]
+        with patch.object(Path, "exists", return_value=True):
+            errors = test_policy_check.validate_test_paths(self.config, paths)
+
+        self.assertEqual(len(errors), len(paths))
+        for path, error in zip(paths, errors, strict=True):
+            self.assertIn(path, error)
+            self.assertIn("源码目录中存在测试文件", error)
+
     def test_允许删除不符合新规范的旧测试(self) -> None:
         errors = test_policy_check.validate_test_paths(
             self.config,
@@ -132,6 +178,31 @@ class TestPathPolicyTests(unittest.TestCase):
         )
 
         self.assertEqual(errors, [])
+
+    def test_命令行检查使用全部仓库文件而不是Git变更集合(self) -> None:
+        """目录门禁必须持续发现历史遗留测试，不能只验证当前 diff。"""
+
+        repository_paths = ["backend/tests/unit/cameras/test_values.py"]
+        terminal = io.StringIO()
+        with (
+            patch.object(
+                test_policy_check,
+                "repository_files",
+                return_value=repository_paths,
+            ) as repository_files,
+            patch.object(
+                test_policy_check,
+                "validate_test_paths",
+                return_value=[],
+            ) as validate_test_paths,
+            contextlib.redirect_stdout(terminal),
+        ):
+            result = test_policy_check.main()
+
+        self.assertEqual(result, 0)
+        repository_files.assert_called_once_with()
+        validate_test_paths.assert_called_once_with(self.config, repository_paths)
+        self.assertIn("测试目录检查：通过", terminal.getvalue())
 
 
 if __name__ == "__main__":

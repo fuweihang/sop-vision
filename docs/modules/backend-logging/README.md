@@ -107,6 +107,9 @@ console 的时间不加方括号并使用 ANSI 灰色弱化；级别沿用不同
 
 ## 验证
 
+日常交付只在仓库根目录运行 `./scripts/verify-changed.sh`。只有定位统一入口失败或单独复验 PostgreSQL
+迁移环境时，才直接运行以下 Backend 命令：
+
 ```bash
 cd backend
 uv run --env-file .env.local pytest tests/unit/core/test_logging.py \

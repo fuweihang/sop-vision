@@ -32,6 +32,9 @@ Filter 从请求上下文补充的 `trace_id`。
 
 ## 验证
 
+日常交付在仓库根目录运行 `./scripts/verify-changed.sh`。只有定位统一入口中的 HTTP 日志失败时，才直接
+运行以下聚焦测试：
+
 ```bash
 cd backend
 uv run pytest tests/contract/core/test_http_foundation.py \

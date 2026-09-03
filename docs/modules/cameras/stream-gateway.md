@@ -138,7 +138,10 @@ trace 由统一日志 Handler 从请求上下文补充，Adapter 不手工读取
 ## 验证
 
 单元测试覆盖分页完整性、严格布尔降级、500ms 总预算、无重试、配置所有权隔离、幂等写删、投影
-不变量和敏感数据过滤。真实 Adapter 门禁使用锁定版本的独立临时容器，并保证清理测试容器：
+不变量和敏感数据过滤。日常交付在仓库根目录运行 `./scripts/verify-changed.sh`。
+
+需要额外确认真实 MediaMTX Adapter 时，使用以下锁定版本的独立临时容器门禁；该命令也可用于定位
+统一入口中的 Stream Gateway integration 失败，并保证清理测试容器：
 
 ```bash
 cd backend

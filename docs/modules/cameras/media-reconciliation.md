@@ -108,7 +108,8 @@ ensure/release 0。Adapter 单次 I/O 使用 `stream_gateway.io` DEBUG，默认�
 ## 长期验证
 
 相关测试覆盖纯差异、完整快照失败零写入、单项失败继续、下一轮恢复、失败退避、任务取消、最小
-连接池、跨实例锁竞争、损坏聚合和敏感数据过滤：
+连接池、跨实例锁竞争、损坏聚合和敏感数据过滤。日常交付在仓库根目录运行
+`./scripts/verify-changed.sh`。只有定位统一入口失败或单独复验 PostgreSQL 环境时，才直接运行：
 
 ```bash
 cd backend

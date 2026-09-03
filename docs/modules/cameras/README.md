@@ -49,27 +49,17 @@ Frontend → FastAPI Cameras API → Cameras Application → PostgreSQL
 
 ## 公共验证入口
 
-常规 Cameras 改动使用以下检查；真实 MediaMTX、媒体对账和浏览器播放的额外入口由对应主题文档
-说明，不在每个业务用例文档中重复全量命令。
+日常交付只在仓库根目录运行统一入口。脚本会根据 `test-impact.json` 中的路径、模块和变更规模选择
+需要的 Backend、Frontend、API Contract、敏感数据与 MediaMTX 检查，并把完整日志写入临时目录。
 
 ```bash
-# 仓库根目录
-bash scripts/check-cameras-contracts.sh
-bash scripts/check-cameras-sensitive-data.sh
-
-# backend/
-uv run --env-file .env.local pytest
-uv run ruff check .
-uv run ruff format --check .
-uv run python scripts/check_camera_placeholders.py foundation
-
-# frontend/
-pnpm vendor:check
-pnpm test
-pnpm lint
-pnpm format:check
-pnpm build
+./scripts/verify-changed.sh
 ```
+
+只有定位统一入口报告的失败时，才直接运行日志中给出的 Pytest 或 Vitest 命令。
+`scripts/check-cameras-contracts.sh`、`scripts/check-cameras-sensitive-data.sh`、
+`backend/scripts/check_camera_placeholders.py` 和 `pnpm vendor:check` 保留为专项排障入口；日常交付由
+统一入口按实际影响调用。真实 MediaMTX、媒体对账和浏览器播放的额外环境验收见对应主题文档。
 
 PostgreSQL 集成测试必须配置独立的 `TEST_DATABASE_URL`；相关测试被跳过时不能算作完整持久化验收。
 `foundation` 门禁允许尚未实现的 handler 保持纯占位，完整 MVP 发布改用 `mvp` 门禁并要求零占位，

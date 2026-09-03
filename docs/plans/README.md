@@ -3,7 +3,6 @@
 本目录只保存尚未完成、可以直接交给开发者执行的工作。当前计划：
 
 - [Cameras MVP 剩余能力](cameras-mvp/README.md)
-- [测试代码重构](test-refactor/README.md)
 
 ## 计划内容
 

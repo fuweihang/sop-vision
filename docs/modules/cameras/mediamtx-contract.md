@@ -80,7 +80,8 @@ MediaMTX 故障不能令 Backend 配置 API 整体失去就绪状态。由 `app/
   [发布门禁](../../plans/cameras-mvp/11-release-gates/README.md)，不由
   Control API 连通性代替。
 
-真实协议门禁使用独立临时容器，不访问共享开发实例：
+日常交付在仓库根目录运行 `./scripts/verify-changed.sh`。MediaMTX 升级、协议排障或额外环境验收时，
+使用以下真实协议门禁；它会创建独立临时容器，不访问共享开发实例：
 
 ```bash
 cd backend
