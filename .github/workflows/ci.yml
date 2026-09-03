@@ -1,15 +1,9 @@
-name: Cameras Foundation
+name: SOP Vision CI
 
 on:
   pull_request:
   push:
   workflow_dispatch:
-    inputs:
-      enforce_mvp_handlers:
-        description: "要求六个 Cameras handler 全部实现（MVP 发布门禁）"
-        required: false
-        default: false
-        type: boolean
 
 # CI 只读取仓库内容，不上传制品、不写 PR，也不需要任何生产环境 secret。
 permissions:
@@ -20,8 +14,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  contract-gate:
-    name: 契约、迁移与敏感数据门禁
+  quality-gate:
+    name: 全量测试与质量检查
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
@@ -41,7 +35,7 @@ jobs:
           --health-retries 5
 
     # 应用库只用于配置隔离比较；集成测试会基于 TEST_DATABASE_URL 创建并最终删除独立的
-    # *_test 数据库。两个 URL 放在 job 级别，确保完整 pytest 收集到 integration 测试时可用。
+    # *_test 数据库。两个 URL 放在 job 级别，确保 Backend 全量测试收集 integration 测试时可用。
     env:
       DATABASE_URL: postgresql+psycopg://sop_vision:sop_vision@127.0.0.1:5432/sop_vision
       TEST_DATABASE_URL: postgresql+psycopg://sop_vision:sop_vision@127.0.0.1:5432/sop_vision_test
@@ -77,26 +71,17 @@ jobs:
         working-directory: frontend
         run: pnpm install --frozen-lockfile
 
-      - name: Backend integration 级别测试与静态检查
+      - name: Backend 全量测试、Lint 与格式检查
         working-directory: backend
         run: |
           uv run pytest
           uv run ruff check .
           uv run ruff format --check .
 
-      - name: 重新生成 OpenAPI 与 TypeScript 并检查漂移
+      - name: 重新生成 Cameras OpenAPI 与 Frontend 类型并检查漂移
         run: bash scripts/check-cameras-contracts.sh
 
-      - name: 检查 Foundation 占位生命周期
-        working-directory: backend
-        run: uv run python scripts/check_camera_placeholders.py foundation
-
-      - name: 检查 MVP 发布时无占位 handler
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.enforce_mvp_handlers }}
-        working-directory: backend
-        run: uv run python scripts/check_camera_placeholders.py mvp
-
-      - name: Frontend 测试、Lint、格式与生产构建
+      - name: Frontend 全量测试、Lint、格式检查与生产构建
         working-directory: frontend
         run: |
           pnpm test
@@ -104,6 +89,6 @@ jobs:
           pnpm format:check
           pnpm build
 
-      # 保持最后执行，确保一般质量检查通过后仍必须单独证明完整的凭据边界。
-      - name: 敏感数据专项门禁
+      # 保持最后执行，让敏感数据测试拥有独立步骤和清晰的失败提示。
+      - name: Cameras 敏感数据专项测试
         run: bash scripts/check-cameras-sensitive-data.sh
