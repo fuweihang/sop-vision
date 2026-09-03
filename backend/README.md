@@ -1,21 +1,21 @@
 # SOP Vision Backend
 
 Backend 是平台的 FastAPI 控制面。当前已完成公共 HTTP/数据库基础、Camera 领域与持久化层、
-MediaMTX v1.20.1 Adapter、PostgreSQL 到 MediaMTX 的后台媒体对账，以及 Camera 创建、列表和详情；
-Camera 更新、默认源切换、删除、Redis 和 Detector 控制尚未实现。
+MediaMTX v1.20.1 Adapter、PostgreSQL 到 MediaMTX 的后台媒体对账，以及 Camera 创建、列表、详情、
+完整更新和默认源切换；Camera 删除、Redis 和 Detector 控制尚未实现。
 
 ## 当前能力
 
-| 能力                         | 状态     | 入口                                            |
-| ---------------------------- | -------- | ----------------------------------------------- |
-| 存活检查                     | 可用     | `GET /api/v1/health/live`                       |
-| PostgreSQL 就绪检查          | 可用     | `GET /api/v1/health/ready`                      |
-| MediaMTX 协议与 Adapter      | 可用     | `contracts/mediamtx-openapi.json`、`ports.py`   |
-| Camera 领域与持久化          | 可用     | `app/modules/cameras/domain`、`persistence`     |
-| 媒体后台对账                 | 可用     | `application/reconciliation.py`                 |
-| Cameras HTTP 契约            | 已冻结   | 六个路由和 Schema 已进入 OpenAPI                |
-| Cameras HTTP 行为            | 部分可用 | 创建、列表和详情可用，其余三个 handler 仍为占位 |
-| Redis / WebSocket / Detector | 未实现   | Compose 变量和目标设计不等于应用接入            |
+| 能力                         | 状态     | 入口                                          |
+| ---------------------------- | -------- | --------------------------------------------- |
+| 存活检查                     | 可用     | `GET /api/v1/health/live`                     |
+| PostgreSQL 就绪检查          | 可用     | `GET /api/v1/health/ready`                    |
+| MediaMTX 协议与 Adapter      | 可用     | `contracts/mediamtx-openapi.json`、`ports.py` |
+| Camera 领域与持久化          | 可用     | `app/modules/cameras/domain`、`persistence`   |
+| 媒体后台对账                 | 可用     | `application/reconciliation.py`               |
+| Cameras HTTP 契约            | 已冻结   | 六个路由和 Schema 已进入 OpenAPI              |
+| Cameras HTTP 行为            | 部分可用 | 除删除外均已实现，删除仍为唯一占位 handler    |
+| Redis / WebSocket / Detector | 未实现   | Compose 变量和目标设计不等于应用接入          |
 
 `/api/v1/health/ready` 当前只检查 PostgreSQL，不检查 MediaMTX 或 Redis。MediaMTX 不可用不会令
 配置 API 被部署层摘除；媒体故障由状态投影和脱敏对账日志独立表达。
@@ -139,12 +139,12 @@ backend/
 │   │   └── http/               # Trace、Problem、校验与 OpenAPI 公共机制
 │   └── modules/
 │       ├── cameras/
-│       │   ├── api/            # Schema、依赖、错误映射、创建、列表、详情和剩余占位 Router
+│       │   ├── api/            # Schema、依赖、错误映射、已实现用例和删除占位 Router
 │       │   ├── application/    # 应用端口、媒体 Desired State 与后台对账
 │       │   ├── domain/         # 框架无关的 Camera 聚合和值对象
 │       │   └── persistence/    # Repository/UoW、Mapper、巡检和对账锁/读取
 │       └── stream_gateway/     # MediaMTX Port、URL 规则、状态投影与 Adapter
-└── tests/                      # 结构与源码层级对应的测试
+└── tests/                      # 按测试层级与主模块组织，Support 独立存放
 ```
 
 `api` 拥有不属于具体业务模块的应用级 HTTP 入口；`core` 提供公共基础设施，不依赖业务模块；
@@ -158,16 +158,16 @@ PostgreSQL，避免 MediaMTX 故障同时让配置控制面被摘除。详细规
 
 ## 质量检查
 
+日常交付从仓库根目录运行统一入口，由影响表选择 Backend 测试和相关专项检查：
+
 ```bash
-uv run --env-file .env.local pytest
-uv run --env-file .env.local pytest --cov=app --cov-report=term-missing
-uv run ruff check .
-uv run ruff format --check .
-uv run python scripts/check_mediamtx_contract.py
-uv run python scripts/check_camera_placeholders.py foundation
+./scripts/verify-changed.sh
 ```
 
-未配置 `TEST_DATABASE_URL` 时，数据库集成测试会明确跳过。MVP 发布门禁使用
+只有定位失败、执行 CI 同等全量检查或额外验收时，才直接运行 Pytest、覆盖率、Ruff 和 Backend
+专项脚本。数据库 integration 被选中时，缺少 `backend/.env.local` 和 `TEST_DATABASE_URL` 会令统一
+入口失败。测试目录、选择过程和日志排障见
+[测试基础设施](../docs/modules/test-infrastructure/README.md)。MVP 发布门禁使用
 `uv run python scripts/check_camera_placeholders.py mvp`，它在任一 Cameras handler 仍为占位时失败。
 
 添加依赖使用 `uv add package-name` 或 `uv add --dev package-name`，并同时提交

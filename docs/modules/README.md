@@ -7,6 +7,7 @@
 
 - [Cameras](cameras/README.md)：Camera 配置、创建、列表与详情、媒体运行态、后台恢复和 WHEP 播放。
 - [Backend 日志](backend-logging/README.md)：Backend 统一日志格式、事件、HTTP access 和数据库输出。
+- [测试基础设施](test-infrastructure/README.md)：测试目录、模块归属、按变更选择和统一验证入口。
 
 ## 模块目录应包含什么
 

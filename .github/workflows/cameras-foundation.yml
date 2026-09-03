@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       enforce_mvp_handlers:
-        description: "要求七个 Cameras handler 全部实现（MVP 发布门禁）"
+        description: "要求六个 Cameras handler 全部实现（MVP 发布门禁）"
         required: false
         default: false
         type: boolean

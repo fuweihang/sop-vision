@@ -1,9 +1,9 @@
 # SOP Vision Frontend
 
 Frontend 使用 React 19、TypeScript、Vite、TanStack Router/Query、Tailwind CSS v4 和 shadcn/ui。
-当前已完成应用 Shell、主题、路由状态、生成式 API Client、错误映射、Cameras MSW、Camera 新增
-Dialog、搜索分页列表、实时预览 Card、只读详情和可临时切源的 WHEP 播放器；Detection Tasks 页面
-仍是业务骨架。
+当前已完成应用 Shell、主题、路由状态、生成式 API Client、错误映射、Cameras MSW、Camera 新增与
+编辑 Dialog、搜索分页列表、实时预览 Card、默认源切换，以及可临时切源的详情 WHEP 播放器；
+Detection Tasks 页面仍是业务骨架。
 
 ## 环境与启动
 
@@ -25,12 +25,12 @@ pnpm dev
 | -------------------- | --------------------------------------------------- |
 | `/`                  | 重定向到 `/cameras`                                 |
 | `/cameras`           | Camera 新增、URL 搜索分页、实时预览 Card 和列表状态 |
-| `/cameras/$cameraId` | 完整只读详情、WHEP 播放器和临时 Source 切换         |
+| `/cameras/$cameraId` | 完整详情、配置编辑、默认源切换和临时切源 WHEP 播放  |
 | `/tasks`             | App Shell、标题和列表骨架                           |
 | `/tasks/$taskId`     | 详情层级、Breadcrumb、返回操作和详情骨架            |
 
 Shell 已支持桌面 Sidebar、移动 Sheet、Light/Dark 主题、跳转主内容、路由后焦点恢复和响应式重排。
-Camera 配置编辑、默认源切换、删除、ROI 和任务操作属于后续业务实现。
+Camera 删除、ROI 和任务操作属于后续业务实现。
 
 ## API 与生成文件
 
@@ -108,13 +108,14 @@ frontend/src/
 
 ## 质量检查
 
+日常交付从仓库根目录运行：
+
 ```bash
-pnpm test
-pnpm test:sensitive-data
-pnpm lint
-pnpm format:check
-pnpm build
+./scripts/verify-changed.sh
 ```
 
-`pnpm build` 同时执行 TypeScript project build 和 Vite 生产构建。修复格式或 Lint 时分别使用
-`pnpm format`、`pnpm lint:fix`。
+脚本按变更选择 Frontend 模块的 unit、component、contract 和 integration 测试，并在需要时调用
+敏感数据、vendored reader 等专项检查。`pnpm test`、`pnpm test:sensitive-data`、`pnpm lint`、
+`pnpm format:check` 和 `pnpm build` 保留用于 CI、失败排查或额外全量验收；其中 `pnpm build` 同时
+执行 TypeScript project build 和 Vite 生产构建。测试目录与选择规则见
+[测试基础设施](../docs/modules/test-infrastructure/README.md)。

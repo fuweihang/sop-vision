@@ -94,10 +94,9 @@ URL 后缀、顺序和时间。完整 RTSP URL 由聚合派生，不单独持久
 
 ## HTTP 与跨端契约
 
-- 公共 API 前缀是 `/api/v1`；健康检查、`GET/POST /api/v1/cameras` 和
-  `GET /api/v1/cameras/{camera_id}` 当前可用。
-- Cameras 六个目标 operation 已注册到真实应用并导出到 `contracts/openapi.json`；创建、列表和详情
-  已实现，更新、默认源切换和删除仍为占位。
+- 公共 API 前缀是 `/api/v1`；健康检查和六个 Cameras operation 已注册到真实应用并导出到
+  `contracts/openapi.json`。
+- Camera 创建、列表、详情、完整更新和默认源切换已实现；删除仍为唯一占位 handler。
 - OpenAPI 生成 Frontend operation 类型；Frontend 不维护第二份手写 DTO。
 - 错误使用 `application/problem+json`，Header 和 body 共享同一 Trace ID。
 - Cameras 写请求禁止未知字段；路径 ID 只接受标准小写 UUID v4。
@@ -120,8 +119,8 @@ Compose 已提供 Redis，但应用尚未接入。通信语义见
 MediaMTX 是媒体路由层，不拥有 Camera 业务配置、用户权限或算法逻辑。Adapter 能读取完整配置/
 运行态快照，并能通过 Control API 覆盖或删除以 `source_id` 命名的 Path。后台 Reconciler 已从
 PostgreSQL 读取 Desired State，在启动、周期和 MediaMTX 内存状态丢失后恢复合法 Path，并清理
-数据库已不存在的受管孤儿 Path。Camera 创建已经在数据库提交后尽力建立媒体 Path；更新和删除的
-即时媒体调用仍未实现。外部操作不进入数据库事务。
+数据库已不存在的受管孤儿 Path。Camera 创建、完整更新和默认源切换会在数据库提交后尽力同步媒体
+Path；删除的即时媒体调用仍未实现。外部操作不进入数据库事务。
 
 每轮对账使用 PostgreSQL session advisory lock 保证多实例互斥。持锁连接只在一条只读
 `LEFT JOIN` 查询期间开启短事务，远端 I/O 不持有数据库事务；配置快照或数据库聚合不完整时整轮

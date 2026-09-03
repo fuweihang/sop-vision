@@ -33,6 +33,8 @@ Python 面向 3.12，使用四个空格、完整类型提示、100 字符行宽�
 
 脚本根据风险和规模在 unit、module、integration 之间升级，并将完整输出写入临时日志。默认不运行全量测试；失败时先使用 `rg` 检索脚本给出的日志路径，只读取定位问题所需的片段。
 
+目录、影响登记、选择过程和排障入口见 `docs/modules/test-infrastructure/README.md`。
+
 ## Git 与 Pull Request
 
 创建 Git 提交时使用 `git-commit` skill；创建、准备或更新 Pull Request 时使用 `pull-request` skill。不得提交 `.env`、密钥、凭据或本地运行数据。

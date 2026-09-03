@@ -2,22 +2,22 @@
 
 SOP Vision 是面向 IP Camera 的视觉分析平台。当前仓库已经完成可运行的基础设施、
 FastAPI/React 工程骨架，以及 Camera 配置、MediaMTX 适配和后台媒体对账所需的公共能力；
-Camera 创建、搜索分页列表、详情和 WHEP 播放已经可用，更新、默认源切换、删除和 Detector 业务
-仍未实现。
+Camera 创建、搜索分页列表、详情、完整编辑、默认源切换和 WHEP 播放已经可用，删除和 Detector
+业务仍未实现。
 
 ## 当前状态
 
-| 范围                | 状态     | 说明                                                                                         |
-| ------------------- | -------- | -------------------------------------------------------------------------------------------- |
-| 本地运行栈          | 可用     | PostgreSQL、Redis、MediaMTX、FastAPI、React/Nginx                                            |
-| Backend 公共基础    | 可用     | 应用工厂、数据库生命周期、统一日志、Problem、Trace ID、CORS                                  |
-| 健康检查            | 可用     | `GET /api/v1/health/live` 与 `GET /api/v1/health/ready`                                      |
-| Cameras Foundation  | 已完成   | 领域聚合、Repository/UoW、关系模型、OpenAPI、前端 Client/Mock 和 CI 门禁                     |
-| MediaMTX 媒体边界   | 已完成   | v1.20.1 协议、Path 读写、完整快照、状态投影和真实 Adapter 门禁                               |
-| 媒体后台对账        | 已完成   | 启动/周期恢复数据库 Source Path，并清理受管孤儿 Path                                         |
-| Cameras HTTP 业务   | 部分可用 | 创建、列表和详情可用；更新、切默认源和删除三个 handler 仍为占位                              |
-| Web UI              | 部分可用 | 新增、搜索分页、Card 实时预览、详情播放和临时切源可用；编辑、默认源切换、删除和 Tasks 未实现 |
-| Detector 与实时检测 | 未实现   | `detector/` 仅为预留目录；Backend 尚未接入 Redis 客户端或 WebSocket                          |
+| 范围                | 状态     | 说明                                                                                    |
+| ------------------- | -------- | --------------------------------------------------------------------------------------- |
+| 本地运行栈          | 可用     | PostgreSQL、Redis、MediaMTX、FastAPI、React/Nginx                                       |
+| Backend 公共基础    | 可用     | 应用工厂、数据库生命周期、统一日志、Problem、Trace ID、CORS                             |
+| 健康检查            | 可用     | `GET /api/v1/health/live` 与 `GET /api/v1/health/ready`                                 |
+| Cameras Foundation  | 已完成   | 领域聚合、Repository/UoW、关系模型、OpenAPI、前端 Client/Mock 和 CI 门禁                |
+| MediaMTX 媒体边界   | 已完成   | v1.20.1 协议、Path 读写、完整快照、状态投影和真实 Adapter 门禁                          |
+| 媒体后台对账        | 已完成   | 启动/周期恢复数据库 Source Path，并清理受管孤儿 Path                                    |
+| Cameras HTTP 业务   | 部分可用 | 创建、列表、详情、完整更新和默认源切换可用；删除仍为唯一占位 handler                    |
+| Web UI              | 部分可用 | 新增、搜索分页、实时预览、详情播放、临时切源、编辑和默认源切换可用；删除和 Tasks 未实现 |
+| Detector 与实时检测 | 未实现   | `detector/` 仅为预留目录；Backend 尚未接入 Redis 客户端或 WebSocket                     |
 
 精确的 Cameras 当前能力见 [Cameras 模块文档](docs/modules/cameras/README.md)，未完成工作见
 [Cameras MVP 剩余计划](docs/plans/cameras-mvp/README.md)。
@@ -50,7 +50,9 @@ flowchart LR
 ├── detector/             # Detector 预留目录，当前无实现
 ├── docs/                 # 架构、产品、Cameras MVP 与设计系统
 ├── frontend/             # React、TypeScript、Vite 和 Nginx 镜像
-├── scripts/              # 跨端契约与敏感数据门禁
+├── scripts/              # 按变更验证、跨端契约与专项门禁
+├── tests/                # 仓库级测试基础设施回归测试
+├── test-impact.json      # 路径、模块影响、验证级别和命令登记
 ├── compose.yaml          # 完整运行栈
 ├── compose.dev.yaml      # 宿主机开发所需的额外端口
 └── .env.example
@@ -75,8 +77,8 @@ docker compose --env-file .env exec backend alembic upgrade head
 - MediaMTX WHEP 服务：<http://localhost:8889>
 
 容器启动不会自动执行数据库迁移；部署新 revision 后必须显式运行 `alembic upgrade head`。
-当前 Frontend 可以创建、搜索和分页浏览 Camera，Card 可以实时预览默认 Source，详情页可以播放 WHEP
-流和临时切换 Source。Backend 的创建、列表和详情接口可用，更新、切默认源和删除仍进入占位 handler。
+当前 Frontend 可以创建、搜索、分页浏览和编辑 Camera，Card 可以实时预览并切换默认 Source，详情页
+可以播放 WHEP 流和临时切换 Source。Backend 除删除外的 Cameras 接口均已实现。
 
 停止服务使用：
 
@@ -130,26 +132,13 @@ pnpm dev
 ## 质量检查
 
 ```bash
-cd backend
-uv run --env-file .env.local pytest
-uv run ruff check .
-uv run ruff format --check .
-uv run python scripts/check_mediamtx_contract.py
-
-cd ../frontend
-pnpm test
-pnpm vendor:check
-pnpm lint
-pnpm format:check
-pnpm build
-
-cd ..
-bash scripts/check-cameras-contracts.sh
-bash scripts/check-cameras-sensitive-data.sh
+./scripts/verify-changed.sh
 ```
 
-未配置 `TEST_DATABASE_URL` 时，PostgreSQL 迁移和 Repository 集成测试会跳过；完整验收必须
-确认这些测试实际执行。
+脚本先检查全仓测试目录，再根据 `test-impact.json` 选择受影响模块和验证强度。Backend integration
+被选中时必须通过 `backend/.env.local` 或进程环境提供独立 `TEST_DATABASE_URL`；缺少环境会失败，
+不会把跳过当作通过。完整规则、日志位置和单项排障命令见
+[测试基础设施](docs/modules/test-infrastructure/README.md)。
 
 ## 文档
 
@@ -159,6 +148,7 @@ bash scripts/check-cameras-sensitive-data.sh
 - [产品范围](docs/product-requirements.md)
 - [Cameras 当前能力](docs/modules/cameras/README.md)
 - [Backend 日志](docs/modules/backend-logging/README.md)
+- [测试基础设施](docs/modules/test-infrastructure/README.md)
 - [Cameras MVP 剩余计划](docs/plans/cameras-mvp/README.md)
 - [Design System](docs/design-system/README.md)
 - [实时检测数据设计](docs/realtime-detection-design.md)

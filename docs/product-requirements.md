@@ -18,14 +18,14 @@ SOP Vision 是企业内部视觉检测平台，围绕两类核心资源工作：
 
 已交付的是工程运行栈、Backend/Frontend 公共基础、Cameras Foundation、MediaMTX Adapter 和
 后台媒体对账。数据库中已有 Camera Source 时，Backend 能在启动及周期轮询中恢复 MediaMTX Path
-并清理受管孤儿 Path；用户已经可以创建、搜索和分页浏览 Camera，通过 Card 预览默认 Source，并在
-详情自动选择可播放 Source、临时切源和使用自定义播放器，但还不能编辑、切换持久化默认源或删除
-Camera，也不能创建或运行 Detection Task。`/tasks` 仍只用于验证 App Shell 和页面层级。
+并清理受管孤儿 Path；用户已经可以创建、搜索、分页浏览和完整编辑 Camera，通过 Card 预览并切换
+默认 Source，也能在详情自动选择可播放 Source、临时切源和使用自定义播放器。Camera 删除以及
+Detection Task 的创建和运行仍未实现；`/tasks` 只用于验证 App Shell 和页面层级。
 
 ## Cameras 第一阶段
 
-Cameras MVP 已提供创建、搜索分页列表、Card 实时预览、详情和详情 WHEP 播放，剩余计划继续提供
-配置更新、默认源切换、删除和发布验收。第一阶段完整范围包括：
+Cameras MVP 已提供创建、搜索分页列表、Card 实时预览、详情、配置更新、默认源切换和详情 WHEP
+播放，剩余计划继续提供删除和发布验收。第一阶段完整范围包括：
 
 - 按名称或 IPv4 搜索、分页浏览 Camera。
 - 查看完整配置、Source 状态和默认 Source。

@@ -28,6 +28,8 @@
 
 ## 相关长期文档
 
-- [仓库测试与交付规则](../../AGENTS.md)
+- [测试基础设施](../modules/test-infrastructure/README.md)
+- [变更影响表驱动日常测试验证的技术决定](../decisions/0003-change-impact-driven-test-verification.md)
+- [仓库开发规则](../../AGENTS.md)
 - [Cameras 公共验证入口](../modules/cameras/README.md#公共验证入口)
 - [Backend 日志验证与排障](../modules/backend-logging/README.md#验证)

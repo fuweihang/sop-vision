@@ -58,6 +58,7 @@ changes/<日期>-<主题>  记录这次交付改变了什么
 
 - [Cameras](modules/cameras/README.md)：Camera 配置、创建、列表与详情、MediaMTX 对账和 WHEP 播放能力。
 - [Backend 日志](modules/backend-logging/README.md)：统一输出、业务事件、HTTP access 与数据库日志。
+- [测试基础设施](modules/test-infrastructure/README.md)：测试目录、影响登记与按变更验证。
 - [总体架构](vision-platform-architecture.md)：当前服务与数据边界。
 - [产品范围](product-requirements.md)：产品对象、计划能力和范围外事项。
 - [实时检测数据设计](realtime-detection-design.md)：尚未实现的 Detector、Redis 和 WebSocket 目标设计。
