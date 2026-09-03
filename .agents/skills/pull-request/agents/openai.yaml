@@ -1,0 +1,4 @@
+interface:
+  display_name: "Pull Request"
+  short_description: "基于当前分支和实际变更创建或更新 PR。"
+  default_prompt: "使用 `$pull-request`，根据实际差异和相关文档，创建、准备或更新当前分支的 PR。"

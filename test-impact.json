@@ -1,0 +1,431 @@
+{
+  "version": 2,
+  "base_ref": "origin/main",
+  "levels": ["unit", "module", "integration"],
+  "impact_level": "module",
+  "scale": {
+    "module_files": 6,
+    "module_modules": 2,
+    "integration_files": 16,
+    "integration_modules": 5
+  },
+  "test_roots": ["tests", "backend/tests", "frontend/tests"],
+  "test_support_paths": [
+    "tests/support/**",
+    "backend/tests/conftest.py",
+    "backend/tests/support/**",
+    "backend/tests/**/__init__.py",
+    "frontend/tests/setup.ts",
+    "frontend/tests/support/**"
+  ],
+  "ignored_paths": [
+    ".codex/**",
+    ".agents/skills/git-commit/**",
+    ".agents/skills/pull-request/**",
+    ".github/instructions/**",
+    ".vscode/**",
+    ".gitignore",
+    "**/.gitignore",
+    "frontend/.prettierignore",
+    "frontend/src/test/**",
+    "detector/.gitkeep",
+    "AGENTS.md",
+    "README.md",
+    "backend/README.md",
+    "frontend/README.md",
+    "docs/**",
+    "skills-lock.json"
+  ],
+  "modules": {
+    "test-infrastructure": {
+      "source": [
+        {
+          "paths": [
+            ".agents/skills/test-policy/**",
+            "scripts/test-changed.sh",
+            "scripts/test-policy-check.sh",
+            "scripts/test_changed.py",
+            "scripts/test_policy_check.py",
+            "scripts/verify-changed.sh",
+            "test-impact.json"
+          ],
+          "level": "unit"
+        }
+      ],
+      "tests": [
+        {
+          "paths": ["tests/unit/test_infrastructure/**"],
+          "level": "unit"
+        }
+      ],
+      "commands": {
+        "unit": [
+          "python3 -m unittest discover -s tests/unit/test_infrastructure -p 'test_*.py'"
+        ],
+        "module": [
+          "python3 -m unittest discover -s tests/unit/test_infrastructure -p 'test_*.py'"
+        ],
+        "integration": [
+          "python3 -m unittest discover -s tests/unit/test_infrastructure -p 'test_*.py'"
+        ]
+      }
+    },
+    "project-infrastructure": {
+      "source": [
+        {
+          "paths": [
+            ".env.example",
+            ".github/workflows/**",
+            "compose.yaml",
+            "compose.dev.yaml",
+            "backend/.dockerignore",
+            "backend/Dockerfile",
+            "frontend/.dockerignore",
+            "frontend/Dockerfile",
+            "frontend/nginx.conf"
+          ],
+          "level": "integration"
+        }
+      ],
+      "tests": [],
+      "impacts": [
+        "backend-core",
+        "backend-cameras",
+        "backend-stream-gateway",
+        "frontend-shared",
+        "frontend-shell",
+        "frontend-cameras",
+        "frontend-video",
+        "api-contract"
+      ],
+      "commands": {
+        "unit": ["docker compose -f compose.yaml -f compose.dev.yaml config --quiet"],
+        "module": ["docker compose -f compose.yaml -f compose.dev.yaml config --quiet"],
+        "integration": ["docker compose -f compose.yaml -f compose.dev.yaml config --quiet"]
+      }
+    },
+    "backend-core": {
+      "source": [
+        {
+          "paths": [
+            "backend/src/app/__init__.py",
+            "backend/src/app/modules/__init__.py",
+            "backend/src/app/core/**",
+            "backend/src/app/api/**",
+            "backend/src/app/factory.py",
+            "backend/src/app/main.py",
+            "backend/src/app/server.py"
+          ],
+          "level": "unit"
+        },
+        {
+          "paths": ["backend/src/app/core/http/**", "backend/src/app/api/**", "backend/src/app/factory.py"],
+          "level": "module"
+        },
+        {
+          "paths": [
+            "backend/src/app/core/database/**",
+            "backend/alembic.ini",
+            "backend/pyproject.toml",
+            "backend/uv.lock",
+            "backend/.python-version",
+            "backend/.env.local.example"
+          ],
+          "level": "integration"
+        }
+      ],
+      "tests": [
+        {"paths": ["backend/tests/unit/core/**"], "level": "unit"},
+        {
+          "paths": ["backend/tests/module/core/**", "backend/tests/contract/core/**"],
+          "level": "module"
+        },
+        {"paths": ["backend/tests/integration/core/**"], "level": "integration"}
+      ],
+      "impacts": ["backend-cameras", "backend-stream-gateway"],
+      "commands": {
+        "unit": ["cd backend && uv run pytest tests/unit/core"],
+        "module": [
+          "cd backend && uv run pytest tests/unit/core tests/module/core tests/contract/core"
+        ],
+        "integration": [
+          "cd backend && if [[ -f .env.local ]]; then uv run --env-file .env.local pytest tests/unit/core tests/module/core tests/contract/core tests/integration/core; elif [[ -n \"${TEST_DATABASE_URL:-}\" ]]; then uv run pytest tests/unit/core tests/module/core tests/contract/core tests/integration/core; else echo 'Backend integration 需要 backend/.env.local 或 TEST_DATABASE_URL' >&2; exit 2; fi"
+        ]
+      }
+    },
+    "backend-cameras": {
+      "source": [
+        {"paths": ["backend/src/app/modules/cameras/**"], "level": "unit"},
+        {
+          "paths": [
+            "backend/src/app/modules/cameras/application/**",
+            "backend/src/app/modules/cameras/api/**"
+          ],
+          "level": "module"
+        },
+        {
+          "paths": [
+            "backend/src/app/modules/cameras/persistence/**",
+            "backend/migrations/**",
+            "backend/scripts/check_camera_placeholders.py"
+          ],
+          "level": "integration"
+        }
+      ],
+      "tests": [
+        {"paths": ["backend/tests/unit/cameras/**"], "level": "unit"},
+        {
+          "paths": ["backend/tests/module/cameras/**", "backend/tests/contract/cameras/**"],
+          "level": "module"
+        },
+        {"paths": ["backend/tests/integration/cameras/**"], "level": "integration"}
+      ],
+      "commands": {
+        "unit": ["cd backend && uv run pytest tests/unit/cameras"],
+        "module": [
+          "cd backend && uv run pytest tests/unit/cameras tests/module/cameras tests/contract/cameras"
+        ],
+        "integration": [
+          "cd backend && if [[ -f .env.local ]]; then uv run --env-file .env.local pytest tests/unit/cameras tests/module/cameras tests/contract/cameras tests/integration/cameras; elif [[ -n \"${TEST_DATABASE_URL:-}\" ]]; then uv run pytest tests/unit/cameras tests/module/cameras tests/contract/cameras tests/integration/cameras; else echo 'Cameras integration 需要 backend/.env.local 或 TEST_DATABASE_URL' >&2; exit 2; fi"
+        ]
+      }
+    },
+    "backend-stream-gateway": {
+      "source": [
+        {"paths": ["backend/src/app/modules/stream_gateway/**"], "level": "unit"},
+        {
+          "paths": ["backend/src/app/modules/stream_gateway/api/**"],
+          "level": "module"
+        },
+        {
+          "paths": [
+            "backend/src/app/modules/stream_gateway/services/**",
+            "backend/scripts/check_mediamtx_adapter.py",
+            "backend/scripts/check_mediamtx_contract.py"
+          ],
+          "level": "integration"
+        }
+      ],
+      "tests": [
+        {"paths": ["backend/tests/unit/stream_gateway/**"], "level": "unit"},
+        {
+          "paths": [
+            "backend/tests/module/stream_gateway/**",
+            "backend/tests/contract/stream_gateway/**"
+          ],
+          "level": "module"
+        },
+        {
+          "paths": ["backend/tests/integration/stream_gateway/**"],
+          "level": "integration"
+        }
+      ],
+      "impacts": ["backend-cameras"],
+      "commands": {
+        "unit": ["cd backend && uv run pytest tests/unit/stream_gateway"],
+        "module": [
+          "cd backend && uv run pytest tests/unit/stream_gateway tests/module/stream_gateway tests/contract/stream_gateway"
+        ],
+        "integration": [
+          "cd backend && uv run pytest tests/unit/stream_gateway tests/module/stream_gateway tests/contract/stream_gateway tests/integration/stream_gateway"
+        ]
+      }
+    },
+    "api-contract": {
+      "source": [
+        {
+          "paths": [
+            "backend/src/app/modules/cameras/api/**",
+            "backend/src/app/core/http/openapi.py",
+            "backend/scripts/export_openapi.py",
+            "contracts/openapi.json",
+            "frontend/src/generated/openapi.ts",
+            "scripts/check-cameras-contracts.sh",
+            "scripts/check-cameras-sensitive-data.sh"
+          ],
+          "level": "module"
+        }
+      ],
+      "tests": [
+        {
+          "paths": [
+            "backend/tests/contract/api_contract/**",
+            "frontend/tests/contract/api_contract/**"
+          ],
+          "level": "module"
+        }
+      ],
+      "impacts": ["backend-cameras", "frontend-cameras"],
+      "commands": {
+        "unit": ["bash scripts/check-cameras-contracts.sh"],
+        "module": ["bash scripts/check-cameras-contracts.sh"],
+        "integration": [
+          "bash scripts/check-cameras-contracts.sh && bash scripts/check-cameras-sensitive-data.sh"
+        ]
+      }
+    },
+    "frontend-shared": {
+      "source": [
+        {
+          "paths": [
+            "frontend/src/components/ui/**",
+            "frontend/src/lib/**",
+            "frontend/src/hooks/**",
+            "frontend/src/providers/**",
+            "frontend/src/config/**",
+            "frontend/src/index.css",
+            "frontend/src/vite-env.d.ts",
+            "frontend/public/mockServiceWorker.js"
+          ],
+          "level": "unit"
+        },
+        {"paths": ["frontend/src/components/ui/**", "frontend/src/providers/**"], "level": "module"},
+        {
+          "paths": [
+            "frontend/package.json",
+            "frontend/pnpm-lock.yaml",
+            "frontend/pnpm-workspace.yaml",
+            "frontend/.node-version",
+            "frontend/components.json",
+            "frontend/eslint.config.js",
+            "frontend/prettier.config.js",
+            "frontend/tsconfig*.json",
+            "frontend/vite.config.ts",
+            "frontend/vitest*.config.ts",
+            "frontend/.env.local.example"
+          ],
+          "level": "integration"
+        }
+      ],
+      "tests": [
+        {"paths": ["frontend/tests/unit/shared/**"], "level": "unit"},
+        {
+          "paths": ["frontend/tests/component/shared/**", "frontend/tests/contract/shared/**"],
+          "level": "module"
+        },
+        {"paths": ["frontend/tests/integration/shared/**"], "level": "integration"}
+      ],
+      "impacts": ["frontend-shell", "frontend-cameras", "frontend-video"],
+      "commands": {
+        "unit": ["cd frontend && pnpm exec vitest run tests/unit/shared"],
+        "module": [
+          "cd frontend && pnpm exec vitest run tests/unit/shared tests/component/shared tests/contract/shared"
+        ],
+        "integration": [
+          "cd frontend && pnpm exec vitest run tests/unit/shared tests/component/shared tests/contract/shared tests/integration/shared"
+        ]
+      }
+    },
+    "frontend-shell": {
+      "source": [
+        {
+          "paths": [
+            "frontend/src/App.tsx",
+            "frontend/index.html",
+            "frontend/public/brand/**",
+            "frontend/public/favicon.ico",
+            "frontend/src/components/app-shell/**",
+            "frontend/src/components/layout/**",
+            "frontend/src/components/page-state/**",
+            "frontend/src/components/route-state/**",
+            "frontend/src/routes/**",
+            "frontend/src/routeTree.gen.ts"
+          ],
+          "level": "module"
+        }
+      ],
+      "tests": [
+        {"paths": ["frontend/tests/unit/app_shell/**"], "level": "unit"},
+        {
+          "paths": [
+            "frontend/tests/component/app_shell/**",
+            "frontend/tests/contract/app_shell/**"
+          ],
+          "level": "module"
+        },
+        {"paths": ["frontend/tests/integration/app_shell/**"], "level": "integration"}
+      ],
+      "commands": {
+        "unit": ["cd frontend && pnpm exec vitest run tests/unit/app_shell"],
+        "module": [
+          "cd frontend && pnpm exec vitest run tests/unit/app_shell tests/component/app_shell tests/contract/app_shell"
+        ],
+        "integration": [
+          "cd frontend && pnpm exec vitest run tests/unit/app_shell tests/component/app_shell tests/contract/app_shell tests/integration/app_shell"
+        ]
+      }
+    },
+    "frontend-cameras": {
+      "source": [
+        {
+          "paths": ["frontend/src/features/cameras/**", "frontend/src/mocks/**"],
+          "level": "unit"
+        },
+        {
+          "paths": [
+            "frontend/src/features/cameras/api/**",
+            "frontend/src/features/cameras/components/**"
+          ],
+          "level": "module"
+        }
+      ],
+      "tests": [
+        {"paths": ["frontend/tests/unit/cameras/**"], "level": "unit"},
+        {
+          "paths": ["frontend/tests/component/cameras/**", "frontend/tests/contract/cameras/**"],
+          "level": "module"
+        },
+        {"paths": ["frontend/tests/integration/cameras/**"], "level": "integration"}
+      ],
+      "commands": {
+        "unit": ["cd frontend && pnpm exec vitest run tests/unit/cameras"],
+        "module": [
+          "cd frontend && pnpm exec vitest run tests/unit/cameras tests/component/cameras tests/contract/cameras"
+        ],
+        "integration": [
+          "cd frontend && pnpm exec vitest run tests/unit/cameras tests/component/cameras tests/contract/cameras tests/integration/cameras"
+        ]
+      }
+    },
+    "frontend-video": {
+      "source": [
+        {"paths": ["frontend/src/features/video/**"], "level": "unit"},
+        {
+          "paths": [
+            "frontend/src/features/video/components/**",
+            "frontend/src/features/video/stream-session/**",
+            "frontend/src/features/video/mediamtx/**"
+          ],
+          "level": "module"
+        },
+        {
+          "paths": [
+            "frontend/src/vendor/mediamtx/**",
+            "contracts/mediamtx-openapi.json",
+            "frontend/scripts/check-mediamtx-reader.mjs",
+            "frontend/scripts/run-whep-test-source.mjs"
+          ],
+          "level": "integration"
+        }
+      ],
+      "tests": [
+        {"paths": ["frontend/tests/unit/video/**"], "level": "unit"},
+        {
+          "paths": ["frontend/tests/component/video/**", "frontend/tests/contract/video/**"],
+          "level": "module"
+        },
+        {"paths": ["frontend/tests/integration/video/**"], "level": "integration"}
+      ],
+      "impacts": ["frontend-cameras"],
+      "commands": {
+        "unit": ["cd frontend && pnpm exec vitest run tests/unit/video"],
+        "module": [
+          "cd frontend && pnpm exec vitest run tests/unit/video tests/component/video tests/contract/video"
+        ],
+        "integration": [
+          "cd frontend && pnpm exec vitest run tests/unit/video tests/component/video tests/contract/video tests/integration/video"
+        ]
+      }
+    }
+  }
+}

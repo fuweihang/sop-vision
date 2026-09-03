@@ -20,5 +20,15 @@
     }
   ],
   "eslint.format.enable": false,
-  "prettier.requireConfig": true
+  "prettier.requireConfig": true,
+  "github.copilot.chat.commitMessageGeneration.instructions": [
+    {
+      "file": ".github/instructions/commit-message.md"
+    }
+  ],
+  "github.copilot.chat.pullRequestDescriptionGeneration.instructions": [
+    {
+      "file": ".github/instructions/pull-request.md"
+    }
+  ]
 }
