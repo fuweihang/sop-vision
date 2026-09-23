@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import sys
+from pathlib import Path
 
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QCloseEvent, QFont
@@ -18,6 +19,8 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
+
+from algorithm.common.config import default_config_path, load_algorithm_config
 
 from .preview_panel import PreviewPanel
 from .preview_panel import VideoCanvas as _VideoCanvas
@@ -66,8 +69,13 @@ class ViewerWindow(QMainWindow):
         task_id_2: str = "detector-002",
         daemon_url: str = "http://127.0.0.1:8090",
         database_url: str = DEFAULT_DATABASE_URL,
+        config_path: Path | None = None,
     ) -> None:
         super().__init__()
+        self.config_path = (config_path or default_config_path()).expanduser().resolve()
+        # 窗口测试和直接构造 ViewerWindow 的调用也必须尽早发现外围配置错误，
+        # 不能等用户点击连接后才得到一个难以定位的 Redis 失败。
+        load_algorithm_config(self.config_path)
         self.setWindowTitle("SOP Vision 双任务检测 Viewer")
         self.resize(1600, 900)
 
@@ -76,8 +84,8 @@ class ViewerWindow(QMainWindow):
         task_group.setMaximumWidth(560)
         task_layout = QVBoxLayout(task_group)
 
-        # Daemon 和数据库属于 Viewer 的公共连接。RTSP 和 Redis 仍位于各任务
-        # 的 Schema 表单中，因此两路视频地址可以独立保存和加载。
+        # Daemon 和数据库属于 Viewer 的公共连接。RTSP 位于各任务 Schema 中，
+        # Redis 则由两路预览共同读取外围 TOML，界面不允许任务覆盖它。
         advanced_content = QWidget()
         endpoints = QFormLayout()
         endpoints.setContentsMargins(0, 0, 0, 0)
@@ -111,7 +119,11 @@ class ViewerWindow(QMainWindow):
         self.preview_splitter.setChildrenCollapsible(False)
         previews: list[PreviewPanel] = []
         for slot_number, panel in enumerate(self.task_panels, start=1):
-            preview = PreviewPanel(f"摄像头 {slot_number}", panel.task_id)
+            preview = PreviewPanel(
+                f"摄像头 {slot_number}",
+                panel.task_id,
+                config_path=self.config_path,
+            )
             panel.task_id_changed.connect(preview.set_task_id)
             panel.preview_configuration_changed.connect(preview.set_task_configuration)
             previews.append(preview)
@@ -228,6 +240,7 @@ def run_viewer(
     task_id_2: str = "detector-002",
     daemon_url: str = "http://127.0.0.1:8090",
     database_url: str = DEFAULT_DATABASE_URL,
+    config_path: Path | None = None,
 ) -> int:
     """启动固定包含两个任务槽位的 Qt Viewer。"""
 
@@ -238,6 +251,7 @@ def run_viewer(
         task_id_2=task_id_2,
         daemon_url=daemon_url,
         database_url=database_url,
+        config_path=config_path,
     )
     window.show()
     return app.exec()

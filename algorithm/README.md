@@ -18,9 +18,11 @@ PostgreSQL ───────────读取已提交配置─────
                                                ▼
 RTSP ─────────────────────────────────────> AIWorker ──> Redis
   └────────────────────> Qt Viewer <────────────┘
+
+config.toml ──统一 Redis / 分类型模型──> Daemon、AIWorker、Qt Viewer
 ```
 
-- PostgreSQL 是唯一任务配置源，不再读取 `config.json`。
+- PostgreSQL 保存任务参数；外围 TOML 保存统一 Redis 地址和各类 Worker 的模型路径。
 - 守护进程不自动启动或自动重启 Worker，也不持久化运行状态。
 - Worker 进程池默认最多同时运行 4 个任务，容量耗尽时 `start` 返回 429。
 - Qt Viewer 同时承担外部客户端模拟、Worker 控制和检测结果预览。
@@ -66,20 +68,33 @@ ALGORITHM_DATABASE_URL=postgresql://sop_vision:sop_vision@localhost:5432/sop_vis
 ```dotenv
 ALGORITHM_DATABASE_URL=postgresql://sop_vision:sop_vision@localhost:5432/sop_vision
 ALGORITHM_MAX_WORKERS=4
-ALGORITHM_RESOURCE_ROOT=/absolute/path/to/sop-vision/algorithm
+ALGORITHM_CONFIG=/absolute/path/to/algorithm/config.toml
 ```
 
-相对模型路径以 `ALGORITHM_RESOURCE_ROOT` 为基准；未设置时使用安装包所在的 algorithm
-工程根目录。配置和错误日志不会回显 RTSP、Redis 或数据库凭据。
+Daemon、独立 Worker 和 Viewer 默认读取工程内的 `config.toml`。也可以通过
+`ALGORITHM_CONFIG` 设置公共路径，或用各命令的 `--config` 临时覆盖；命令行参数优先级
+最高。默认配置格式如下：
 
-当前 Detector 和 Tracker 共用以下参数（存入 `config` 列），通过数据库记录的
-`worker_type` 分别选择 `detector` 或 `tracker`：
+```toml
+redis_url = "redis://127.0.0.1:6379/0"
+
+[workers.detector]
+model_path = "resources/models/yolo26n.pt"
+
+[workers.tracker]
+model_path = "resources/models/yolo26n.pt"
+```
+
+`redis_url` 可省略，默认值仍为 `redis://127.0.0.1:6379/0`。每个已注册 Worker 类型必须
+分别提供 `model_path`；相对路径以 TOML 所在目录为基准。文件不存在、格式错误或模型配置
+缺失时进程拒绝启动。配置和错误日志不会回显 RTSP、Redis 或数据库凭据。
+
+当前 Detector 和 Tracker 的任务参数存入 PostgreSQL 的 `config` 列，通过数据库记录的
+`worker_type` 选择类型。任务参数不包含模型路径或 Redis 地址：
 
 ```json
 {
   "rtsp_url": "rtsp://user:password@camera/stream",
-  "redis_url": "redis://127.0.0.1:6379/0",
-  "model_path": "resources/models/yolo26n.pt",
   "image_size": 640,
   "confidence": 0.5,
   "device": "0",
@@ -90,6 +105,9 @@ ALGORITHM_RESOURCE_ROOT=/absolute/path/to/sop-vision/algorithm
   }
 }
 ```
+
+任务记录如果包含 `redis_url` 或 `model_path`，Daemon 会将其视为非法配置并拒绝启动，
+防止任务覆盖外围 TOML。
 
 `roi=null` 表示全画面检测。ROI 坐标归一化到 `[0, 1]`，至少需要三个不重复且能组成
 非零面积多边形的点。Tracker 始终在全画面维护轨迹，ROI 只过滤发布结果；目标离开 ROI
@@ -118,9 +136,9 @@ curl -X POST http://127.0.0.1:8090/v1/workers/detector-001/stop
 curl http://127.0.0.1:8090/healthz
 ```
 
-- `start`：读取数据库最新配置并启动；任务已运行时返回 409。
-- `reload`：先验证数据库最新配置，再停止旧 Worker 并启动新 Worker；配置无效时旧进程
-  继续运行。
+- `start`：重新读取 TOML 和数据库最新配置并启动；任务已运行时返回 409。
+- `reload`：重新读取 TOML 和数据库最新配置，验证成功后停止旧 Worker 并启动新
+  Worker；配置无效时旧进程继续运行。
 - `stop`：优雅停止，超时后 terminate/kill；已配置但未运行的任务幂等成功。
 
 404 表示任务或类型不存在，422 表示配置非法，429 表示进程容量耗尽，503 表示数据库
@@ -144,13 +162,14 @@ uv run --extra viewer algorithm-viewer \
 ```
 
 Viewer 左侧用“任务 1 / 任务 2”页签分别编辑两个 Worker，右侧同时显示两个摄像头
-画面。两个任务共用 Daemon 和 PostgreSQL 连接，但各自保存 Task ID、Worker 类型、RTSP、
-Redis、ROI 和其他算法参数。Viewer 从 Daemon 获取标准 JSON Schema 并动态生成参数控件；
+画面。两个任务共用 Daemon、PostgreSQL 和 TOML 中的 Redis 地址，各自保存 Task ID、
+Worker 类型、RTSP、ROI 和其他算法参数。Viewer 从 Daemon 获取标准 JSON Schema 并动态生成参数控件；
 保存操作在后台线程中先提交 PostgreSQL 事务，提交成功后再调用 Daemon。连接参数位于默认
-收起的“高级连接设置”中。数据库中的任务配置是各自预览地址的唯一来源。
+收起的“高级连接设置”中。RTSP 来自各自的数据库任务配置，Redis 来自外围 TOML。
 重载 Worker 时，如果 `rtsp_url` 没有变化，Viewer 会保留现有 RTSP 拉流和当前画面，
-只清除旧检测框并等待新结果；只有 RTSP 地址确实改变时才重新拉流。`redis_url` 改变时
-只重建对应的 Redis 订阅，不影响视频画面。
+只清除旧检测框并等待新结果；只有 RTSP 地址确实改变时才重新拉流。TOML 中统一的
+`redis_url` 改变时，两路任务会在各自下一次加载、启动或重载时重建 Redis 订阅，不影响
+视频画面。
 当任务配置包含 ROI 时，Viewer 会在视频内容区域绘制黄色虚线多边形并标注区域 ID；
 `roi=null` 时不绘制边框。多边形仅用于展示当前过滤区域，不改变 Worker 的中心点过滤规则。
 

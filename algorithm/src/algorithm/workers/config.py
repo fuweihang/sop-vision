@@ -20,10 +20,12 @@ class VideoWorkerConfig(BaseModel):
 
     task_id: str = Field(title="任务 ID", min_length=1)
     rtsp_url: str = Field(title="RTSP 地址", min_length=1)
+    # 下面两个字段属于进程运行配置，不会出现在任务 JSON Schema 中。Daemon
+    # 只允许外围 TOML 填充它们，数据库任务包含同名字段时会直接拒绝启动。
     redis_url: str = Field(title="Redis 地址", min_length=1)
     model_path: Path = Field(
         title="模型路径",
-        description="绝对路径，或相对于 ALGORITHM_RESOURCE_ROOT 的路径。",
+        description="由外围 TOML 提供，任务参数不能覆盖。",
     )
     image_size: int = Field(title="推理图像尺寸", default=640, gt=0)
     confidence: float = Field(title="置信度阈值", default=0.5, gt=0.0, le=1.0)

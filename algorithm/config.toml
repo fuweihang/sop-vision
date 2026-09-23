@@ -1,0 +1,9 @@
+# 所有 Worker 和 Viewer 共用同一个 Redis，任务参数不能覆盖该地址。
+redis_url = "redis://127.0.0.1:6379/0"
+
+# 模型按 Worker 类型分别配置。相对路径以本文件所在目录为基准。
+[workers.detector]
+model_path = "resources/models/yolo26n.pt"
+
+[workers.tracker]
+model_path = "resources/models/yolo26n.pt"

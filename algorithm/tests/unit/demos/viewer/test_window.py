@@ -1,6 +1,7 @@
 import os
 import time
 from datetime import UTC, datetime
+from pathlib import Path
 from types import SimpleNamespace
 
 import numpy as np
@@ -13,6 +14,7 @@ from PySide6.QtCore import Qt
 from PySide6.QtGui import QImage
 from PySide6.QtWidgets import QApplication
 
+from algorithm.common.config import DEFAULT_REDIS_URL
 from algorithm.common.roi import RoiConfig
 from algorithm.contracts.detection import (
     DetectionMetrics,
@@ -76,6 +78,8 @@ def test_schema表单可读写detector默认值和嵌套roi() -> None:
     assert payload["image_size"] == 640
     assert payload["roi"]["roi_id"] == "area-1"
     assert payload["roi"]["points"][2] == [0.8, 0.8]
+    assert "redis_url" not in payload
+    assert "model_path" not in payload
 
 
 def test_两个任务可独立选择worker类型() -> None:
@@ -159,8 +163,8 @@ def test_两个任务分别缓存预览地址和roi() -> None:
     first_preview, second_preview = window.preview_panels
     assert first_preview.preview_rtsp_url == first_config["rtsp_url"]
     assert second_preview.preview_rtsp_url == second_config["rtsp_url"]
-    assert first_preview.preview_redis_url == first_config["redis_url"]
-    assert second_preview.preview_redis_url == second_config["redis_url"]
+    assert first_preview.preview_redis_url == DEFAULT_REDIS_URL
+    assert second_preview.preview_redis_url == DEFAULT_REDIS_URL
     assert first_preview.canvas.roi is not None
     assert first_preview.canvas.roi.roi_id == "area-1"
     assert second_preview.canvas.roi is not None
@@ -281,7 +285,7 @@ def test_重载地址未变化时保持rtsp画面和redis订阅(monkeypatch) -> 
     app.processEvents()
 
 
-def test_重载只重连发生变化的预览地址(monkeypatch) -> None:
+def test_重载只重连发生变化的预览地址(monkeypatch, tmp_path: Path) -> None:
     app = QApplication.instance() or QApplication([])
     feed_urls: list[str] = []
     subscriber_urls: list[str] = []
@@ -308,20 +312,24 @@ def test_重载只重连发生变化的预览地址(monkeypatch) -> None:
 
     monkeypatch.setattr(preview_module, "RtspVideoFeed", FakeFeed)
     monkeypatch.setattr(preview_module, "RedisDetectionSubscriber", FakeSubscriber)
-    window = ViewerWindow(task_id="task-1", task_id_2="task-2")
+    config_path = tmp_path / "config.toml"
+    _write_outer_config(config_path, redis_url="redis://redis-1/0")
+    window = ViewerWindow(
+        task_id="task-1", task_id_2="task-2", config_path=config_path
+    )
     preview = window.preview_panels[0]
     config = _detector_config("camera-1")
     preview.set_task_configuration("task-1", config, "start")
 
-    redis_changed = {**config, "redis_url": "redis://redis-2/0"}
-    preview.set_task_configuration("task-1", redis_changed, "reload")
+    _write_outer_config(config_path, redis_url="redis://redis-2/0")
+    preview.set_task_configuration("task-1", config, "reload")
     assert feed_urls == ["rtsp://camera-1/stream"]
-    assert subscriber_urls == ["redis://camera-1/0", "redis://redis-2/0"]
+    assert subscriber_urls == ["redis://redis-1/0", "redis://redis-2/0"]
 
-    rtsp_changed = {**redis_changed, "rtsp_url": "rtsp://camera-2/stream"}
+    rtsp_changed = {**config, "rtsp_url": "rtsp://camera-2/stream"}
     preview.set_task_configuration("task-1", rtsp_changed, "reload")
     assert feed_urls == ["rtsp://camera-1/stream", "rtsp://camera-2/stream"]
-    assert subscriber_urls == ["redis://camera-1/0", "redis://redis-2/0"]
+    assert subscriber_urls == ["redis://redis-1/0", "redis://redis-2/0"]
     window.close()
     app.processEvents()
 
@@ -382,8 +390,8 @@ def test_两路重新连接分别使用自己的缓存配置(monkeypatch) -> Non
             "rtsp://camera-2/stream",
         ],
         "redis": [
-            ("redis://camera-1/0", "task-1"),
-            ("redis://camera-2/0", "task-2"),
+            (DEFAULT_REDIS_URL, "task-1"),
+            (DEFAULT_REDIS_URL, "task-2"),
         ],
     }
     window.close()
@@ -538,13 +546,25 @@ def test_关闭窗口清理两路预览但不停止worker(monkeypatch) -> None:
 def _detector_config(camera: str, *, roi_id: str = "main") -> dict:
     return {
         "rtsp_url": f"rtsp://{camera}/stream",
-        "redis_url": f"redis://{camera}/0",
-        "model_path": "resources/models/model.pt",
         "roi": {
             "roi_id": roi_id,
             "points": [[0.2, 0.2], [0.8, 0.2], [0.8, 0.8], [0.2, 0.8]],
         },
     }
+
+
+def _write_outer_config(path: Path, *, redis_url: str) -> None:
+    path.write_text(
+        f'''redis_url = "{redis_url}"
+
+[workers.detector]
+model_path = "models/detector.pt"
+
+[workers.tracker]
+model_path = "models/tracker.pt"
+''',
+        encoding="utf-8",
+    )
 
 
 def _wait_until(app: QApplication, predicate, *, timeout: float = 2.0) -> None:

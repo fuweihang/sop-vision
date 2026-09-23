@@ -9,7 +9,7 @@ from pathlib import Path
 
 import uvicorn
 
-from algorithm.common.config import project_root
+from algorithm.common.config import AlgorithmConfigError, default_config_path
 from algorithm.database import TaskParameterRepository
 
 from .api import create_app
@@ -28,9 +28,10 @@ def build_parser() -> argparse.ArgumentParser:
         default=os.getenv("ALGORITHM_DATABASE_URL", DEFAULT_DATABASE_URL),
     )
     parser.add_argument(
-        "--resource-root",
+        "--config",
         type=Path,
-        default=Path(os.getenv("ALGORITHM_RESOURCE_ROOT", str(project_root()))),
+        default=default_config_path(),
+        help="外围 TOML 路径，默认读取 ALGORITHM_CONFIG 或 algorithm/config.toml。",
     )
     parser.add_argument(
         "--max-workers",
@@ -50,13 +51,16 @@ def main() -> None:
         format="%(asctime)s %(levelname)s %(processName)s %(name)s: %(message)s",
     )
     args = build_parser().parse_args()
-    manager = WorkerManager(
-        TaskParameterRepository(args.database_url),
-        args.resource_root,
-        max_workers=args.max_workers,
-        startup_timeout=args.startup_timeout,
-        graceful_stop_timeout=args.stop_timeout,
-    )
+    try:
+        manager = WorkerManager(
+            TaskParameterRepository(args.database_url),
+            args.config,
+            max_workers=args.max_workers,
+            startup_timeout=args.startup_timeout,
+            graceful_stop_timeout=args.stop_timeout,
+        )
+    except AlgorithmConfigError as error:
+        raise SystemExit(str(error)) from error
     uvicorn.run(create_app(manager=manager), host=args.host, port=args.port)
 
 

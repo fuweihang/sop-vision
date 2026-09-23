@@ -12,7 +12,7 @@ from typing import Annotated, Any
 
 from fastapi import Depends, FastAPI, HTTPException, Request, Response, status
 
-from algorithm.common.config import project_root
+from algorithm.common.config import default_config_path
 from algorithm.database import RepositoryUnavailableError, TaskParameterRepository
 
 from .configuration import WorkerConfigurationError
@@ -52,12 +52,12 @@ def create_app(
     *,
     manager: WorkerManager | None = None,
     database_url: str = DEFAULT_DATABASE_URL,
-    resource_root: Path | None = None,
+    config_path: Path | None = None,
     max_workers: int = 4,
 ) -> FastAPI:
     worker_manager = manager or WorkerManager(
         TaskParameterRepository(database_url),
-        resource_root or project_root(),
+        config_path or default_config_path(),
         max_workers=max_workers,
     )
 

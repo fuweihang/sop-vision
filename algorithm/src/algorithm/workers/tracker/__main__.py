@@ -7,7 +7,11 @@ import logging
 import os
 from pathlib import Path
 
-from algorithm.common.config import project_root
+from algorithm.common.config import (
+    AlgorithmConfigError,
+    default_config_path,
+    load_algorithm_config,
+)
 from algorithm.daemon.configuration import validate_record
 from algorithm.database import TaskParameterRepository
 
@@ -28,9 +32,10 @@ def build_parser() -> argparse.ArgumentParser:
         ),
     )
     parser.add_argument(
-        "--resource-root",
+        "--config",
         type=Path,
-        default=Path(os.getenv("ALGORITHM_RESOURCE_ROOT", str(project_root()))),
+        default=default_config_path(),
+        help="外围 TOML 路径，默认读取 ALGORITHM_CONFIG 或 algorithm/config.toml。",
     )
     parser.add_argument("--task-id", required=True)
     return parser
@@ -44,12 +49,16 @@ def main() -> None:
         format="%(asctime)s %(levelname)s %(name)s: %(message)s",
     )
     args = build_parser().parse_args()
+    try:
+        outer_config = load_algorithm_config(args.config)
+    except AlgorithmConfigError as error:
+        raise SystemExit(str(error)) from error
     repository = TaskParameterRepository(args.database_url)
     try:
         record = repository.get(args.task_id)
         if record is None:
             raise SystemExit(f"Worker {args.task_id!r} 尚未配置")
-        loaded = validate_record(record, args.resource_root)
+        loaded = validate_record(record, outer_config)
         if not isinstance(loaded.config, TrackerConfig):
             raise SystemExit(f"Worker {args.task_id!r} 不是 tracker 类型")
         run_tracker(loaded.config)

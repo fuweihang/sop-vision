@@ -26,28 +26,39 @@ class WorkerDefinition:
         self,
         task_id: str,
         value: dict[str, Any],
-        resource_root: Path,
+        *,
+        redis_url: str,
+        model_path: Path,
     ) -> BaseModel:
         if "task_id" in value:
             raise ValueError("task_id must be declared only as the workers object key")
-        config = self.config_model.model_validate({"task_id": task_id, **value})
-        model_path = getattr(config, "model_path", None)
-        if isinstance(model_path, Path) and not model_path.is_absolute():
-            config = config.model_copy(
-                update={"model_path": (resource_root / model_path).resolve()}
-            )
-        return config
+        outer_fields = sorted({"redis_url", "model_path"} & value.keys())
+        if outer_fields:
+            fields = ", ".join(outer_fields)
+            raise ValueError(f"任务参数不能包含外围配置字段：{fields}")
+        return self.config_model.model_validate(
+            {
+                "task_id": task_id,
+                **value,
+                "redis_url": redis_url,
+                "model_path": model_path,
+            }
+        )
 
     def parameter_schema(self) -> dict[str, Any]:
-        """Expose the runtime config model without the externally supplied task ID."""
+        """返回任务可填写字段，不暴露由外围 TOML 管理的运行参数。"""
 
         schema = self.config_model.model_json_schema(mode="validation")
         properties = schema.get("properties")
         if isinstance(properties, dict):
-            properties.pop("task_id", None)
+            for field in ("task_id", "redis_url", "model_path"):
+                properties.pop(field, None)
         required = schema.get("required")
         if isinstance(required, list):
-            schema["required"] = [item for item in required if item != "task_id"]
+            hidden_fields = {"task_id", "redis_url", "model_path"}
+            schema["required"] = [
+                item for item in required if item not in hidden_fields
+            ]
         return schema
 
 

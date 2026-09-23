@@ -5,6 +5,7 @@ from pathlib import Path
 
 import pytest
 
+from algorithm.common.config import AlgorithmConfigError
 from algorithm.daemon.configuration import WorkerConfigurationError
 from algorithm.daemon.manager import (
     WorkerAlreadyRunningError,
@@ -22,8 +23,6 @@ def task_record(task_id: str = "detector-001", *, confidence: float = 0.5):
         worker_type="detector",
         config={
             "rtsp_url": "rtsp://camera/stream",
-            "redis_url": "redis://localhost/0",
-            "model_path": "model.pt",
             "confidence": confidence,
         },
         updated_at=datetime(2026, 8, 21, tzinfo=UTC),
@@ -137,12 +136,42 @@ class FailingContext(FakeContext):
 
 
 def manager_for(repository, tmp_path: Path, **kwargs):
+    config_path = tmp_path / "config.toml"
+    _write_outer_config(config_path)
     return WorkerManager(
         repository,
-        tmp_path,
+        config_path,
         process_context=kwargs.pop("process_context", FakeContext()),
         **kwargs,
     )
+
+
+def _write_outer_config(
+    path: Path,
+    *,
+    redis_url: str = "redis://outer/0",
+    detector_model: str = "models/detector.pt",
+) -> None:
+    path.write_text(
+        f'''redis_url = "{redis_url}"
+
+[workers.detector]
+model_path = "{detector_model}"
+
+[workers.tracker]
+model_path = "models/tracker.pt"
+''',
+        encoding="utf-8",
+    )
+
+
+def test_manager_启动时拒绝缺失的外围配置(tmp_path: Path) -> None:
+    with pytest.raises(AlgorithmConfigError):
+        WorkerManager(
+            FakeRepository(task_record()),
+            tmp_path / "missing.toml",
+            process_context=FakeContext(),
+        )
 
 
 def test_manager_does_not_autostart_and_reload_uses_latest_database_config(
@@ -156,6 +185,10 @@ def test_manager_does_not_autostart_and_reload_uses_latest_database_config(
         started = manager.start("detector-001")
         assert started.runtime_state == "running"
         assert context.processes[-1].args[2]["confidence"] == 0.5
+        assert context.processes[-1].args[2]["redis_url"] == "redis://outer/0"
+        assert context.processes[-1].args[2]["model_path"] == str(
+            (tmp_path / "models/detector.pt").resolve()
+        )
         with pytest.raises(WorkerAlreadyRunningError):
             manager.start("detector-001")
 
@@ -176,6 +209,36 @@ def test_invalid_reload_keeps_live_worker_running(tmp_path: Path) -> None:
         with pytest.raises(WorkerConfigurationError):
             manager.reload("detector-001")
         assert context.processes[-1].is_alive()
+    finally:
+        manager.close()
+
+
+def test_reload_reloads_outer_toml_and_invalid_file_keeps_worker_running(
+    tmp_path: Path,
+) -> None:
+    repository = FakeRepository(task_record())
+    context = FakeContext()
+    manager = manager_for(repository, tmp_path, process_context=context)
+    config_path = tmp_path / "config.toml"
+    try:
+        first = manager.start("detector-001")
+        _write_outer_config(
+            config_path,
+            redis_url="redis://second/0",
+            detector_model="models/detector-v2.pt",
+        )
+        second = manager.reload("detector-001")
+        assert second.config_revision != first.config_revision
+        assert context.processes[-1].args[2]["redis_url"] == "redis://second/0"
+        assert context.processes[-1].args[2]["model_path"] == str(
+            (tmp_path / "models/detector-v2.pt").resolve()
+        )
+
+        config_path.write_text("redis_url = [", encoding="utf-8")
+        current_process = context.processes[-1]
+        with pytest.raises(WorkerConfigurationError):
+            manager.reload("detector-001")
+        assert current_process.is_alive()
     finally:
         manager.close()
 

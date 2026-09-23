@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import threading
 import time
+from pathlib import Path
 
 from PySide6.QtCore import QObject, QPointF, QRectF, Qt, QTimer, Signal
 from PySide6.QtGui import QColor, QFontMetrics, QImage, QPainter, QPen, QPolygonF
@@ -17,6 +18,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from algorithm.common.config import AlgorithmConfigError, load_algorithm_config
 from algorithm.common.roi import RoiConfig
 from algorithm.contracts.detection import DetectionObject, FrameDetection
 
@@ -159,10 +161,11 @@ class VideoCanvas(QWidget):
 class PreviewPanel(QGroupBox):
     """显示一个任务的视频，并独立管理该任务的两个后台连接。"""
 
-    def __init__(self, slot_label: str, task_id: str) -> None:
+    def __init__(self, slot_label: str, task_id: str, *, config_path: Path) -> None:
         super().__init__()
         self._slot_label = slot_label
         self._task_id = task_id.strip()
+        self._config_path = config_path
         self._signals = _PreviewSignals()
         self._signals.detection.connect(self._on_detection)
         self._signals.redis_status.connect(self._on_redis_status)
@@ -298,15 +301,25 @@ class PreviewPanel(QGroupBox):
         self.canvas.set_roi(roi)
 
         rtsp_url = config.get("rtsp_url") if isinstance(config, dict) else None
-        redis_url = config.get("redis_url") if isinstance(config, dict) else None
+        try:
+            # 每次加载、启动或重载任务都重新读取，使统一 Redis 地址的修改可以
+            # 跟随显式操作生效，而不需要关闭整个 Viewer。
+            redis_url = load_algorithm_config(self._config_path).redis_url
+        except AlgorithmConfigError as error:
+            if had_active_connection:
+                self.disconnect_sources()
+            self._preview_task_id = None
+            self._preview_rtsp_url = None
+            self._preview_redis_url = None
+            self.connect_button.setEnabled(False)
+            self.result_status.setText(f"检测：外围配置无效：{error}")
+            return
         if (
             isinstance(rtsp_url, str)
             and rtsp_url.strip()
-            and isinstance(redis_url, str)
-            and redis_url.strip()
         ):
             next_rtsp_url = rtsp_url.strip()
-            next_redis_url = redis_url.strip()
+            next_redis_url = redis_url
             self._task_id = next_task_id
             self._preview_rtsp_url = next_rtsp_url
             self._preview_redis_url = next_redis_url

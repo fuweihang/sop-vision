@@ -10,10 +10,11 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Protocol
 
+from algorithm.common.config import AlgorithmConfigError, load_algorithm_config
 from algorithm.database import TaskParameterRecord
 from algorithm.workers.base import worker_process_main
 
-from .configuration import LoadedWorker, validate_record
+from .configuration import LoadedWorker, WorkerConfigurationError, validate_record
 from .models import CommandName, CommandResponse, RuntimeState
 
 LOGGER = logging.getLogger(__name__)
@@ -76,7 +77,7 @@ class WorkerManager:
     def __init__(
         self,
         repository: TaskRepository,
-        resource_root: Path,
+        config_path: Path,
         *,
         max_workers: int = 4,
         startup_timeout: float = 60.0,
@@ -87,7 +88,10 @@ class WorkerManager:
         if max_workers <= 0:
             raise ValueError("max_workers must be positive")
         self.repository = repository
-        self.resource_root = resource_root.expanduser().resolve()
+        self.config_path = config_path.expanduser().resolve()
+        # 在启动 HTTP 服务前先发现文件缺失、TOML 损坏或模型未配置。后续每次
+        # start/reload 仍会重新读取，使文件修改可以通过显式 reload 生效。
+        load_algorithm_config(self.config_path)
         self.max_workers = max_workers
         self.startup_timeout = startup_timeout
         self.graceful_stop_timeout = graceful_stop_timeout
@@ -170,7 +174,13 @@ class WorkerManager:
         record = self.repository.get(task_id)
         if record is None:
             raise WorkerNotFoundError(f"worker {task_id!r} is not configured")
-        return validate_record(record, self.resource_root)
+        try:
+            outer_config = load_algorithm_config(self.config_path)
+        except AlgorithmConfigError as error:
+            # reload 在停止旧进程前调用这里。转换成任务配置错误后，API 会返回
+            # 422，同时旧 Worker 继续使用上一次已经验证通过的配置。
+            raise WorkerConfigurationError(str(error)) from error
+        return validate_record(record, outer_config)
 
     def _replace_loaded(
         self,

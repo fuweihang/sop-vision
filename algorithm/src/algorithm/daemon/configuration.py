@@ -6,10 +6,10 @@ import hashlib
 import json
 from dataclasses import dataclass
 from datetime import datetime
-from pathlib import Path
 
 from pydantic import BaseModel, ValidationError
 
+from algorithm.common.config import AlgorithmConfig, AlgorithmConfigError
 from algorithm.database import TaskParameterRecord
 
 from .registry import get_worker_definition
@@ -28,13 +28,21 @@ class LoadedWorker:
     updated_at: datetime
 
 
-def validate_record(record: TaskParameterRecord, resource_root: Path) -> LoadedWorker:
+def validate_record(
+    record: TaskParameterRecord,
+    outer_config: AlgorithmConfig,
+) -> LoadedWorker:
+    """合并数据库任务参数与外围配置，生成子进程实际使用的完整配置。"""
+
     try:
         definition = get_worker_definition(record.worker_type)
         config = definition.validate_config(
-            record.task_id, record.config, resource_root
+            record.task_id,
+            record.config,
+            redis_url=outer_config.redis_url,
+            model_path=outer_config.model_path_for(record.worker_type),
         )
-    except (ValidationError, ValueError) as error:
+    except (AlgorithmConfigError, ValidationError, ValueError) as error:
         raise WorkerConfigurationError(_safe_error_detail(error)) from error
     return LoadedWorker(
         task_id=record.task_id,

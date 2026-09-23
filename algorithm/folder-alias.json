@@ -1,4 +1,8 @@
 {
+  "config.toml": {
+    "description": "⚙️ 外围运行配置",
+    "tooltip": "统一 Redis 地址与各 Worker 类型的模型路径"
+  },
   "resources": {
     "description": "📦 运行资源",
     "tooltip": "模型权重与示例配置等非源码资源"
@@ -61,7 +65,7 @@
   },
   "src/algorithm/common/config.py": {
     "description": "⚙️ 共享配置工具",
-    "tooltip": "项目路径解析与敏感 URL 脱敏"
+    "tooltip": "外围 TOML 加载、模型路径解析与敏感 URL 脱敏"
   },
   "src/algorithm/common/redis_telemetry.py": {
     "description": "📡 Redis 结果发布器",
@@ -141,7 +145,7 @@
   },
   "src/algorithm/daemon/configuration.py": {
     "description": "✅ 数据库配置校验",
-    "tooltip": "校验单条任务参数、解析资源路径并计算配置版本"
+    "tooltip": "合并任务参数与外围配置并计算配置版本"
   },
   "src/algorithm/daemon/manager.py": {
     "description": "🎛️ Worker 生命周期管理器",
@@ -169,7 +173,7 @@
   },
   "src/algorithm/workers/config.py": {
     "description": "⚙️ 视频 Worker 公共配置",
-    "tooltip": "Detector 与 Tracker 共用的连接、模型、ROI 和发布参数"
+    "tooltip": "Detector 与 Tracker 实际运行时使用的完整参数"
   },
   "src/algorithm/workers/frame_message.py": {
     "description": "📨 帧消息构建",
