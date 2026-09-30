@@ -74,3 +74,4 @@ docs.local
 algorithm/docker/mediamtx/docker-compose.yml
 algorithm/docker/mediamtx/mediamtx.yml
 algorithm/docker/postgres/docker-compose.yml
+algorithm/schema_test.json
